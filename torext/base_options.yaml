@@ -1,0 +1,65 @@
+---
+app:
+    process: 2
+    port : 19000
+    # en_US..
+    locale: zh_CN
+
+debug:
+    enable: True
+
+secure:
+    auth_secret  : DomJiq8GS0yi1udJRdBFBR+b0xt1oU4nlvlaS2KV+qM=
+    auth_sign    : user_id
+    auth_header  : Nodemix-Auth-Token
+    cookie_name  : sessionid
+
+web:
+    template_path: ../web/templates
+    static_path  : ../web/static
+    translations_path: ../web/translations
+
+misc:
+    autoescape:
+
+connections:
+    mysql:
+        # this show the nickname of the mysql database
+        master:
+            enable       : False
+            database     : # database name
+            host         : 127.0.0.1
+            port         : 3306
+            username     : root
+            password     : # password
+            debug        : True
+            pool_recycle : 3600
+            keep_time: 7200
+
+
+    mongodb:
+        master:
+            enable   : False
+            database : # database name
+            host     : 127.0.0.1
+            port     : 27017
+            keep_time: 7200
+
+    rabbitmq:
+        socket:
+            enable  : False
+            host    : localhost
+            port    : 5672
+            username: guest
+            password: guest
+            virtual_host   : /
+            queues  :
+                - user
+            keep_time: 7200
+
+    redis:
+        worker:
+            enable  : False
+            keep_time: 7200
+
+...

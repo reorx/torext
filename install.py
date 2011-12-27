@@ -1,0 +1,41 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+# NOTE: this script require setuptools (easy_install) to run properly
+#
+
+import os
+import ConfigParser
+from distutils.version import StrictVersion
+
+config = ConfigParser.RawConfigParser()
+config.read('install.cfg')
+for name, version in config.items('requirements'):
+    # version may be parsed as float, its nesessary to transform it
+    version = str(version)
+    try:
+        pkg = __import__(name)
+        try:
+            _version = getattr(pkg, '__version__')
+        except AttributeError:
+            try:
+                _version = getattr(pkg, 'VERSION')
+            except AttributeError:
+                try:
+                    _version = getattr(pkg, 'version')
+                except AttributeError:
+                    print 'Could not get package version informaion, will force upgrade'
+                    os.system('easy_install -U %s' % name)
+                    continue
+        if StrictVersion(version) > _version:
+            print 'version number is low (%s > %s), upgrade package' %\
+                    (version, _version)
+            os.system('easy_install -U %s' % name)
+            
+    except ImportError:
+        print 'missing package:', name
+        os.system('easy_install %s' % name)
+    else:
+        print 'satisfied: %s %s' % (name, _version)
+
+os.system('python setup.py install')
