@@ -6,6 +6,7 @@ import os
 import sys
 import _ast
 import logging
+import logging.handlers
 
 checker = __import__('pyflakes.checker').checker
 
@@ -45,11 +46,12 @@ def check(codeString, filename):
             if offset is not None:
                 offset = offset - (len(text) - len(line))
 
-            logging.error('%s:%d: %s' % (filename, lineno, msg))
-            logging.error(line)
+            logging.error('[{0:4}] {1}'.format(lineno, msg))
+            gap = ' '*7
+            logging.error(gap + line)
 
             if offset is not None:
-                logging.error(" " * offset, "^")
+                logging.error(gap + ' '*offset + '^')
 
         return 1
     else:
@@ -57,7 +59,8 @@ def check(codeString, filename):
         w = checker.Checker(tree, filename)
         w.messages.sort(lambda a, b: cmp(a.lineno, b.lineno))
         for warning in w.messages:
-            logging.warning(warning)
+            #print dir(warning)
+            logging.warning('[{0:4}] {1}'.format(warning.lineno, warning.message % warning.message_args))
         return len(w.messages)
 
 
@@ -73,31 +76,78 @@ def checkPath(filename):
         print >> sys.stderr, "%s: %s" % (filename, msg.args[1])
         return 1
 
+class SharedLogFormatter(logging.Formatter):
+    #def __init__(self):
+
+    def format(self, record):
+        """
+        debug:
+        ----------[dir/]----------
+
+        info:
+        [info]
+
+        warning & error:
+          [W]
+          [E]
+        """
+        #print 'in Formater'
+        l = record.levelname
+        try:
+            msg = record.getMessage()
+        except:
+            msg = 'OMG'
+        fmted = ''
+        if 'DEBUG' == l:
+            fmted = '----------[{0:10}]----------'.format(msg)
+        elif 'INFO' == l:
+            fmted = '- ' + msg
+        elif 'WARNING' == l:
+            fmted = '  [W]' + msg
+        elif 'ERROR' == l:
+            fmted = '  [E]' + msg
+        return fmted
+
 
 def main():
     # TODO parameter parse
-    root = sys.argv[1]
+    from optparse import OptionParser
+    parser = OptionParser(usage='Usage: %prog [options] arg1 arg2 ..')
+    parser.add_option('-w', '--write-log', action='store_true')
+    parser.add_option('-o', '--output-file', default='torext_syntax_checker.log')
 
-    if root.endswith('/'):
-        root = root[:-1]
-    if os.path.isdir(root):
-        log_file_name = root + '_dir' + LOG_FILE_NAME_SUFFIX
-    else:
-        log_file_name = root + LOG_FILE_NAME_SUFFIX
-    if os.path.exists(log_file_name):
-        os.remove(log_file_name)
+    options, args = parser.parse_args()
+    if len(args) < 1:
+        parser.error('one file or directory should be pointed')
 
-    # TODO prettified logger class
-    logging.basicConfig(filename=log_file_name, level=logging.DEBUG)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+    formatter = SharedLogFormatter()
+    ch = logging.StreamHandler()
+    ch.setFormatter(formatter)
+    root_logger.addHandler(ch)
+    if options.write_log:
+        #if os.path.exists(options.output_file):
+            #os.remove(options.output_file)
+        fi = logging.handlers.RotatingFileHandler(options.output_file, mode='w')
+        fi.setFormatter(formatter)
+        root_logger.addHandler(fi)
 
-    logging.info('start checking')
-    warnings = 0
-    for dirpath, dirnames, fnames in os.walk(root):
-        for i in fnames:
-            if i.endswith('.py'):
-                # TODO ignore warning by certain format comment
-                warnings += checkPath(os.path.join(dirpath, i))
-    logging.info('warnings number: %s' % warnings)
+    for pth in args:
+        logging.debug(pth)
+        warnings = 0
+        if os.path.isdir(pth):
+            for dirpath, dirnames, fnames in os.walk(pth):
+                for i in fnames:
+                    if i.endswith('.py'):
+                        # TODO ignore warning by certain format comment
+                        logging.info(i)
+                        warnings += checkPath(os.path.join(dirpath, i))
+        else:
+            logging.info(pth)
+            warnings = checkPath(pth)
+        logging.info('warnings number: %s' % warnings)
+        logging.info('::end')
 
 
 if __name__ == '__main__':

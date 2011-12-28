@@ -1,12 +1,11 @@
 ---
-app:
-    process: 2
+# essential config to start the server
+application:
+    processes: 2
     port : 19000
     # en_US..
     locale: zh_CN
-
-debug:
-    enable: True
+    debug: True
 
 secure:
     auth_secret  : DomJiq8GS0yi1udJRdBFBR+b0xt1oU4nlvlaS2KV+qM=

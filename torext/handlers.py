@@ -75,7 +75,7 @@ class _BaseHandler(tornado.web.RequestHandler):
     def format_dict(self):
         return _dict
 
-    def api_write(self, chunk, json=False):
+    def json_write(self, chunk, json=False):
         """Used globally, not special in ApiHandler
         """
         if isinstance(chunk, dict) or isinstance(chunk, list):
@@ -108,7 +108,7 @@ class _BaseHandler(tornado.web.RequestHandler):
             self.set_header("Content-Type", "application/json; charset=UTF-8")
         self.write(chunk)
 
-    def api_error(self, code, text=None):
+    def json_error(self, code, text=None):
         """Used globally, not special in ApiHandler
         """
         # TODO show message on logging
