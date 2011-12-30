@@ -15,18 +15,15 @@ for name, version in config.items('requirements'):
     version = str(version)
     try:
         pkg = __import__(name)
-        try:
-            _version = getattr(pkg, '__version__')
-        except AttributeError:
-            try:
-                _version = getattr(pkg, 'VERSION')
-            except AttributeError:
-                try:
-                    _version = getattr(pkg, 'version')
-                except AttributeError:
-                    print 'Could not get package version informaion, will force upgrade'
-                    os.system('easy_install -U %s' % name)
-                    continue
+        _version = getattr(pkg, '__version__', None) or\
+                   getattr(pkg, 'VERSION', None) or\
+                   getattr(pkg, 'version', None)
+        if '|' in version:
+            version, name = tuple(version.split('|'))
+        if _version is None:
+            print 'Could not get package version informaion, will force upgrade'
+            os.system('easy_install -U %s' % name)
+            continue
         if StrictVersion(version) > _version:
             print 'version number is low (%s > %s), upgrade package' %\
                     (version, _version)
