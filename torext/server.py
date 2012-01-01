@@ -1,14 +1,21 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
-# simple implementation of http & socket servers
+# simple implementation of the main 3 servers
+#    api
+#    rpc
+#    web
 #
 
+import logging
 from tornado.ioloop import IOLoop
 from tornado.httpserver import HTTPServer
+from tornado.options import options
 
 
-def run_http_server(application, opts):
+def run_api_server(application):
+    global options
+    opts = options.application
     http_server = HTTPServer(application)
 
     # NOTE could not use multiprocess mode under debug
@@ -18,7 +25,11 @@ def run_http_server(application, opts):
         http_server.bind(opts['port'])
         http_server.start(opts['processes'])
 
+    logging.info('api server starting')
     IOLoop.instance().start()
 
-def run_socket_server():
+def run_rpc_server(application, opts):
+    pass
+
+def run_web_server(application, opts):
     pass

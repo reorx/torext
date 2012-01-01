@@ -12,9 +12,15 @@ distutils.core.setup(
     author_email='novoreorx@gmail.com',
     url='http://nodemix.com',
     description='torext is an instrumental package which aim at easy implementation of tornado based project',
-    packages = ['torext', 'torext.utils', 'torext.scripts'],
+    packages=[
+        'torext',
+        'torext.handler',
+        'torext.utils',
+        'torext.scripts',
+        'torext.third'
+    ],
     package_data = {
-        'torext': ['base_options.yaml'],
+        'torext': ['base_options.yaml']
     },
     scripts=['bin/torext_syntax'],
 )

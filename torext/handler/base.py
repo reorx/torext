@@ -30,7 +30,7 @@ from tornado.web import HTTPError
 from tornado import escape
 from tornado.options import options
 
-from .utils.format import _json, _dict
+from ..utils.format import _json, _dict
 
 
 class _BaseHandler(tornado.web.RequestHandler):
@@ -82,7 +82,7 @@ class _BaseHandler(tornado.web.RequestHandler):
             chunk = self.format_json(chunk)
             self.set_header("Content-Type", "application/json; charset=UTF-8")
         chunk = escape.utf8(chunk)
-        if options.debug['enable']:
+        if options.application['debug']:
             import copy
             text = copy.copy(chunk)
             op = ''

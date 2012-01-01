@@ -37,3 +37,10 @@ Requiring Packages
 * wtform
 * requests
 * pyflakes (not essential)
+
+====
+Attentions
+====
+* as this is an extension based on tornado, so direct involving of
+  tornado.options.options is fine anywhere.
+

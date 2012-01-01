@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import logging
-from tornado.options import options
 
+from tornado.options import options
 from .utils.format import _json, utf8
 from .exceptions import BaseError
 
@@ -134,7 +134,7 @@ class Connections(OneInstanceImp):
         logging.info('connections:: ' +\
             '\n'.join(
                 ['%s\t%s' % (i, str(self._availables[i]))\
-                    for i in connections._availables])
+                    for i in self._availables])
         )
 
     def set(self, typ, name, opts):
@@ -163,3 +163,4 @@ class ConnectionSetError(BaseError):
     pass
 
 connections = Connections.instance(options.connections)
+# TODO start an ioloop to periodly check connections
