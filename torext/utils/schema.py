@@ -86,6 +86,10 @@ class StructedSchema(object):
     def _index_doc(doc, dot_key):
         """
         will raise KeyError if cant index out
+
+        Return:
+            1. tuple
+            2. non-tuple
         """
         def recurse_doc(d, klist):
             try:
@@ -94,7 +98,25 @@ class StructedSchema(object):
                 return d
 
             if '*' == k:
-                d = d[0]
+                if isinstance(d, list):
+                    d = tuple(d)
+                elif isinstance(d, tuple):
+                    nl = []
+                    for i in d:
+                        if isinstance(i, list):
+                            nl.extend(i)
+                        else:
+                            nl.append(i)
+                    d = tuple(nl)
+            elif isinstance(d, tuple):
+                nl = []
+                for i in d:
+                    if isinstance(i, list):
+                        for j in i:
+                            nl.append(j[k])
+                    else:
+                        nl.append(i[k])
+                d = tuple(nl)
             else:
                 d = d[k]
             return recurse_doc(d, klist)
@@ -107,64 +129,54 @@ class StructedSchema(object):
     @staticmethod
     def _validate(doc, struct):
         def iter_struct(st, ck):
-
+            #time.sleep(0.3)
+            logging.debug('@ ' + ck)
             if isinstance(st, type):
                 typ = st
             else:
                 typ = type(st)
-            logging.debug('@ {0}, {1}'.format(ck, str(typ)))
-            # indexing in doc
+            logging.debug('define: ' + str(typ))
+
+            # index in doc
             try:
                 o = StructedSchema._index_doc(doc, ck)
-            except (KeyError, IndexError):
-                raise ValidateError(ck + ' cant be indexed')
-            logging.debug('obj: {0} {1}'.format(str(o), str(type(o) ) ) )
+            except KeyError:
+                raise ValidateError(ck + ' could not index out')
 
-            # check o type
-            if not isinstance(o, typ):
-                raise ValidateError(
-                    '{0} type {1} invalid, should be: {2}'.format(ck, type(o), typ))
-            logging.debug('check pass\n')
+            logging.debug('obj: ' + str(o) + str(type(o)))
+            if not isinstance(o, tuple):
+                o = (o, )
+            for i in o:
+                logging.debug('item: ' + str(i) + str(type(i)))
+                if not isinstance(i, typ):
+                    raise ValidateError(
+                        'invalid {0}, should be {1}'.format(str(type(i)), str(typ)))
 
-            # check if extra validator
-            # TODO validator checking
-#                validator = self.validators.get(ck)
-#                if validator:
-#                    try:
-#                        ro = validator(o)
-#                    except Exception, e:
-#                        raise ValidateError(str(e))
-#                    if isinstance(ro, str):
-#                        raise ValidateError(ro)
-#                    if ro is False:
-#                        raise ValidateError('validator unpassed: ' + ck)
-
+            logging.debug('---')
             # iter down step
             if isinstance(st, dict):
                 for k, v in st.iteritems():
                     nk = ck + '.' + k
                     iter_struct(v, nk)
             elif isinstance(st, list):
-                for i in st:
-                    nk = ck + '.*'
-                    iter_struct(i, nk)
+                nk = ck + '.*'
+                iter_struct(st[0], nk)
             else: # isinstance(st, type)
                 return
-
-        # start iterd function
         iter_struct(struct, '$')
-
-        # no error means all passed !
-        logging.info('doc validate all passed !')
-        return True
+        logging.debug('all passed !')
 
     @classmethod
     def validate(cls, doc, name='main'):
+        # step 1. get struct
         try:
             struct = getattr(cls, 'struct_' + name)
         except AttributeError:
             raise AttributeError('No corresponding struct defined')
+        # step 3. check struct in doc
         cls._validate(doc, struct)
+        print 'done _validate'
+        # step 4. use validator TODO
 
     @classmethod
     def build_instance(cls, name):
@@ -197,18 +209,17 @@ if '__main__' == __name__:
     class TestSchema(StructedSchema):
         struct_main = {
             'name': str,
-            'nature': {
-                'luck': int,
-                'skill': int,
-                'cpow': int,
-                'pleasure': int,
-                'pain': int,
-                'rtrn': int
-            },
+            'nature': { 'luck': int, },
             'people': [str],
             'disks': [
                 {
-                    'title': str
+                    'title': str,
+                    'volums': [
+                        {
+                            'size': int,
+                            'block': [int],
+                        }
+                    ]
                 }
             ]
         }
@@ -221,37 +232,36 @@ if '__main__' == __name__:
         def setUp(self):
             self._t_data = {
                 'name': 'reorx is the god',
-                'nature': {
-                    'luck': 10,
-                    'skill': 20,
-                    'cpow': 15,
-                    'pleasure': 5,
-                    'pain': 50,
-                    'rtrn': 100
-                },
-                'people': [
-                    'aoyi',
-                    'utada'
-                ],
+                'nature': { 'luck': 10, },
+                'people': [ 'aoyi', ],
                 'disks': [
                     {
                         'title': 'My Passport',
+                        'volums': [
+                            {
+                                'size': 1,
+                                'block': [12,4,32]
+                            }
+                        ]
                     },
                     {
-                        'title': 'DATA'
-                    },
-                    {
-                        'title': 'SOURCE'
+                        'title': 'DATA',
+                        'volums': [
+                            {
+                                'size': 2,
+                                'block': [1,2,3]
+                            }
+                        ]
                     }
-                ]
+                ],
+                'extra': 'oos'
             }
             self.TS = TestSchema
 
         def test_base(self):
             self.TS.validate(self._t_data)
+            print 'done test_base'
 
-        def test_sub(self):
-            self.TS.validate({'hello': 'umi'}, 'sub')
 
         #def test_ins_main(self):
             #print 'run test 3'
@@ -264,5 +274,13 @@ if '__main__' == __name__:
             #logging.debug('ins::\n' + str(ins2))
 
 
-    logging.basicConfig(level=logging.DEBUG)
+    #logging.basicConfig(level=logging.DEBUG)
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('. %(message)s')
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+
     unittest.main()
