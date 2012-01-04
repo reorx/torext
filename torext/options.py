@@ -9,7 +9,7 @@ from tornado.options import options
 from tornado.options import define as define_option
 from tornado.options import enable_pretty_logging
 
-def parse_options(path):
+def parse_options(path=None):
     global options
 
     def parse_and_set(path):
@@ -21,9 +21,9 @@ def parse_options(path):
 
     parse_and_set(os.path.join(
         os.path.dirname(__file__), 'base_options.yaml'))
-    if not os.path.isfile(path):
-        logging.warning("""settings.yaml file does not exist,
-                check if it has been copied from .dev or .product""")
+    if not path or not os.path.isfile(path):
+        print """settings.yaml file does not exist,
+                check if it has been copied from .dev or .product"""
     else:
         parse_and_set(path)
 

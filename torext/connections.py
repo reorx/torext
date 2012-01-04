@@ -1,11 +1,19 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+# TODO try..except shouldnt be in connect_$ functions
+# TODO function ping_mysql
+# TODO function ping_rabbitmq
+# TODO in order to ensure connection is properly established, call ping_$ after first connecting
+
 import logging
+import types
 
 from tornado.options import options
+from tornado.ioloop import PeriodicCallback
 from .utils.format import _json, utf8
-from .exceptions import BaseError
+from .utils.factory import OneInstanceImp
+from .errors import ConnectionError
 
 class MySQLConnection(object):
     def __init__(self, e, s):
@@ -53,6 +61,13 @@ def connect_mysql(opts):
     else:
         return None
 
+def ping_mongodb(self):
+    from pymongo.errors import AutoReconnect
+    try:
+        self.database_names()
+    except AutoReconnect, e:
+        raise ConnectionError(str(e))
+
 def connect_mongodb(opts):
     """
     opts structure:
@@ -60,14 +75,13 @@ def connect_mongodb(opts):
     : port
     : database
     """
-    from pymongo import Connection
-    from pymongo import errors
-    try:
-        _conn = Connection(opts['host'], opts['port'])
-    except errors.AutoReconnect:
-        return None
-    conn = _conn[opts['database']]
+    from mongokit import Connection
+    conn = Connection(opts['host'], opts['port'])
+    # bind method to conn instance
+    _ping_connection = ping_mongodb
+    types.MethodType(_ping_connection, conn)
     return conn
+
 
 class RabbitMQConnection(object):
     def __init__(self, _conn, queues):
@@ -106,10 +120,42 @@ def connect_rabbitmq(opts):
     conn = RabbitMQConnection(_conn, opts['queues'])
     return conn
 
-def connect_redis(opts):
-    return None
 
-from .utils.factory import OneInstanceImp
+def ping_redis(self):
+    from redis.exceptions import ConnectionError
+    try:
+        self.get('KEEPER')
+    except ConnectionError, e:
+        global ConnectionError
+        raise ConnectionError(str(e))
+
+def connect_redis(opts):
+    import redis
+    if opts['use_socket']:
+        conn = redis.Redis(unix_socket_path=opts['socket_path'])
+    else:
+        pool = redis.ConnectionPool(host=opts['host'], port=opts['port'], db=0)
+        conn = redis.Redis(connection_pool=pool)
+    # bind method to conn instance
+    _ping_connection = ping_redis
+    types.MethodType(_ping_connection, conn)
+    return conn
+
+def ping_rpc(self):
+    from socket import error as socket_error
+    try:
+        self.test('test')
+    except socket_error, e:
+        raise ConnectionError(str(e))
+
+def connect_rpc(opts):
+    from jsonrpclib import Server
+    conn_path = '{protocol}://{host}:{port}'.format(**opts)
+    logging.info('rpc conn path: \n' + conn_path)
+    conn = Server(conn_path)
+    return conn
+
+
 """
 opts structure:
     {
@@ -124,28 +170,29 @@ class Connections(OneInstanceImp):
     for example, a session in MySQl, a database of MongoDB,
     and, as to RabbitMQ, itself fits this concept well enough
     """
-    def __init__(self, opts):
+    def __init__(self):
         self._availables = {}
-        self._options = opts
-        for typ in opts:
-            for i, j in opts[typ].iteritems():
-                self.set(typ, i, j)
+        opts = options.connections
+        for facility in opts:
+            for ider, args in opts[facility].iteritems():
+                self.set(facility, ider, args)
 
-        logging.info('connections:: ' +\
-            '\n'.join(
-                ['%s\t%s' % (i, str(self._availables[i]))\
-                    for i in self._availables])
+        logging.info('connections::\n' +
+            ''.join(
+                ['%s\t%s\n' % (i, str(self._availables[i])) for i in self._availables])
         )
 
     def set(self, typ, name, opts):
-        if not typ in ('mysql', 'mongodb', 'rabbitmq', 'redis'):
-            raise ConnectionSetError('Connection type not exist')
+        try:
+            func = globals()['connect_'+typ]
+        except KeyError:
+            raise ConnectionError('Connection type not exist')
         if not opts['enable']:
             return
-        conn = globals()['connect_'+typ](opts)
+        conn = func(opts)
         if conn is None:
-            raise ConnectionSetError('Set connection %s error' % typ)
-        if typ not in self._availables:
+            raise ConnectionError('Set connection %s error' % typ)
+        if not typ in self._availables:
             self._availables[typ] = {}
         self._availables[typ][name] = conn
 
@@ -157,10 +204,20 @@ class Connections(OneInstanceImp):
 
     def reset(self, typ, name):
         del self._availables[typ][name]
-        self.set(typ, name, self._options[typ][name])
+        self.set(typ, name, options.connections[typ][name])
 
-class ConnectionSetError(BaseError):
-    pass
+connections = Connections.instance()
 
-connections = Connections.instance(options.connections)
-# TODO start an ioloop to periodly check connections
+def keep_connections():
+    for facility, connMap in connections._availables.iteritems():
+        for name, conn in connMap.iteritems():
+            try:
+                logging.info('check connection {0} - {1}'.format(facility, name))
+                globals()['ping_' + facility](conn)
+            except ConnectionError, e:
+                logging.error('{0} - {1} lost connection: {3}'.format(
+                    facility, name, str(e)))
+    # TODO try reconnect if lost connection
+
+_KEEPER = PeriodicCallback(keep_connections, options.connection_keep_time)
+_KEEPER.start()

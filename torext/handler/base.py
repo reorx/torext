@@ -34,7 +34,7 @@ from ..utils.format import _json, _dict
 
 
 class _BaseHandler(tornado.web.RequestHandler):
-    __prepares__ = ['debug', ]
+    __prepares__ = ['debug']
     """
     Request
         header:
@@ -77,6 +77,7 @@ class _BaseHandler(tornado.web.RequestHandler):
 
     def json_write(self, chunk, json=False):
         """Used globally, not special in ApiHandler
+        chunk could be any type of str, dict, list
         """
         if isinstance(chunk, dict) or isinstance(chunk, list):
             chunk = self.format_json(chunk)
@@ -137,7 +138,7 @@ class _BaseHandler(tornado.web.RequestHandler):
         like a middleware between raw request and handling process,
         """
         for i in self.__prepares__:
-            logging.info('[prepare %s]' % i)
+            logging.info('prepare:: %s' % i)
             getattr(self, '_prepare_'+i)()
             if self._finished: return
 
