@@ -9,6 +9,7 @@ __all__ = (
     'CollectionDeclarer', 'Document', 'ObjectId',
 )
 
+import logging
 from pymongo.objectid import ObjectId
 from pymongo.cursor import Cursor as PymongoCursor
 
@@ -71,10 +72,21 @@ class Document(StructedSchema):
 
     def __getitem__(self, key):
         return self._[key]
+    
+    def __setitem__(self, key, value):
+        self._[key] = value
+
+    def __delitem__(self, key):
+        del self._[key]
 
     def save(self):
-        self.col.save(self._, safe=self.__safe__)
+        ro = self.col.save(self._,
+                           manipulate=True,
+                           safe=self.__safe__)
+        logging.info('mongodb save return: ' + str(ro))
+        self['_id'] = ro
         self._in_db = True
+        return ro
 
     def remove(self):
         assert self._in_db, 'could not remove not in db document'
@@ -96,15 +108,15 @@ class Document(StructedSchema):
         NOTE *will validate struct*
         """
         ins = cls()
-
-        if input_dict is None:
-            ins._.update(cls.build_instance('main'))
-        else:
+        if input_dict is not None:
             assert isinstance(input_dict, dict), 'mongodb document source should be dict'
-            # validate
-            ins.validate_main(input_dict)
+            # validate first
+            cls.validate(input_dict)
             ins._.update(input_dict)
-        ins._.update(_id=ObjectId())
+        else:
+            ins._.update(cls.build_instance())
+
+        # let pymongo add ObjectId #ins._.update(_id=ObjectId())
         return ins
 
     @classmethod
@@ -117,12 +129,17 @@ class Document(StructedSchema):
     def one(cls, *args, **kwgs):
         cursor = cls.find(*args, **kwgs)
         count = cursor.count()
-        if count >= 1:
-            return cursor.next()
+        if count == 0:
+            return None
+        if count > 1:
+            logging.warning('multi results found in Document.one, query dict: ' + str(arg[0]))
+        return cursor.next()
 
     @classmethod
-    def by_strId(cls, strId):
-        return cls.find(ObjectId(strId))
+    def by_id(cls, id, key='_id'):
+        if isinstance(id, str):
+            id = ObjectId(id)
+        return cls.one({key: id})
 
     def __str__(self):
         return 'Document: ' + str(self._)
@@ -149,15 +166,19 @@ class Cursor(PymongoCursor):
         db = self.__collection.database
         if len(self.__data) or self._refresh():
             if self.__manipulate:
+                logging.debug('manipulate in cursor')
                 # NOTE this line will return a SON object, which isnt used normally,
                 # but may cause problems if leave orignial
-                return db._fix_outgoing(self.__data.pop(0), self.__collection)
+                raw = db._fix_outgoing(self.__data.pop(0), self.__collection)
             else:
                 raw = self.__data.pop(0)
-                if self.__wrap is not None:
-                    return self.__wrap(raw)
-                else:
-                    return raw
+
+            if self.__wrap is not None:
+                logging.debug('get wrap')
+                return self.__wrap(raw)
+            else:
+                logging.debug('wrap unget')
+                return raw
         else:
             raise StopIteration
 

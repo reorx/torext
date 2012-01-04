@@ -73,12 +73,122 @@ data = {
 """
 import logging
 
-class ValidateError(Exception):
-    pass
+DEFAULT_TYPE_VALUE = {
+    int: 0,
+    float: 0.0,
+    str: '',
+    unicode: u'', # NOTE think later, this place is dangerous(easy to cause problem) !
+    bool: True,
+    list: [],
+    dict: {},
+}
 
+def validate_doc(doc, struct):
+    def iter_struct(st, ck):
+        #time.sleep(0.3)
+        logging.debug('@ ' + ck)
+        if isinstance(st, type):
+            typ = st
+        else:
+            typ = type(st)
+        logging.debug('define: ' + str(typ))
+
+        # index in doc
+        try:
+            o = StructedSchema._index_doc(doc, ck)
+        except KeyError:
+            raise ValidateError(ck + ' could not index out')
+
+        logging.debug('obj: ' + str(o) + str(type(o)))
+        if not isinstance(o, tuple):
+            o = (o, )
+        for i in o:
+            logging.debug('item: ' + str(i) + str(type(i)))
+            if not isinstance(i, typ):
+                raise ValidateError(
+                    'invalid {0}, should be {1}'.format(str(type(i)), str(typ)))
+
+        logging.debug('---')
+        # iter down step
+        if isinstance(st, dict):
+            for k, v in st.iteritems():
+                nk = ck + '.' + k
+                iter_struct(v, nk)
+        elif isinstance(st, list):
+            nk = ck + '.*'
+            iter_struct(st[0], nk)
+        else: # isinstance(st, type)
+            return
+    iter_struct(struct, '$')
+    logging.debug('all passed !')
+
+def build_from_struct(struct):
+    """
+    struct & the result can only be dict
+
+    NOTE list will be passed (build to [])
+    """
+    def build_dict(dst):
+        cd = {}
+        for k, v in dst.iteritems():
+            if type(v) is dict:
+                kv = build_dict(v)
+            else:
+                if not isinstance(v, type):
+                    v = type(v)
+                if v in DEFAULT_TYPE_VALUE:
+                    kv = DEFAULT_TYPE_VALUE[v]
+                else:
+                    kv = None
+            cd[k] = kv
+        return cd
+    return build_dict(struct)
+
+class _Gen(object):
+    def __init__(self, structObj):
+        self.__structObj = structObj
+        self.__dot_key = '$'
+
+    def __index_struct(self):
+        def recurse_st(st, klist):
+            try:
+                k = klist.pop(0)
+            except:
+                return st
+            if '*' == k:
+                st = st[0]
+            else:
+                st = st[k]
+            return recurse_st(st, klist)
+        spKeys = self.__dot_key.split('.')[1:]
+        return recurse_st(self.__structObj.struct_main, spKeys)
+
+    def __call__(self):
+        struct = self.__index_struct()
+        if isinstance(struct, list):
+            struct = struct[0]
+        # now struct can only be:
+        # dict_ins, int*, str*, bool
+        if isinstance(struct, dict):
+            return build_from_struct(struct)
+        else:
+            if struct in DEFAULT_TYPE_VALUE:
+                return DEFAULT_TYPE_VALUE[struct]
+            else:
+                return None
+
+    def __getattr__(self, key):
+        self.__dot_key = '%s.%s' % (self.__dot_key, key)
+        return self
+
+
+class GenCaller(object):
+    def __get__(self, ins, owner):
+        return _Gen(owner)
 
 class StructedSchema(object):
     current_struct = None
+    gen = GenCaller()
     # TODO rewrite validators ability, has been moved due to multi structs definition
     #validators = {}
 
@@ -126,81 +236,20 @@ class StructedSchema(object):
 
         return recurse_doc(doc, spKeys)
 
-    @staticmethod
-    def _validate(doc, struct):
-        def iter_struct(st, ck):
-            #time.sleep(0.3)
-            logging.debug('@ ' + ck)
-            if isinstance(st, type):
-                typ = st
-            else:
-                typ = type(st)
-            logging.debug('define: ' + str(typ))
-
-            # index in doc
-            try:
-                o = StructedSchema._index_doc(doc, ck)
-            except KeyError:
-                raise ValidateError(ck + ' could not index out')
-
-            logging.debug('obj: ' + str(o) + str(type(o)))
-            if not isinstance(o, tuple):
-                o = (o, )
-            for i in o:
-                logging.debug('item: ' + str(i) + str(type(i)))
-                if not isinstance(i, typ):
-                    raise ValidateError(
-                        'invalid {0}, should be {1}'.format(str(type(i)), str(typ)))
-
-            logging.debug('---')
-            # iter down step
-            if isinstance(st, dict):
-                for k, v in st.iteritems():
-                    nk = ck + '.' + k
-                    iter_struct(v, nk)
-            elif isinstance(st, list):
-                nk = ck + '.*'
-                iter_struct(st[0], nk)
-            else: # isinstance(st, type)
-                return
-        iter_struct(struct, '$')
-        logging.debug('all passed !')
-
+    # open
     @classmethod
-    def validate(cls, doc, name='main'):
-        # step 1. get struct
-        try:
-            struct = getattr(cls, 'struct_' + name)
-        except AttributeError:
-            raise AttributeError('No corresponding struct defined')
-        # step 3. check struct in doc
-        cls._validate(doc, struct)
+    def validate(cls, doc):
+        validate_doc(doc, cls.struct_main)
         print 'done _validate'
-        # step 4. use validator TODO
+        # use validator TODO
 
+    # open
     @classmethod
-    def build_instance(cls, name):
-        """
-        instance can only be dict
+    def build_instance(cls):
+        return build_from_struct(cls.struct_main)
 
-        TODO instance can check input value type
-        """
-        struct = getattr(cls, 'struct_' + name)
-
-        def build_dict(dst):
-            cd = {}
-            for k, v in dst.iteritems():
-                if v is dict:
-                    cd[k] = {}
-                elif type(v) is dict:
-                    cd[k] = build_dict(v)
-                elif v is list or type(v) is list:
-                    cd[k] = []
-                else:
-                    cd[k] = None
-            return cd
-
-        return build_dict(struct)
+class ValidateError(Exception):
+    pass
 
 if '__main__' == __name__:
     # below are test codes
@@ -273,14 +322,9 @@ if '__main__' == __name__:
             #ins2 = self.ts.build_instance('sub')
             #logging.debug('ins::\n' + str(ins2))
 
-
-    #logging.basicConfig(level=logging.DEBUG)
+    from torext.logger import streamHandler
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('. %(message)s')
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
+    logger.addHandler(streamHandler)
 
     unittest.main()
