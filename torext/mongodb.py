@@ -33,6 +33,20 @@ class CollectionDeclarer(object):
         return self.col
 
 # NOTE pymongo.collection only apply dict object to save
+# TODO django manager like attribute binding with Document,
+# use for attaching logical-data-operation packed functions.
+# Philosophe:
+#
+# * application level involvings
+#           ^
+#           |
+#   [middleware attach to models]
+#           |
+# * functional data operation (packed functions)
+#           ^
+#           |
+# * bottom data storage (database)
+
 class Document(StructedSchema):
     """A wrapper of MongoDB Document, can also be used to init new document.
 
@@ -72,7 +86,7 @@ class Document(StructedSchema):
 
     def __getitem__(self, key):
         return self._[key]
-    
+
     def __setitem__(self, key, value):
         self._[key] = value
 

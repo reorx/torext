@@ -13,30 +13,23 @@ Philosophy:
     * complex type or custom type is unnesessary,,
       `validators` can handle those things.
 
-
+Example:
 struct = {
     'name': str,
     'nature': {
-        'luck': int,
-        'skill': int,
-        'cpow': int,
-        'pleasure': int,
-        'pain': int,
         'rtrn': int
     },
     'people': [str],
     'disks': [
-        {
-            'title': str
-        }
+        {'title': str }
     ]
 }
 
-fmt = [
+doc_keys = [
     '$'
     '$.name'
     '$.nature'
-    '$.nature.luck'
+    '$.nature.rtrn'
     '$.people'
     '$.people.*'
     '$.disks'
@@ -47,31 +40,17 @@ fmt = [
 data = {
     'name': 'reorx',
     'nature': {
-        'luck': 10,
-        'skill': 20,
-        'cpow': 15,
-        'pleasure': 5,
-        'pain': 50,
         'rtrn': 100
     },
-    'people': [
-        'aoyi',
-        'utada'
-    ],
+    'people': ['aoyi', 'utada'],
     'disks': [
-        {
-            'title': 's',
-        },
-        {
-            'title': 'DATA'
-        },
-        {
-            'title': 'SOURCE'
-        }
+        {'title': 's', },
+        {'title': 'DATA'}
     ]
 }
 """
 import logging
+
 
 DEFAULT_TYPE_VALUE = {
     int: 0,
@@ -82,6 +61,74 @@ DEFAULT_TYPE_VALUE = {
     list: [],
     dict: {},
 }
+
+
+class GenCaller(object):
+    def __get__(self, ins, owner):
+        return _Gen(owner)
+
+
+class StructedSchema(object):
+    current_struct = None
+    gen = GenCaller()
+    # TODO rewrite validators ability, has been moved due to multi structs definition
+    #validators = {}
+
+
+
+    # open
+    @classmethod
+    def validate(cls, doc):
+        validate_doc(doc, cls.struct_main)
+        print 'done _validate'
+        # use validator TODO
+
+    # open
+    @classmethod
+    def build_instance(cls):
+        return build_dict(cls.struct_main)
+
+
+class _Gen(object):
+    def __init__(self, structObj):
+        self.__structObj = structObj
+        self.__dot_key = '$'
+
+    def __index_struct(self):
+        """
+        if the struct indexed is a list, return its first item
+        """
+        def recurse_st(st, klist):
+            try:
+                k = klist.pop(0)
+            except:
+                if isinstance(st, list):
+                    return st[0]
+                return st
+            st = st[k]
+            return recurse_st(st, klist)
+        spKeys = self.__dot_key.split('.')[1:]
+        return recurse_st(self.__structObj.struct_main, spKeys)
+
+    def __call__(self, **kwgs):
+        struct = self.__index_struct()
+        # now struct can only be: dict_ins, int*, str*, bool
+        if isinstance(struct, dict):
+            return build_dict(struct, **kwgs)
+        else:
+            if struct in DEFAULT_TYPE_VALUE:
+                return DEFAULT_TYPE_VALUE[struct]
+            else:
+                return None
+
+    def __getattr__(self, key):
+        self.__dot_key = '%s.%s' % (self.__dot_key, key)
+        return self
+
+
+class ValidateError(Exception):
+    pass
+
 
 def validate_doc(doc, struct):
     def iter_struct(st, ck):
@@ -95,7 +142,7 @@ def validate_doc(doc, struct):
 
         # index in doc
         try:
-            o = StructedSchema._index_doc(doc, ck)
+            o = index_dict(doc, ck)
         except KeyError:
             raise ValidateError(ck + ' could not index out')
 
@@ -112,6 +159,7 @@ def validate_doc(doc, struct):
         # iter down step
         if isinstance(st, dict):
             for k, v in st.iteritems():
+                assert not isinstance(k, type), 'struct key must not be type object'
                 nk = ck + '.' + k
                 iter_struct(v, nk)
         elif isinstance(st, list):
@@ -122,135 +170,97 @@ def validate_doc(doc, struct):
     iter_struct(struct, '$')
     logging.debug('all passed !')
 
-def build_from_struct(struct):
+
+def build_dict(struct, default={}):
     """
+    build a dict from struct,
     struct & the result can only be dict
 
-    NOTE list will be passed (build to [])
+    NOTE
+     * inner list will be passed (build to [])
+     * KeyError will be raised if not all dot_keys in default are properly set
     """
-    def build_dict(dst):
+    def recurse_struct(dst, ck):
         cd = {}
         for k, v in dst.iteritems():
-            if type(v) is dict:
-                kv = build_dict(v)
+            if not ck:
+                nk = k
             else:
-                if not isinstance(v, type):
-                    v = type(v)
-                if v in DEFAULT_TYPE_VALUE:
-                    kv = DEFAULT_TYPE_VALUE[v]
+                nk = ck + '.' + k
+            logging.info('set value st: ' + nk)
+            if type(v) is dict:
+                kv = recurse_struct(v, nk)
+            else:
+                if nk in default:
+                    kv = default.pop(nk)
                 else:
-                    kv = None
+                    # not in default, get type-default value
+                    if not isinstance(v, type):
+                        v = type(v)
+                    if v in DEFAULT_TYPE_VALUE:
+                        kv = DEFAULT_TYPE_VALUE[v]
+                    else:
+                        kv = None
             cd[k] = kv
         return cd
-    return build_dict(struct)
-
-class _Gen(object):
-    def __init__(self, structObj):
-        self.__structObj = structObj
-        self.__dot_key = '$'
-
-    def __index_struct(self):
-        def recurse_st(st, klist):
-            try:
-                k = klist.pop(0)
-            except:
-                return st
-            if '*' == k:
-                st = st[0]
-            else:
-                st = st[k]
-            return recurse_st(st, klist)
-        spKeys = self.__dot_key.split('.')[1:]
-        return recurse_st(self.__structObj.struct_main, spKeys)
-
-    def __call__(self):
-        struct = self.__index_struct()
-        if isinstance(struct, list):
-            struct = struct[0]
-        # now struct can only be:
-        # dict_ins, int*, str*, bool
-        if isinstance(struct, dict):
-            return build_from_struct(struct)
-        else:
-            if struct in DEFAULT_TYPE_VALUE:
-                return DEFAULT_TYPE_VALUE[struct]
-            else:
-                return None
-
-    def __getattr__(self, key):
-        self.__dot_key = '%s.%s' % (self.__dot_key, key)
-        return self
+    builtDict = recurse_struct(struct, '')
+    if len(default.keys()) > 0:
+        raise KeyError('cant index to set default value')
+    return builtDict
 
 
-class GenCaller(object):
-    def __get__(self, ins, owner):
-        return _Gen(owner)
+def index_dict(doc, dot_key):
+    """
+    Index out values in a dict by dot_key,
+    if doc_key represent multi values,
+    it will return tuple in order to distinct from list
 
-class StructedSchema(object):
-    current_struct = None
-    gen = GenCaller()
-    # TODO rewrite validators ability, has been moved due to multi structs definition
-    #validators = {}
+    Note that it will raise KeyError if cant index out
 
-    @staticmethod
-    def _index_doc(doc, dot_key):
-        """
-        will raise KeyError if cant index out
+    Return:
+        1. tuple of values
+        2. non-tuple value
+    """
+    def recurse_dict(d, klist):
+        try:
+            k = klist.pop(0)
+        except:
+            return d
 
-        Return:
-            1. tuple
-            2. non-tuple
-        """
-        def recurse_doc(d, klist):
-            try:
-                k = klist.pop(0)
-            except:
-                return d
-
-            if '*' == k:
-                if isinstance(d, list):
-                    d = tuple(d)
-                elif isinstance(d, tuple):
-                    nl = []
-                    for i in d:
-                        if isinstance(i, list):
-                            nl.extend(i)
-                        else:
-                            nl.append(i)
-                    d = tuple(nl)
+        if '*' == k:
+            if isinstance(d, list):
+                d = tuple(d)
             elif isinstance(d, tuple):
                 nl = []
                 for i in d:
                     if isinstance(i, list):
-                        for j in i:
-                            nl.append(j[k])
+                        nl.extend(i)
                     else:
-                        nl.append(i[k])
+                        nl.append(i)
                 d = tuple(nl)
-            else:
-                d = d[k]
-            return recurse_doc(d, klist)
+        elif isinstance(d, tuple):
+            nl = []
+            for i in d:
+                if isinstance(i, list):
+                    for j in i:
+                        nl.append(j[k])
+                else:
+                    nl.append(i[k])
+            d = tuple(nl)
+        else:
+            d = d[k]
+        return recurse_dict(d, klist)
 
-        spKeys = dot_key.split('.')
-        spKeys.pop(0)
+    spKeys = dot_key.split('.')
+    spKeys.pop(0)
 
-        return recurse_doc(doc, spKeys)
+    return recurse_dict(doc, spKeys)
 
-    # open
-    @classmethod
-    def validate(cls, doc):
-        validate_doc(doc, cls.struct_main)
-        print 'done _validate'
-        # use validator TODO
 
-    # open
-    @classmethod
-    def build_instance(cls):
-        return build_from_struct(cls.struct_main)
 
-class ValidateError(Exception):
-    pass
-
+##############
+#  unittest  #
+##############
 if '__main__' == __name__:
     # below are test codes
     import unittest
