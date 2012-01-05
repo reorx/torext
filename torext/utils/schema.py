@@ -53,13 +53,13 @@ import logging
 
 
 DEFAULT_TYPE_VALUE = {
-    int: 0,
-    float: 0.0,
-    str: '',
-    unicode: u'', # NOTE think later, this place is dangerous(easy to cause problem) !
-    bool: True,
-    list: [],
-    dict: {},
+    int: lambda: 0,
+    float: lambda: 0.0,
+    str: lambda: '',
+    unicode: lambda: u'', # NOTE think later, this place is dangerous(easy to cause problem) !
+    bool: lambda: True,
+    list: lambda: [],
+    dict: lambda: {},
 }
 
 
@@ -72,21 +72,17 @@ class StructedSchema(object):
     current_struct = None
     gen = GenCaller()
     # TODO rewrite validators ability, has been moved due to multi structs definition
-    #validators = {}
-
-
 
     # open
     @classmethod
     def validate(cls, doc):
-        validate_doc(doc, cls.struct_main)
-        print 'done _validate'
+        validate_doc(doc, cls.struct)
         # use validator TODO
 
     # open
     @classmethod
-    def build_instance(cls):
-        return build_dict(cls.struct_main)
+    def build_instance(cls, **kwgs):
+        return build_dict(cls.struct, **kwgs)
 
 
 class _Gen(object):
@@ -108,7 +104,7 @@ class _Gen(object):
             st = st[k]
             return recurse_st(st, klist)
         spKeys = self.__dot_key.split('.')[1:]
-        return recurse_st(self.__structObj.struct_main, spKeys)
+        return recurse_st(self.__structObj.struct, spKeys)
 
     def __call__(self, **kwgs):
         struct = self.__index_struct()
@@ -117,7 +113,7 @@ class _Gen(object):
             return build_dict(struct, **kwgs)
         else:
             if struct in DEFAULT_TYPE_VALUE:
-                return DEFAULT_TYPE_VALUE[struct]
+                return DEFAULT_TYPE_VALUE[struct]()
             else:
                 return None
 
@@ -152,8 +148,17 @@ def validate_doc(doc, struct):
         for i in o:
             logging.debug('item: ' + str(i) + str(type(i)))
             if not isinstance(i, typ):
+                if (typ is unicode or typ is str) and i is None:
+                    # at this point, i should be (or must be?) the end of
+                    # a dot_key, so if value is None, as to str and unicode,
+                    # it is kinda acceptable
+                    continue
+                if (type(i) is str and typ is unicode) or\
+                    (type(i) is unicode and typ is str):
+                    # NOTE temporarily let unicode and str compatable
+                    continue
                 raise ValidateError(
-                    'invalid {0}, should be {1}'.format(str(type(i)), str(typ)))
+                    '{0}: invalid {1}, should be {2}, value: {3}'.format(ck, str(type(i)), str(typ), i ) )
 
         logging.debug('---')
         # iter down step
@@ -187,25 +192,34 @@ def build_dict(struct, default={}):
                 nk = k
             else:
                 nk = ck + '.' + k
-            logging.info('set value st: ' + nk)
-            if type(v) is dict:
-                kv = recurse_struct(v, nk)
+            logging.debug('set value st: ' + nk)
+
+            # if dot_key is find in default, stop recurse and set value immediatelly
+            # this may make the dict structure broken (not valid with struct),
+            # so a validate() will do at following
+            if nk in default:
+                kv = default.pop(nk)
             else:
-                if nk in default:
-                    kv = default.pop(nk)
+                if type(v) is dict:
+                    kv = recurse_struct(v, nk)
                 else:
-                    # not in default, get type-default value
+                    # get type-default value
                     if not isinstance(v, type):
                         v = type(v)
                     if v in DEFAULT_TYPE_VALUE:
-                        kv = DEFAULT_TYPE_VALUE[v]
+                        kv = DEFAULT_TYPE_VALUE[v]()
                     else:
                         kv = None
             cd[k] = kv
         return cd
+
     builtDict = recurse_struct(struct, '')
     if len(default.keys()) > 0:
-        raise KeyError('cant index to set default value')
+        raise KeyError('cant index to set default value: ' + str(default))
+    try:
+        validate_doc(builtDict, struct)
+    except ValidateError, e:
+        raise ValidateError('validate error in build_dict(), may be dict structure is broken by default ?|' + str(e))
     return builtDict
 
 
@@ -266,7 +280,7 @@ if '__main__' == __name__:
     import unittest
 
     class TestSchema(StructedSchema):
-        struct_main = {
+        struct = {
             'name': str,
             'nature': { 'luck': int, },
             'people': [str],

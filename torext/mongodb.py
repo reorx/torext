@@ -14,6 +14,7 @@ from pymongo.objectid import ObjectId
 from pymongo.cursor import Cursor as PymongoCursor
 
 from torext.utils.schema import StructedSchema
+from torext.utils.debugtools import pprint
 
 class CollectionDeclarer(object):
     connection = None
@@ -114,23 +115,15 @@ class Document(StructedSchema):
 
 ################
     @classmethod
-    def new(cls, input_dict=None):
-        """Designed only to init from:
-         1. existing plain (no _id) dict
-         2. self struct
-
-        NOTE *will validate struct*
+    def new(cls, **kwgs):
+        """Designed only to init from self struct
         """
         ins = cls()
-        if input_dict is not None:
-            assert isinstance(input_dict, dict), 'mongodb document source should be dict'
-            # validate first
-            cls.validate(input_dict)
-            ins._.update(input_dict)
+        if 'default' in kwgs:
+            default = kwgs.pop('default')
         else:
-            ins._.update(cls.build_instance())
-
-        # let pymongo add ObjectId #ins._.update(_id=ObjectId())
+            default = {}
+        ins._.update(cls.build_instance(default=default))
         return ins
 
     @classmethod
@@ -157,6 +150,9 @@ class Document(StructedSchema):
 
     def __str__(self):
         return 'Document: ' + str(self._)
+
+    def pprint(self):
+        pprint(self._)
 
 
 class Cursor(PymongoCursor):
