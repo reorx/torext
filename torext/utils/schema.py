@@ -55,8 +55,8 @@ import logging
 DEFAULT_TYPE_VALUE = {
     int: lambda: 0,
     float: lambda: 0.0,
-    str: lambda: '',
-    unicode: lambda: u'', # NOTE think later, this place is dangerous(easy to cause problem) !
+    str: lambda: None,
+    unicode: lambda: None, # NOTE think later, this place is dangerous(easy to cause problem) !
     bool: lambda: True,
     list: lambda: [],
     dict: lambda: {},

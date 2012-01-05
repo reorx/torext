@@ -94,6 +94,36 @@ class Document(StructedSchema):
     def __delitem__(self, key):
         del self._[key]
 
+    def get(self, dot_key):
+        """
+        raise IndexError or KeyError if can not get
+
+        Example:
+            'menu.file.name'
+            'menu.ps.0.title'
+        """
+        def drag_out(o, klist):
+            try:
+                key = klist.pop(0)
+            except IndexError:
+                return o
+            return drag_out(o[key], klist)
+
+        return drag_out(self._, dot_key.split('.'))
+
+    def set(self, dot_key, value):
+        keys = dot_key.split('.')
+        last_key = keys.pop(-1)
+        op = self.get('.'.join(keys))
+        op[last_key] = value
+
+    def de(self, dot_key):
+        """ seems no use.."""
+        keys = dot_key.split('.')
+        last_key = keys.pop(-1)
+        op = self.get('.'.join(keys))
+        del op[last_key]
+
     def save(self):
         ro = self.col.save(self._,
                            manipulate=True,
