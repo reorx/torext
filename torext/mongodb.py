@@ -5,6 +5,21 @@
 # NOTE this code is semi-manufactured, now using mongokit with torext
 # in practicing product
 
+# NOTE pymongo.collection only apply dict object to save
+# TODO django manager like attribute binding with Document,
+# use for attaching logical-data-operation packed functions.
+# Philosophe:
+#
+# * application level involvings
+#           ^
+#           |
+#   [middleware attach to models]
+#           |
+# * functional data operation (packed functions)
+#           ^
+#           |
+# * bottom data storage (database)
+
 __all__ = (
     'CollectionDeclarer', 'Document', 'ObjectId',
 )
@@ -32,21 +47,6 @@ class CollectionDeclarer(object):
     def __get__(self, ins, owner):
         self._fetch_col()
         return self.col
-
-# NOTE pymongo.collection only apply dict object to save
-# TODO django manager like attribute binding with Document,
-# use for attaching logical-data-operation packed functions.
-# Philosophe:
-#
-# * application level involvings
-#           ^
-#           |
-#   [middleware attach to models]
-#           |
-# * functional data operation (packed functions)
-#           ^
-#           |
-# * bottom data storage (database)
 
 class Document(StructedSchema):
     """A wrapper of MongoDB Document, can also be used to init new document.
@@ -94,7 +94,7 @@ class Document(StructedSchema):
     def __delitem__(self, key):
         del self._[key]
 
-    def get(self, dot_key):
+    def doc_get(self, dot_key):
         """
         raise IndexError or KeyError if can not get
 
@@ -111,18 +111,24 @@ class Document(StructedSchema):
 
         return drag_out(self._, dot_key.split('.'))
 
-    def set(self, dot_key, value):
+    def doc_set(self, dot_key, value):
         keys = dot_key.split('.')
         last_key = keys.pop(-1)
         op = self.get('.'.join(keys))
         op[last_key] = value
 
-    def de(self, dot_key):
+    def doc_del(self, dot_key):
         """ seems no use.."""
         keys = dot_key.split('.')
         last_key = keys.pop(-1)
         op = self.get('.'.join(keys))
         del op[last_key]
+
+    #def autofix(self):
+        #pass
+
+    def identify(self):
+        return {'_id': self['_id']}
 
     def save(self):
         ro = self.col.save(self._,
@@ -140,8 +146,26 @@ class Document(StructedSchema):
         self._ = {}
         self._in_db = False
 
-    #def autofix(self):
-        #pass
+    def update(self, to_update):
+        ro = self.col.update(self.identify(),
+                to_update,
+                safe=self.__safe__)
+        return ro
+
+    def col_set(self, index, value):
+        return self.update({
+            '$set': {index: value}
+        })
+
+    def col_inc(self, index, value):
+        return self.update({
+            '$inc': {index: value}
+        })
+
+    def col_push(self, index, value):
+        return self.update({
+            '$push': {index: value}
+        })
 
 ################
     @classmethod
