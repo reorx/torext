@@ -1,4 +1,6 @@
-#coding=utf8
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 
 """
 core concepts:
@@ -46,6 +48,7 @@ class _BaseHandler(tornado.web.RequestHandler):
         body:
     """
     _first_running = True
+
     def initialize(self):
         if self.__class__._first_running:
             self.__class__._first_running = False
@@ -68,11 +71,11 @@ class _BaseHandler(tornado.web.RequestHandler):
         raise NotImplementedError
 
     @property
-    def format_json(self):
+    def dump_json(self):
         return _json
 
     @property
-    def format_dict(self):
+    def parse_json(self):
         return _dict
 
     def json_write(self, chunk, json=False):
@@ -80,7 +83,7 @@ class _BaseHandler(tornado.web.RequestHandler):
         chunk could be any type of str, dict, list
         """
         if isinstance(chunk, dict) or isinstance(chunk, list):
-            chunk = self.format_json(chunk)
+            chunk = self.dump_json(chunk)
             self.set_header("Content-Type", "application/json; charset=UTF-8")
         chunk = escape.utf8(chunk)
         if options.application['debug']:

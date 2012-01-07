@@ -15,6 +15,7 @@ class ThreadWorker(threading.Thread):
         self.task_fn(*args, **kwgs)
         logging.info('worker:: done..')
 
+
 def do_task(task_fn, *args, **kwgs):
-    logging.info('task:: init %s' % str(task_fn))
+    logging.info('task:: init %s' % repr(task_fn))
     ThreadWorker(task_fn).start(*args, **kwgs)

@@ -1,42 +1,61 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 import logging
 from tornado.options import options
 
-class SubService(object):
+
+class HandlersContainer(object):
+    def handlers(self):
+        return self._handlers
+
+
+class Module(HandlersContainer):
     def __init__(self, svc_label):
         self.import_path = options.package + '.' + svc_label
-        self.handlers = []
+        self._handlers = []
 
         try:
             logging.info('import %s' % self.import_path)
             module = __import__(self.import_path, fromlist=[options.package])
-            print module
-            self.handlers = getattr(module, 'handlers')
+            self._handlers = getattr(module, 'handlers')
         except ImportError, e:
-            logging.error(str(e))
+            logging.error('error when get handlers in module: ' + repr(e))
+        except AttributeError, e:
+            logging.error('error when get handlers in module: ' + repr(e))
 
-def include(*args):
-    return SubService(*args)
 
-class Router(object):
-    def __init__(self, raw):
-        self.raw = raw
+# TODO considering: if Router can be recursed by Router,
+# so that it may be easier to invoke sub apps
+class Router(HandlersContainer):
+    def __init__(self, map):
+        self.map = map
+        self._handlers = []
+        self._get_handlers()
 
-    def get_handlers(self):
-        def format_pattern(pt):
-            if pt.endswith('/') and len(pt) > 1:
-                pt = pt[:-1]
-            return pt
-        handlers = []
-        for path, label in self.raw:
-            if isinstance(label, SubService):
-                for subPath, handler in label.handlers:
-                    pattern = r'%s%s' % (path, subPath)
-                    handlers.append(
-                            (format_pattern(pattern), handler)
+    def _get_handlers(self):
+        for path, mapper in self.map:
+            if isinstance(mapper, (Module, Router)):
+                for subPath, handler in mapper.handlers():
+                    url = r'%s%s' % (path, subPath)
+                    self._handlers.append(
+                            (format_pattern(url), handler)
                     )
             else:
-                pattern = r'%s' % path
-                handlers.append(
-                        (format_pattern(pattern), label)
+                url = r'%s' % path
+                self._handlers.append(
+                        (format_pattern(url), mapper)
                 )
-        return handlers
+
+    def handlers(self):
+        return self._handlers
+
+
+def include(*args):
+    return Module(*args)
+
+
+def format_pattern(ptn):
+    if ptn.endswith('/') and len(ptn) > 1:
+        ptn = ptn[:-1]
+    return ptn

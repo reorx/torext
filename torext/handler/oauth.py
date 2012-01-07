@@ -1,5 +1,6 @@
-#!/usr/bin/env python
-#coding=utf8
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 
 # from shiao's tornado.third.renren
 # sina weibo
@@ -28,13 +29,13 @@ from tornado.util import bytes_type
 # oauth 1.0 & 1.0a #
 ####################
 
+
 class TwitterOAuthMixin(OAuthMixin):
     # copy from tornado.auth
     _OAUTH_REQUEST_TOKEN_URL = "http://api.twitter.com/oauth/request_token"
     _OAUTH_ACCESS_TOKEN_URL = "http://api.twitter.com/oauth/access_token"
     _OAUTH_AUTHORIZE_URL = "http://api.twitter.com/oauth/authorize"
     _OAUTH_AUTHENTICATE_URL = "http://api.twitter.com/oauth/authenticate"
-
 
     def authenticate_redirect(self):
         http = httpclient.AsyncHTTPClient()
@@ -93,6 +94,7 @@ class TwitterOAuthMixin(OAuthMixin):
             user["username"] = user["screen_name"]
         callback(user)
 
+
 class WeiboOAuthMixin(OAuthMixin):
     _OAUTH_REQUEST_TOKEN_URL = "http://api.t.sina.com.cn/oauth/request_token"
     _OAUTH_ACCESS_TOKEN_URL = "http://api.t.sina.com.cn/oauth/access_token"
@@ -142,6 +144,7 @@ class WeiboOAuthMixin(OAuthMixin):
         if user:
             user["username"] = user["screen_name"]
         callback(user)
+
 
 class DoubanOAuthMixin(OAuthMixin):
     _OAUTH_REQUEST_TOKEN_URL = "http://www.douban.com/service/auth/request_token"
@@ -209,6 +212,7 @@ class DoubanOAuthMixin(OAuthMixin):
             user["uid"] = user["db:uid"]["$t"]
         callback(user)
 
+
 class TencentOAuthMixin(OAuthMixin):
     _OAUTH_REQUEST_TOKEN_URL = "http://open.t.qq.com/cgi-bin/request_token"
     _OAUTH_ACCESS_TOKEN_URL = "http://open.t.qq.com/cgi-bin/access_token"
@@ -273,9 +277,11 @@ class TencentOAuthMixin(OAuthMixin):
             user["username"] = user["data"]["name"]
         callback(user)
 
+
 #############
 # oauth 2.0 #
 #############
+
 
 class FacebookOAuth2Mixin(OAuth2Mixin):
     # copy from tornado.auth
@@ -304,7 +310,7 @@ class FacebookOAuth2Mixin(OAuth2Mixin):
     def _on_access_token(self, redirect_uri, client_id, client_secret,
                         callback, fields, response):
       if response.error:
-          logging.warning('Facebook auth error: %s' % str(response))
+          logging.warning('Facebook auth error: %s' % response)
           callback(None)
           return
 
@@ -359,6 +365,7 @@ class FacebookOAuth2Mixin(OAuth2Mixin):
             callback(None)
             return
         callback(escape.json_decode(response.body))
+
 
 class WeiboOAuth2Mixin(object):
     _OAUTH_AUTHORIZE_URL = "https://api.weibo.com/oauth2/authorize"
@@ -454,6 +461,7 @@ class WeiboOAuth2Mixin(object):
         token = dict(client_id=options.networks['weibo']['consumer_key'],
                      client_secret=options.networks['weibo']['consumer_secret'],)
         return token
+
 
 class RenrenOAuth2Mixin(object):
     _OAUTH_AUTHORIZE_URL = "https://graph.renren.com/oauth/authorize"
@@ -598,9 +606,11 @@ class RenrenOAuth2Mixin(object):
         return dict(key=options.networks['renren']['consumer_key'],
                      secret=options.networks['renren']['consumer_secret'])
 
+
 ##########
 # others #
 ##########
+
 
 class FacebookAuthMixin(object):
     def authenticate_redirect(self, callback_uri=None, cancel_uri=None,

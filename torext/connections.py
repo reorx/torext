@@ -15,6 +15,7 @@ from .utils.format import _json, utf8
 from .utils.factory import OneInstanceImp
 from .errors import ConnectionError
 
+
 class MySQLConnection(object):
     def __init__(self, e, s):
         self.engine = e
@@ -31,11 +32,14 @@ class MySQLConnection(object):
     def keep_connection(self):
         pass
 
+
 """
 connect_$facility is designed to be silence debug,
 that is, if the attmpt to connect the certain facility failed,
 the function will return None instead of raising exceptions
 """
+
+
 def connect_mysql(opts):
     """Receive a SDict instance, return session as `db`, which can represent `connection`
     opts structure::
@@ -61,12 +65,14 @@ def connect_mysql(opts):
     else:
         return None
 
+
 def ping_mongodb(self):
     from pymongo.errors import AutoReconnect
     try:
         self.database_names()
     except AutoReconnect, e:
-        raise ConnectionError(str(e))
+        raise ConnectionError(repr(e))
+
 
 def connect_mongodb(opts):
     """
@@ -86,7 +92,7 @@ def connect_mongodb(opts):
 class RabbitMQConnection(object):
     def __init__(self, _conn, queues):
         # this is the real connection, but we see itself as the connection
-        self._conn = _conn 
+        self._conn = _conn
         self.channel = self._conn.channel()
         self.declared_queues = []
         for i in queues:
@@ -103,6 +109,7 @@ class RabbitMQConnection(object):
         self.channel.basic_publish(routing_key=utf8(queue),
                                    body=msg,
                                    exchange='')
+
 
 def connect_rabbitmq(opts):
     import socket
@@ -127,7 +134,8 @@ def ping_redis(self):
         self.get('KEEPER')
     except ConnectionError, e:
         global ConnectionError
-        raise ConnectionError(str(e))
+        raise ConnectionError(repr(e))
+
 
 def connect_redis(opts):
     import redis
@@ -141,12 +149,14 @@ def connect_redis(opts):
     types.MethodType(_ping_connection, conn)
     return conn
 
+
 def ping_rpc(self):
     from socket import error as socket_error
     try:
         self.test('test')
     except socket_error, e:
-        raise ConnectionError(str(e))
+        raise ConnectionError(repr(e))
+
 
 def connect_rpc(opts):
     from jsonrpclib import Server
@@ -156,13 +166,6 @@ def connect_rpc(opts):
     return conn
 
 
-"""
-opts structure:
-    {
-        'mysql': (
-        )
-    }
-"""
 class Connections(OneInstanceImp):
     """What a connection is, doesn't mean linking with kinda facility,
     like MySQL, MongoDB, RabbitMQ...
@@ -179,12 +182,12 @@ class Connections(OneInstanceImp):
 
         logging.info('connections::\n' +
             ''.join(
-                ['%s\t%s\n' % (i, str(self._availables[i])) for i in self._availables])
+                ['%s\t%s\n' % (i, repr(self._availables[i])) for i in self._availables])
         )
 
     def set(self, typ, name, opts):
         try:
-            func = globals()['connect_'+typ]
+            func = globals()['connect_' + typ]
         except KeyError:
             raise ConnectionError('Connection type not exist')
         if not opts['enable']:
@@ -208,6 +211,7 @@ class Connections(OneInstanceImp):
 
 connections = Connections.instance()
 
+
 def keep_connections():
     for facility, connMap in connections._availables.iteritems():
         for name, conn in connMap.iteritems():
@@ -216,7 +220,7 @@ def keep_connections():
                 globals()['ping_' + facility](conn)
             except ConnectionError, e:
                 logging.error('{0} - {1} lost connection: {3}'.format(
-                    facility, name, str(e)))
+                    facility, name, repr(e)))
     # TODO try reconnect if lost connection
 
 _KEEPER = PeriodicCallback(keep_connections, options.connection_keep_time)

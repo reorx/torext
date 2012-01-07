@@ -1,3 +1,6 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 """
 Philosophy:
     * `struct` is straight, this is of top importance !
@@ -56,7 +59,7 @@ DEFAULT_TYPE_VALUE = {
     int: lambda: 0,
     float: lambda: 0.0,
     str: lambda: None,
-    unicode: lambda: None, # NOTE think later, this place is dangerous(easy to cause problem) !
+    unicode: lambda: None,  # NOTE think later, dangerous(easy to cause problem) !
     bool: lambda: True,
     list: lambda: [],
     dict: lambda: {},
@@ -134,7 +137,7 @@ def validate_doc(doc, struct):
             typ = st
         else:
             typ = type(st)
-        logging.debug('define: ' + str(typ))
+        logging.debug('define: %s' % typ)
 
         # index in doc
         try:
@@ -142,11 +145,11 @@ def validate_doc(doc, struct):
         except KeyError:
             raise ValidateError(ck + ' could not index out')
 
-        logging.debug('obj: ' + str(o) + str(type(o)))
+        logging.debug('obj: %s %s' % (o, type(o)))
         if not isinstance(o, tuple):
             o = (o, )
         for i in o:
-            logging.debug('item: ' + str(i) + str(type(i)))
+            logging.debug('item: %s %s' % (i, type(i)))
             if not isinstance(i, typ):
                 if (typ is unicode or typ is str) and i is None:
                     # at this point, i should be (or must be?) the end of
@@ -158,7 +161,7 @@ def validate_doc(doc, struct):
                     # NOTE temporarily let unicode and str compatable
                     continue
                 raise ValidateError(
-                    '{0}: invalid {1}, should be {2}, value: {3}'.format(ck, str(type(i)), str(typ), i ) )
+                    '{0}: invalid {1}, should be {2}, value: {3}'.format(ck, type(i), typ, repr(i)))
 
         logging.debug('---')
         # iter down step
@@ -170,7 +173,7 @@ def validate_doc(doc, struct):
         elif isinstance(st, list):
             nk = ck + '.*'
             iter_struct(st[0], nk)
-        else: # isinstance(st, type)
+        else:  # isinstance(st, type)
             return
     iter_struct(struct, '$')
     logging.debug('all passed !')
@@ -215,11 +218,11 @@ def build_dict(struct, default={}):
 
     builtDict = recurse_struct(struct, '')
     if len(default.keys()) > 0:
-        raise KeyError('cant index to set default value: ' + str(default))
+        raise KeyError('cant index to set default value: %s' % default)
     try:
         validate_doc(builtDict, struct)
     except ValidateError, e:
-        raise ValidateError('validate error in build_dict(), may be dict structure is broken by default ?|' + str(e))
+        raise ValidateError('validate error in build_dict(), may be dict structure is broken by default ?|' + repr(e))
     return builtDict
 
 
@@ -271,7 +274,6 @@ def index_dict(doc, dot_key):
     return recurse_dict(doc, spKeys)
 
 
-
 ##############
 #  unittest  #
 ##############
@@ -282,7 +284,7 @@ if '__main__' == __name__:
     class TestSchema(StructedSchema):
         struct = {
             'name': str,
-            'nature': { 'luck': int, },
+            'nature': {'luck': int},
             'people': [str],
             'disks': [
                 {
@@ -300,20 +302,19 @@ if '__main__' == __name__:
             'hello': str
         }
 
-
     class ValidateTestCase(unittest.TestCase):
         def setUp(self):
             self._t_data = {
                 'name': 'reorx is the god',
-                'nature': { 'luck': 10, },
-                'people': [ 'aoyi', ],
+                'nature': {'luck': 10},
+                'people': ['aoyi'],
                 'disks': [
                     {
                         'title': 'My Passport',
                         'volums': [
                             {
                                 'size': 1,
-                                'block': [12,4,32]
+                                'block': [12, 4, 32]
                             }
                         ]
                     },
@@ -322,7 +323,7 @@ if '__main__' == __name__:
                         'volums': [
                             {
                                 'size': 2,
-                                'block': [1,2,3]
+                                'block': [1, 2, 3]
                             }
                         ]
                     }
@@ -334,17 +335,6 @@ if '__main__' == __name__:
         def test_base(self):
             self.TS.validate(self._t_data)
             print 'done test_base'
-
-
-        #def test_ins_main(self):
-            #print 'run test 3'
-            #ins1 = self.ts.build_instance('main')
-            #logging.debug('ins::\n' + str(ins1))
-
-        #def test_ins_sub(self):
-            #print 'run test 4'
-            #ins2 = self.ts.build_instance('sub')
-            #logging.debug('ins::\n' + str(ins2))
 
     from torext.logger import streamHandler
     logger = logging.getLogger()

@@ -21,7 +21,7 @@
 # * bottom data storage (database)
 
 __all__ = (
-    'CollectionDeclarer', 'Document', 'ObjectId',
+    'CollectionDeclarer', 'Document', 'ObjectId', 'ValidateError'
 )
 
 import logging
@@ -29,7 +29,9 @@ from pymongo.objectid import ObjectId
 from pymongo.cursor import Cursor as PymongoCursor
 
 from torext.utils.schema import StructedSchema
+#from torext.utils.schema import ValidateError
 from torext.utils.debugtools import pprint
+
 
 class CollectionDeclarer(object):
     connection = None
@@ -47,6 +49,7 @@ class CollectionDeclarer(object):
     def __get__(self, ins, owner):
         self._fetch_col()
         return self.col
+
 
 class Document(StructedSchema):
     """A wrapper of MongoDB Document, can also be used to init new document.
@@ -130,11 +133,14 @@ class Document(StructedSchema):
     def identify(self):
         return {'_id': self['_id']}
 
+    def validate_self(self):
+        self.__class__.validate(self._)
+
     def save(self):
         ro = self.col.save(self._,
                            manipulate=True,
                            safe=self.__safe__)
-        logging.info('mongodb save return: ' + str(ro))
+        logging.info('mongodb save return: %s' % ro)
         self['_id'] = ro
         self._in_db = True
         return ro
@@ -193,19 +199,19 @@ class Document(StructedSchema):
         if count == 0:
             return None
         if count > 1:
-            logging.warning('multi results found in Document.one, query dict: ' + str(arg[0]))
+            logging.warning('multi results found in Document.one, query dict: ' + repr(args[0]))
         return cursor.next()
 
     @classmethod
-    def by_id(cls, id, key='_id'):
+    def by_oid(cls, id, key='_id'):
         if isinstance(id, str):
             id = ObjectId(id)
         return cls.one({key: id})
 
     def __str__(self):
-        return 'Document: ' + str(self._)
+        return 'Document: ' + repr(self._)
 
-    def pprint(self):
+    def _pprint(self):
         pprint(self._)
 
 

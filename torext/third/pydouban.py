@@ -1,4 +1,6 @@
-#-*- coding: utf-8 -*-
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 """
 pydouban
 
@@ -42,7 +44,7 @@ are met:
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT 
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
 HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
 SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
 LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
@@ -134,10 +136,10 @@ class Auth(object):
         params['oauth_signature'] = digest.encode('base64')[:-1]
 
         return params
-    
+
     def login(self, callback=None):
         req_token_url = AUTH_URL + '/request_token'
-        params = self.get_oauth_params(req_token_url, {}) 
+        params = self.get_oauth_params(req_token_url, {})
         res = urllib.urlopen(url=req_token_url + '?' + _dict2qs(params))
         if 200 != res.code:
             raise Exception('OAuth Request Token Error: ' + res.read())
@@ -210,7 +212,7 @@ class Api(object):
     def set_qs_oauth(self, key, secret, qs):
         self._oauth = Auth(key, secret)
         self._oauth.set_qs_token(qs)
-    
+
     #{{{ method
 
     def _post(self, path, body, params={}):
@@ -219,7 +221,7 @@ class Api(object):
         dic = self._oauth.get_oauth_params(res_url, params, 'POST')
         headers = _dict2header(dic)
         headers['Content-Type'] = 'application/atom+xml; charset=utf-8'
-        
+
         con = httplib.HTTPConnection('api.douban.com', 80)
         con.request('POST', path, body, headers)
         res = con.getresponse()
@@ -235,7 +237,7 @@ class Api(object):
         dic = self._oauth.get_oauth_params(res_url, params, 'PUT')
         headers = _dict2header(dic)
         headers['Content-Type'] = 'application/atom+xml; charset=utf-8'
-        
+
         con = httplib.HTTPConnection('api.douban.com', 80)
         con.request('PUT', path, body, headers)
         res = con.getresponse()
@@ -259,7 +261,7 @@ class Api(object):
         if self._skip:
             return True
         return res.read()
-    
+
     def _get_open(self, url):
         res = urllib.urlopen(url)
         if 200 != res.code:
@@ -286,7 +288,7 @@ class Api(object):
         return self._get_open(url)
 
     #}}}
-    
+
     #{{{ public method, no need for oauth
 
     def get_people(self, userID):
@@ -363,7 +365,7 @@ class Api(object):
         path = '/music/subject/%s/tags' % subjectID
         params = {'start-index': self._start, 'max-results': self._max}
         return self._get_public(path, params)
-    
+
     def get_user_tags(self, userID, cat='book'):
         path = '/people/%s/tags' % userID
         if cat not in ('book','music','movie'):
@@ -372,7 +374,7 @@ class Api(object):
         return self._get_public(path, params)
 
     #}}}
-    
+
     #{{{ user info
 
     def get_profile(self):
@@ -582,12 +584,12 @@ class Api(object):
         path = '/people/%40me/notes'
         params = {'start-index': self._start, 'max-results': self._max}
         return self._get(path, params)
-    
+
     def get_note(self, noteID):
         path = '/note/%s' % noteID
         return self._get(path)
 
-    def _note_atom(self, title, content, privacy, can_reply): 
+    def _note_atom(self, title, content, privacy, can_reply):
         if privacy not in ('public', 'friend', 'private'):
             privacy = 'private'
         if can_reply not in ('yes', 'no'):
@@ -602,12 +604,12 @@ class Api(object):
         atom += '</entry>'
         return atom
 
-    def post_note(self, title, content, privacy='public', can_reply='yes'): 
+    def post_note(self, title, content, privacy='public', can_reply='yes'):
         path = '/notes'
         atom = self._note_atom(title, content, privacy, can_reply)
         return self._post(path, atom)
 
-    def update_note(self, noteID, title, content, privacy='public', can_reply='yes'): 
+    def update_note(self, noteID, title, content, privacy='public', can_reply='yes'):
         path = '/note/%s' % noteID
         atom = self._note_atom(title, content, privacy, can_reply)
         return self._put(path, atom)
@@ -744,7 +746,7 @@ class Api(object):
 
     #{{{ recommendation
     # http://www.douban.com/service/apidoc/reference/recommendation
-    
+
     def get_recommendation(self, recommendationID):
         path = '/recommendation/%s' % recommendationID
         return self._get_public(path)
@@ -796,7 +798,7 @@ class Api(object):
         path = '/doumail/inbox/unread'
         params = {'start-index': self._start, 'max-results': self._max}
         return self._get(path, params)
-    
+
     def get_outbox_mails(self):
         path = '/doumail/outbox'
         params = {'start-index': self._start, 'max-results': self._max}
@@ -829,17 +831,17 @@ def _quote(s):
     return urllib.quote(str(s), '~')
 
 def _qs2dict(s):
-    dic = {} 
+    dic = {}
     for param in s.split('&'):
         (key, value) = param.split('=')
         dic[key] = value
     return dic
 
 def _dict2qs(dic):
-    return '&'.join(['%s=%s' % (key, _quote(value)) for key, value in dic.iteritems()]) 
+    return '&'.join(['%s=%s' % (key, _quote(value)) for key, value in dic.iteritems()])
 
 def _dict2header(dic):
-    s = ', '.join(['%s="%s"' % (k, _quote(v)) for k, v in dic.iteritems() if k.startswith('oauth_')]) 
+    s = ', '.join(['%s="%s"' % (k, _quote(v)) for k, v in dic.iteritems() if k.startswith('oauth_')])
     auth_header = 'OAuth realm="", %s' % s
     return {'Authorization': auth_header}
 
