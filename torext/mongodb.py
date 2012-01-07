@@ -21,7 +21,7 @@
 # * bottom data storage (database)
 
 __all__ = (
-    'CollectionDeclarer', 'Document', 'ObjectId', 'ValidateError'
+    'CollectionDeclarer', 'Document', 'ObjectId'
 )
 
 import logging
@@ -29,7 +29,6 @@ from pymongo.objectid import ObjectId
 from pymongo.cursor import Cursor as PymongoCursor
 
 from torext.utils.schema import StructedSchema
-#from torext.utils.schema import ValidateError
 from torext.utils.debugtools import pprint
 
 
