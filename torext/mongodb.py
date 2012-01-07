@@ -136,6 +136,7 @@ class Document(StructedSchema):
         self.__class__.validate(self._)
 
     def save(self):
+        self.validate_self()
         ro = self.col.save(self._,
                            manipulate=True,
                            safe=self.__safe__)

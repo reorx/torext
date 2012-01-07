@@ -118,7 +118,7 @@ class _BaseHandler(tornado.web.RequestHandler):
         # TODO show message on logging
         self.set_status(code)
         if isinstance(error, Exception):
-            error_msg = repr(error)
+            error_msg = str(error)
         else:
             error_msg = error
         msg = {'code': code, 'error': error_msg}
