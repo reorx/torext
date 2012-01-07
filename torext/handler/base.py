@@ -112,12 +112,16 @@ class _BaseHandler(tornado.web.RequestHandler):
             self.set_header("Content-Type", "application/json; charset=UTF-8")
         self.write(chunk)
 
-    def json_error(self, code, text=None):
+    def json_error(self, code, error=None):
         """Used globally, not special in ApiHandler
         """
         # TODO show message on logging
         self.set_status(code)
-        msg = {'code': code, 'error': text}
+        if isinstance(error, Exception):
+            error_msg = repr(error)
+        else:
+            error_msg = error
+        msg = {'code': code, 'error': error_msg}
         print 'API ERROR: ', msg
         self.write(msg)
         self.finish()
