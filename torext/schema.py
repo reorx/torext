@@ -54,6 +54,7 @@ data = {
 """
 import logging
 from torext.errors import ValidationError
+from hashlib import md5
 
 
 DEFAULT_TYPE_VALUE = {
@@ -219,7 +220,7 @@ def build_dict(struct, default={}):
     try:
         validate_doc(builtDict, struct)
     except ValidationError, e:
-        raise ValidationError('validate error in build_dict(), may be dict structure is broken by default ?|' + repr(e))
+        raise ValidationError('validate error in build_dict(), may be dict structure is broken by default ?|' + str(e))
     return builtDict
 
 
@@ -270,6 +271,31 @@ def index_dict(doc, dot_key):
 
     return recurse_dict(doc, spKeys)
 
+
+def dict_mapping(o):
+    def recurse_doc(mapping, d, pk):
+        if isinstance(d, dict):
+            for k, v in d.iteritems():
+                ck = pk + '.' + k
+                recurse_doc(mapping, v, ck)
+        elif isinstance(d, list):
+            for loop, i in enumerate(d):
+                ck = pk + '.' + str(loop)
+                recurse_doc(mapping, i, ck)
+        else:
+            mapping[pk] = d
+        return mapping
+
+    return recurse_doc({}, o, '$')
+
+def dict_hash(o):
+    mapping = dict_mapping(o)
+    keys = mapping.keys()
+    keys.sort()
+    string = ''
+    for i in keys:
+        string += i + repr(mapping[i]) + '\n'
+    return md5(string).hexdigest()
 
 ##############
 #  unittest  #

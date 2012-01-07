@@ -204,7 +204,7 @@ class Document(StructedSchema):
 
     @classmethod
     def by_oid(cls, id, key='_id'):
-        if isinstance(id, str):
+        if isinstance(id, (str, unicode)):
             id = ObjectId(id)
         return cls.one({key: id})
 

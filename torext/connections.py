@@ -219,8 +219,8 @@ def keep_connections():
                 logging.info('check connection {0} - {1}'.format(facility, name))
                 globals()['ping_' + facility](conn)
             except ConnectionError, e:
-                logging.error('{0} - {1} lost connection: {3}'.format(
-                    facility, name, repr(e)))
+                logging.error('%s - %s lost connection: %s' %\
+                    (facility, name, repr(e)))
     # TODO try reconnect if lost connection
 
 _KEEPER = PeriodicCallback(keep_connections, options.connection_keep_time)
