@@ -71,7 +71,7 @@ class _BaseHandler(tornado.web.RequestHandler):
         raise NotImplementedError
 
     @property
-    def dump_json(self):
+    def dump_dict(self):
         return _json
 
     @property
@@ -83,7 +83,7 @@ class _BaseHandler(tornado.web.RequestHandler):
         chunk could be any type of str, dict, list
         """
         if isinstance(chunk, dict) or isinstance(chunk, list):
-            chunk = self.dump_json(chunk)
+            chunk = self.dump_dict(chunk)
             self.set_header("Content-Type", "application/json; charset=UTF-8")
         chunk = escape.utf8(chunk)
         if options.application['debug']:

@@ -156,6 +156,8 @@ def ping_rpc(self):
         self.test('test')
     except socket_error, e:
         raise ConnectionError(repr(e))
+    except Exception, e:
+        logging.warning('rpc checking unsuccess: ' + str(e))
 
 
 def connect_rpc(opts):

@@ -60,7 +60,7 @@ from hashlib import md5
 DEFAULT_TYPE_VALUE = {
     int: lambda: 0,
     float: lambda: 0.0,
-    str: lambda: None,
+    str: lambda: None,  # NOTE really None ?
     unicode: lambda: None,  # NOTE think later, dangerous(easy to cause problem) !
     bool: lambda: True,
     list: lambda: [],
@@ -287,6 +287,7 @@ def dict_mapping(o):
         return mapping
 
     return recurse_doc({}, o, '$')
+
 
 def dict_hash(o):
     mapping = dict_mapping(o)
