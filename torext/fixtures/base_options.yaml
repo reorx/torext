@@ -1,0 +1,24 @@
+---
+#
+#  tornado defined options  #
+#
+# Set the Python log level. If 'none', tornado won't touch the logging configuration.
+logging: info
+
+# Send log output to stderr (colorized if possible).
+# By default use stderr if --log_file_prefix is not set and
+# no other logging is configured.
+log_to_stderr: True
+
+# Path prefix for log files. Note that if you are running multiple tornado processes,
+# log_file_prefix must be different for each of them (e.g. include the port number)
+log_file_prefix: None
+
+# max size of log files before rollover
+# 100*1000*1000 ~= 100MB
+log_file_max_size: 100000000
+
+# number of log files to keep
+log_file_num_backups: 10
+
+...

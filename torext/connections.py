@@ -161,7 +161,6 @@ def ping_rpc(self):
 def connect_rpc(opts):
     from jsonrpclib import Server
     conn_path = '{protocol}://{host}:{port}'.format(**opts)
-    logging.info('rpc conn path: \n' + conn_path)
     conn = Server(conn_path)
     return conn
 

@@ -1,0 +1,68 @@
+---
+
+package:
+
+application:
+    root:
+    debug: True
+    port : 19000
+    processes: 2
+    locale: en_US
+
+secure:
+    auth_sign    : user_id
+    cookie_name  : sessionid
+
+web:
+    template_path: ../web/templates
+    static_path  : ../web/static
+    translations_path: ../web/translations
+
+# connection_keep_time: 600000
+
+# connections:
+#     mongodb:
+#         master:
+#             enable    : True
+#             host      : 127.0.0.1
+#             port      : 27017
+#             username  : None
+#             password  : None
+#             keep_time : 7200
+#             database  : nodelink
+#     redis:
+#         master:
+#             enable: True
+#             use_socket: False
+#             host: localhost
+#             port: 6379
+#     rpc:
+#         usercenter:
+#             enable: True
+#             protocol: http
+#             host: uc.nodemix.xen
+#             port: 8000
+#     rabbitmq:
+#         socket:
+#             enable       : False
+#             host         : 10.10.10.200
+#             port         : 5672
+#             username     : guest
+#             password     : guest
+#             keep_time    : 7200
+#             virtual_host : /
+#             init:
+#                 queues:
+#                     - user
+
+
+#############################
+#  tornado defined options  #
+#############################
+# logging: info
+# log_to_stderr: False
+# log_file_prefix: None
+# log_file_max_size: 100000000
+# log_file_num_backups: 10
+
+...

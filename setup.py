@@ -20,7 +20,8 @@ distutils.core.setup(
         'torext.third'
     ],
     package_data = {
-        'torext': ['base_options.yaml']
+        'torext': ['fixtures/base_options.yaml', 
+                   'fixtures/custom_options_template.yaml']
     },
     scripts=['bin/torext_syntax'],
 )
