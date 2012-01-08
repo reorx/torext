@@ -1,11 +1,12 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import yaml
 import os.path
 import logging
-from tornado.options import options
-from tornado.options import enable_pretty_logging
-from torext.opt import parse_and_set
+from tornado.options import (options,
+                             enable_pretty_logging,
+                             define)
 
 
 def initialize(options_file_path):
@@ -21,3 +22,12 @@ def initialize(options_file_path):
     # setp 2. set logging
     logging.getLogger().setLevel(getattr(logging, options.logging.upper()))
     enable_pretty_logging()
+
+
+def parse_and_set(path):
+    global options
+    for i, o in yaml.load(file(path)).iteritems():
+        if i in options:
+            options[i].set(o)
+        else:
+            define(i, o)
