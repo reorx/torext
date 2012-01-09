@@ -126,6 +126,10 @@ class _BaseHandler(tornado.web.RequestHandler):
         self.write(msg)
         self.finish()
 
+    def file_write(self, byteStream, mime='text/plain'):
+        self.set_header("Content-Type", mime)
+        self.write(byteStream)
+
     # TODO get_user_locale
 
     def get_auth_value(self, name, value, max_age_days=7):

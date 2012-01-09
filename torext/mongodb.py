@@ -143,7 +143,7 @@ class Document(StructedSchema):
         ro = self.col.save(self._,
                            manipulate=True,
                            safe=self.__safe__)
-        logging.info('mongodb:: save return id: %s' % ro)
+        # logging.info('mongodb:: save return id: %s' % ro)
         self._in_db = True
         return ro
 
