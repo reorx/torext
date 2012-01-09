@@ -219,7 +219,7 @@ def build_dict(struct, default={}):
     try:
         validate_doc(builtDict, struct)
     except ValidationError, e:
-        raise ValidationError('validate error in build_dict(), may be dict structure is broken by default ?|' + repr(e))
+        raise ValidationError('validate error in build_dict(), may be dict structure is broken by default ?|' + str(e))
     return builtDict
 
 

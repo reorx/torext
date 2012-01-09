@@ -53,8 +53,9 @@ data = {
 }
 """
 import logging
-from torext.errors import ValidationError
 from hashlib import md5
+from pymongo.objectid import ObjectId
+from torext.errors import ValidationError
 
 
 DEFAULT_TYPE_VALUE = {
@@ -65,6 +66,7 @@ DEFAULT_TYPE_VALUE = {
     bool: lambda: True,
     list: lambda: [],
     dict: lambda: {},
+    ObjectId: lambda: ObjectId()
 }
 
 
@@ -146,6 +148,7 @@ def validate_doc(doc, struct):
         logging.debug('obj: %s %s' % (o, type(o)))
         if not isinstance(o, tuple):
             o = (o, )
+        # so if o is an empty iterable (originally list), this step will pass
         for i in o:
             logging.debug('item: %s %s' % (i, type(i)))
             if not isinstance(i, typ):
@@ -169,6 +172,8 @@ def validate_doc(doc, struct):
                 nk = ck + '.' + k
                 iter_struct(v, nk)
         elif isinstance(st, list):
+            # NOTE currently, redundancy validations, which maily occured on list,
+            # could not be reduced, because of the unperfect mechanism ..
             nk = ck + '.*'
             iter_struct(st[0], nk)
         else:  # isinstance(st, type)
@@ -193,7 +198,7 @@ def build_dict(struct, default={}):
                 nk = k
             else:
                 nk = ck + '.' + k
-            logging.debug('set value st: ' + nk)
+            logging.debug('set value to: ' + nk)
 
             # if dot_key is find in default, stop recurse and set value immediatelly
             # this may make the dict structure broken (not valid with struct),
@@ -205,18 +210,23 @@ def build_dict(struct, default={}):
                     kv = recurse_struct(v, nk)
                 else:
                     # get type-default value
-                    if not isinstance(v, type):
+                    # fix ObjectId judge
+                    if not v is ObjectId and not isinstance(v, type):
                         v = type(v)
                     if v in DEFAULT_TYPE_VALUE:
                         kv = DEFAULT_TYPE_VALUE[v]()
                     else:
                         kv = None
+            logging.debug('value is: %s' % kv)
             cd[k] = kv
         return cd
 
     builtDict = recurse_struct(struct, '')
     if len(default.keys()) > 0:
-        raise KeyError('cant index to set default value: %s' % default)
+        raise KeyError('index default value `%s` failed' % default)
+
+    # this step is a bit unnesessary for struct will be checked in Document before save(),
+    # put it just to ensure build_dict() runs properly, for test use
     try:
         validate_doc(builtDict, struct)
     except ValidationError, e:

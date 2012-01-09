@@ -1,6 +1,0 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-
-from torext.scripts.syntax_checker import main
-
-main()

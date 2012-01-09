@@ -28,8 +28,8 @@ import logging
 from pymongo.objectid import ObjectId
 from pymongo.cursor import Cursor as PymongoCursor
 
-from torext.utils.schema import StructedSchema
 from torext.utils.debugtools import pprint
+from torext.schema import StructedSchema
 
 
 class CollectionDeclarer(object):
@@ -72,11 +72,10 @@ class Document(StructedSchema):
     >>> d.save()
     """
     __safe__ = True
+    __id_map__ = False
 
     def __init__(self, raw=None):
         """ wrapper of raw data from cursor
-
-        can also involved in normal use
 
         NOTE *without validation*
         """
@@ -132,6 +131,10 @@ class Document(StructedSchema):
     def identify(self):
         return {'_id': self['_id']}
 
+    @property
+    def id(self):
+        return self[self.__id_map__]
+
     def validate_self(self):
         self.__class__.validate(self._)
 
@@ -140,8 +143,7 @@ class Document(StructedSchema):
         ro = self.col.save(self._,
                            manipulate=True,
                            safe=self.__safe__)
-        # logging.info('mongodb save return: %s' % ro)
-        self['_id'] = ro
+        logging.info('mongodb:: save return id: %s' % ro)
         self._in_db = True
         return ro
 
@@ -179,11 +181,17 @@ class Document(StructedSchema):
         """Designed only to init from self struct
         """
         ins = cls()
+        # now ins._in_db is False
         if 'default' in kwgs:
             default = kwgs.pop('default')
         else:
             default = {}
         ins._.update(cls.build_instance(default=default))
+        if ins.__id_map__:
+            ins['_id'] = ins['id']
+        else:
+            ins['_id'] = ObjectId()
+        logging.info('mongodb:: generated id: %s' % ins['_id'])
         return ins
 
     @classmethod
