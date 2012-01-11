@@ -16,13 +16,14 @@ class Module(HandlersContainer):
         self._handlers = []
 
         try:
-            logging.info('import %s' % self.import_path)
+            logging.debug('import %s' % self.import_path)
             module = __import__(self.import_path, fromlist=[options.package])
             self._handlers = getattr(module, 'handlers')
         except ImportError, e:
-            logging.error('error when get handlers in module: ' + repr(e))
+            print 'import path', self.import_path
+            logging.error('error when get handlers in module: ' + str(e))
         except AttributeError, e:
-            logging.error('error when get handlers in module: ' + repr(e))
+            logging.error('error when get handlers in module: ' + str(e))
 
 
 # TODO considering: if Router can be recursed by Router,

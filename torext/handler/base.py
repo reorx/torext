@@ -24,6 +24,7 @@ import logging
 import urllib
 import urlparse
 import functools
+import copy
 
 import tornado.web
 import tornado.locale
@@ -35,8 +36,27 @@ from tornado.options import options
 from ..utils.format import _json, _dict
 
 
+def block_text(text, width=80, limit=800):
+    text = copy.copy(text)
+    if isinstance(text, str):
+        text = text.decode('utf-8')
+    if len(text) > limit:
+        text = text[:limit]
+        end = ' ...'
+    else:
+        end = None
+
+    block = '-> Response\n'
+    height = (len(text) / width) + 1
+    for i in range(height):
+        block += ' | ' + text[i * width:(i + 1) * width - 1] + '\n'
+    if end:
+        block += end
+    return block
+
+
 class _BaseHandler(tornado.web.RequestHandler):
-    __prepares__ = ['debug']
+    __prepares__ = []
     """
     Request
         header:
@@ -52,7 +72,7 @@ class _BaseHandler(tornado.web.RequestHandler):
     def initialize(self):
         if self.__class__._first_running:
             self.__class__._first_running = False
-            logging.info('%s initializing' % self.__class__.__name__)
+            logging.debug('%s initializing' % self.__class__.__name__)
 
     @property
     def mysql(self):
@@ -78,7 +98,7 @@ class _BaseHandler(tornado.web.RequestHandler):
     def parse_json(self):
         return _dict
 
-    def json_write(self, chunk, json=False):
+    def json_write(self, chunk, json=False, headers={}):
         """Used globally, not special in ApiHandler
         chunk could be any type of str, dict, list
         """
@@ -87,30 +107,15 @@ class _BaseHandler(tornado.web.RequestHandler):
             self.set_header("Content-Type", "application/json; charset=UTF-8")
         chunk = escape.utf8(chunk)
         if options.application['debug']:
-            import copy
-            text = copy.copy(chunk)
-            op = ''
-            ed = None
-            width = 80
-            limit = 800
-            l = len(text)
-            if l > limit:
-                text = text[:limit-1]
-                l = limit
-                ed = ' ...'
-            height = l/width
-            if l - (l/width)*width > 0:
-                height += 1
-            for i in range(height):
-                op += ' | ' + text[i*width:(i+1)*width-1]
-                if i == height-1 and ed is not None:
-                    op += ed
-                op += '\n'
-            print ' [ Response'
-            print op
+            logging.info(block_text(chunk))
         if json:
             self.set_header("Content-Type", "application/json; charset=UTF-8")
+        if headers:
+            for k, v in headers.iteritems():
+                self.set_header(k, str(v))
         self.write(chunk)
+        if not self._finished:
+            self.finish()
 
     def json_error(self, code, error=None):
         """Used globally, not special in ApiHandler
@@ -124,11 +129,14 @@ class _BaseHandler(tornado.web.RequestHandler):
         msg = {'code': code, 'error': error_msg}
         print 'API ERROR: ', msg
         self.write(msg)
-        self.finish()
+        if not self._finished:
+            self.finish()
 
     def file_write(self, byteStream, mime='text/plain'):
         self.set_header("Content-Type", mime)
         self.write(byteStream)
+        if not self._finished:
+            self.finish()
 
     # TODO get_user_locale
 
@@ -148,56 +156,31 @@ class _BaseHandler(tornado.web.RequestHandler):
         """
         like a middleware between raw request and handling process,
         """
+        if options.application['debug']:
+            self._prepare_debug()
+            if self._finished:
+                return
         for i in self.__prepares__:
-            logging.info('prepare:: %s' % i)
-            getattr(self, '_prepare_'+i)()
-            if self._finished: return
+            logging.debug('prepare:: %s' % i)
+            getattr(self, '_prepare_' + i)()
+            if self._finished:
+                return
 
     def _prepare_debug(self, with_value=True):
         """
         """
-        def print_dict_keys(d):
-            fmt = ' | {0:<15}'
-            d_keys = d.keys()
-            d_keys.sort()
-            d_op = ''
-            for loop, i in enumerate(d_keys):
-                d_op += fmt.format(i)
-                if loop == len(d_keys)-1:
-                    d_op += ' ]'
-                elif (loop+1)%4 == 0:
-                    d_op += ' |\n'
-                else:
-                    pass
-            print d_op
+        block = '-> Request\n'
+        block += '-----Headers-----\n'
+        for k, v in self.request.headers.iteritems():
+            tmpl = '| {0:<15} | {1:<15} \n'
+            block += tmpl.format(k, v)
+        if self.request.arguments:
+            block += '-----Arguments-----\n'
+            for k, v in self.request.arguments.iteritems():
+                tmpl = '| {0:<15} | {1:<15} \n'
+                block += tmpl.format(repr(k), repr(v))
 
-        def print_dict(d):
-            fmt = ' | {0:<15}: {1:<15}'
-            d_keys = d.keys()
-            d_keys.sort()
-            d_op = ''
-            for loop, i in enumerate(d_keys):
-                v = d[i]
-                if isinstance(v, list) or isinstance(v, tuple):
-                    v = v[0]
-                d_op += fmt.format(i, v)
-                if loop == len(d_keys)-1:
-                    d_op += ' ]'
-                else:
-                    d_op += '\n'
-            print d_op
-
-        if not with_value:
-            print ' [ {0:<15} |'.format('Request Headers')
-            print_dict_keys(self.request.headers)
-            print ' [ {0:<15} |'.format('Request Params')
-            print_dict_keys(self.request.arguments)
-        else:
-            print ' [ {0:<15}'.format('Request Headers')
-            print_dict(self.request.headers)
-            print ' [ {0:<15}'.format('Request Params')
-            print_dict(self.request.arguments)
-        print ''
+        logging.info(block)
 
 
 def api_authenticated(method):
@@ -222,6 +205,7 @@ def api_authenticated(method):
             raise HTTPError(403)
         return method(self, *args, **kwargs)
     return wrapper
+
 
 def api_define(method):
     pass

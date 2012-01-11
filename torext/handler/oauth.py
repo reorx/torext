@@ -61,7 +61,8 @@ class TwitterOAuthMixin(OAuthMixin):
             oauth = self._oauth_request_parameters(
                 url, access_token, all_args, method=method)
             args.update(oauth)
-        if args: url += "?" + urllib.urlencode(args)
+        if args:
+            url += "?" + urllib.urlencode(args)
         callback = self.async_callback(self._on_twitter_request, callback)
         http = httpclient.AsyncHTTPClient()
         if post_args is not None:
@@ -112,7 +113,8 @@ class WeiboOAuthMixin(OAuthMixin):
             oauth = self._oauth_request_parameters(
                 url, access_token, all_args, method=method)
             args.update(oauth)
-        if args: url += "?" + urllib.urlencode(args)
+        if args:
+            url += "?" + urllib.urlencode(args)
         callback = self.async_callback(self._on_weibo_request, callback)
         http = httpclient.AsyncHTTPClient()
         if post_args is not None:
@@ -186,7 +188,8 @@ class DoubanOAuthMixin(OAuthMixin):
                     body=post_args,
                     callback=callback)
         else:
-            if args: url += "?" + urllib.urlencode(args)
+            if args:
+                url += "?" + urllib.urlencode(args)
             http.fetch(url, callback=callback)
 
     def _on_douban_request(self, callback, response):
@@ -243,7 +246,8 @@ class TencentOAuthMixin(OAuthMixin):
             oauth = self._oauth_request_parameters(
                 url, access_token, all_args, method=method)
             args.update(oauth)
-        if args: url += "?" + urllib.urlencode(args)
+        if args:
+            url += "?" + urllib.urlencode(args)
         http = httpclient.AsyncHTTPClient()
         callback = self.async_callback(self._on_tencent_request, callback)
 
@@ -291,43 +295,43 @@ class FacebookOAuth2Mixin(OAuth2Mixin):
 
     def get_authenticated_user(self, redirect_uri, client_id, client_secret,
                               code, callback, extra_fields=None):
-      http = httpclient.AsyncHTTPClient()
-      args = {
-        "redirect_uri": redirect_uri,
-        "code": code,
-        "client_id": client_id,
-        "client_secret": client_secret,
-      }
+        http = httpclient.AsyncHTTPClient()
+        args = {
+            "redirect_uri": redirect_uri,
+            "code": code,
+            "client_id": client_id,
+            "client_secret": client_secret,
+        }
 
-      fields = set(['id', 'name', 'first_name', 'last_name',
+        fields = set(['id', 'name', 'first_name', 'last_name',
                     'locale', 'picture', 'link'])
-      if extra_fields: fields.update(extra_fields)
+        if extra_fields:
+            fields.update(extra_fields)
 
-      http.fetch(self._oauth_request_token_url(**args),
-          self.async_callback(self._on_access_token, redirect_uri, client_id,
-                              client_secret, callback, fields))
+        http.fetch(self._oauth_request_token_url(**args),
+        self.async_callback(self._on_access_token, redirect_uri, client_id,
+                            client_secret, callback, fields))
 
     def _on_access_token(self, redirect_uri, client_id, client_secret,
                         callback, fields, response):
-      if response.error:
-          logging.warning('Facebook auth error: %s' % response)
-          callback(None)
-          return
+        if response.error:
+            logging.warning('Facebook auth error: %s' % response)
+            callback(None)
+            return
 
-      args = escape.parse_qs_bytes(escape.native_str(response.body))
-      session = {
-          "access_token": args["access_token"][-1],
-          "expires": args.get("expires")
-      }
+        args = escape.parse_qs_bytes(escape.native_str(response.body))
+        session = {
+            "access_token": args["access_token"][-1],
+            "expires": args.get("expires")
+        }
 
-      self.facebook_request(
-          path="/me",
-          callback=self.async_callback(
-              self._on_get_user_info, callback, session, fields),
-          access_token=session["access_token"],
-          fields=",".join(fields)
-          )
-
+        self.facebook_request(
+            path="/me",
+            callback=self.async_callback(
+                self._on_get_user_info, callback, session, fields),
+            access_token=session["access_token"],
+            fields=",".join(fields)
+        )
 
     def _on_get_user_info(self, callback, session, fields, user):
         if user is None:
@@ -349,7 +353,8 @@ class FacebookOAuth2Mixin(OAuth2Mixin):
             all_args["access_token"] = access_token
             all_args.update(args)
             all_args.update(post_args or {})
-        if all_args: url += "?" + urllib.urlencode(all_args)
+        if all_args:
+            url += "?" + urllib.urlencode(all_args)
         callback = self.async_callback(self._on_facebook_request, callback)
         http = httpclient.AsyncHTTPClient()
         if post_args is not None:
@@ -432,7 +437,7 @@ class WeiboOAuth2Mixin(object):
             for k in ('username', 'password'):
                 assert k in kwgs, 'argument:%s is required' % k
                 all_args[k] = kwgs[k]
-        else: # 'refresh_token' == grant_type
+        else:  # 'refresh_token' == grant_type
             for k in ('refresh_token', ):
                 assert k in kwgs, 'argument:%s is required' % k
                 all_args[k] = kwgs[k]
@@ -561,10 +566,10 @@ class RenrenOAuth2Mixin(object):
             'redirect_uri': redirect_uri,
             'response_type': response_type,
         }
-        if scope: all_args.update({'scope': scope})
+        if scope:
+            all_args.update({'scope': scope})
         args.update(all_args)
         self.redirect(url_concat(self._OAUTH_AUTHORIZE_URL, args))
-
 
     @gen.engine
     def get_access_token(self, code, callback, grant_type='code', redirect_uri=None):
@@ -575,14 +580,14 @@ class RenrenOAuth2Mixin(object):
         }
         if grant_type == 'refresh_token':
             args.update(
-                grant_type = 'refresh_token',
-                refresh_token = code,
+                grant_type='refresh_token',
+                refresh_token=code,
             )
         elif redirect_uri:
             args.update(
-                grant_type = 'authorization_code',
-                code = code,
-                redirect_uri = redirect_uri,
+                grant_type='authorization_code',
+                code=code,
+                redirect_uri=redirect_uri,
             )
         else:
             logging.error('Renren Get Access Token Error. redirect_uri required')
@@ -708,5 +713,6 @@ class FacebookAuthMixin(object):
     def _signature(self, args):
         parts = ["%s=%s" % (n, args[n]) for n in sorted(args.keys())]
         body = "".join(parts) + self.settings["facebook_secret"]
-        if isinstance(body, unicode): body = body.encode("utf-8")
+        if isinstance(body, unicode):
+            body = body.encode("utf-8")
         return hashlib.md5(body).hexdigest()

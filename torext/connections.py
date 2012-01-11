@@ -181,9 +181,9 @@ class Connections(OneInstanceImp):
             for ider, args in opts[facility].iteritems():
                 self.set(facility, ider, args)
 
-        logging.info('connections::\n' +
+        logging.info('-> Connections\n' +
             ''.join(
-                ['%s\t%s\n' % (i, repr(self._availables[i])) for i in self._availables])
+                ['| {0:<15}| {1:<15}\n'.format(i, repr(self._availables[i])) for i in self._availables])
         )
 
     def set(self, typ, name, opts):

@@ -28,8 +28,10 @@ def run_api_server(application):
     logging.info('api server starting')
     IOLoop.instance().start()
 
+
 def run_rpc_server(application, opts):
     pass
+
 
 def run_web_server(application, opts):
     pass

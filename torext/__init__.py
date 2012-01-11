@@ -20,7 +20,11 @@ def initialize(options_file_path):
         parse_and_set(options_file_path)
 
     # setp 2. set logging
-    logging.getLogger().setLevel(getattr(logging, options.logging.upper()))
+    if not isinstance(options.logging, int):
+        level = getattr(logging, options.logging.upper())
+    else:
+        level = options.logging
+    logging.getLogger().setLevel(level)
     enable_pretty_logging()
 
 
