@@ -26,8 +26,8 @@ setup(
     scripts=['bin/torext_syntax'],
 
     install_requires=[
-        'tornado==2.2.1',
-        'yaml',
+        'tornado==2.1.1',
+        'pyyaml',
         'pymongo>=2.1',
         'redis>=2.4',
         'pika>=0.9.5',
