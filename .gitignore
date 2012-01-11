@@ -1,4 +1,4 @@
 *.log
 *.py[co]
 build/
-bin/
+*.egg*/

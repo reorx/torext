@@ -3,9 +3,9 @@
 
 __version__ = '0.1'
 
-import distutils.core
+from setuptools import setup
 
-distutils.core.setup(
+setup(
     name='torext',
     version=__version__,
     author='Nodemix',
