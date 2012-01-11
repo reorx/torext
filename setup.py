@@ -24,4 +24,14 @@ setup(
                    'fixtures/custom_options_template.yaml']
     },
     scripts=['bin/torext_syntax'],
+
+    install_requires=[
+        'tornado==2.2.1',
+        'yaml',
+        'pymongo>=2.1',
+        'redis>=2.4',
+        'pika>=0.9.5',
+        'requests>=0.9',
+        'pyflakes>=0.5.0'
+    ]
 )
