@@ -7,8 +7,6 @@
 # TODO in order to ensure connection is properly established, call ping_$ after first connecting
 
 import logging
-import types
-
 from tornado.options import options
 from tornado.ioloop import PeriodicCallback
 from .utils.format import _json, utf8
@@ -83,12 +81,12 @@ def connect_mongodb(opts):
     """
     from mongokit import Connection
     conn = Connection(opts['host'], opts['port'])
-    # bind method to conn instance
-    _ping_connection = ping_mongodb
-    types.MethodType(_ping_connection, conn)
+    # check connection firstly
+    ping_mongodb(conn)
     return conn
 
 
+# deprecated
 class RabbitMQConnection(object):
     def __init__(self, _conn, queues):
         # this is the real connection, but we see itself as the connection
@@ -121,19 +119,17 @@ def connect_rabbitmq(opts):
                                   virtual_host=opts['virtual_host'],
                                   credentials=cred)
     try:
-        _conn = BlockingConnection(params)
-    except (socket.gaierror, socket.error):
-        return None
-    conn = RabbitMQConnection(_conn, opts['queues'])
+        conn = BlockingConnection(params)
+    except (socket.gaierror, socket.error), e:
+        raise ConnectionError(repr(e))
     return conn
 
 
 def ping_redis(self):
-    from redis.exceptions import ConnectionError
+    from redis.exceptions import ConnectionError as RedisConnectionError
     try:
         self.get('KEEPER')
-    except ConnectionError, e:
-        global ConnectionError
+    except RedisConnectionError, e:
         raise ConnectionError(repr(e))
 
 
@@ -144,26 +140,32 @@ def connect_redis(opts):
     else:
         pool = redis.ConnectionPool(host=opts['host'], port=opts['port'], db=0)
         conn = redis.Redis(connection_pool=pool)
-    # bind method to conn instance
-    _ping_connection = ping_redis
-    types.MethodType(_ping_connection, conn)
+    # check connection firstly
+    ping_redis(conn)
     return conn
 
 
 def ping_rpc(self):
-    from socket import error as socket_error
+    import socket
+    import xmlrpclib
+    import jsonrpclib.jsonrpc
     try:
         self.test('test')
-    except socket_error, e:
-        raise ConnectionError(repr(e))
-    except Exception, e:
-        logging.warning('rpc checking unsuccess: ' + str(e))
+    except jsonrpclib.jsonrpc.ProtocolError:
+        try:
+            self.checkin('test')
+        except (socket.error, socket.gaierror, xmlrpclib.ProtocolError) as e:
+            raise ConnectionError(repr(e))
+        except Exception, e:
+            logging.warning('rpc checking unsuccess: ' + repr(e))
 
 
 def connect_rpc(opts):
     from jsonrpclib import Server
     conn_path = '{protocol}://{host}:{port}'.format(**opts)
     conn = Server(conn_path)
+    # check connection firstly
+    ping_rpc(conn)
     return conn
 
 
@@ -183,7 +185,8 @@ class Connections(OneInstanceImp):
 
         logging.info('-> Connections\n' +
             ''.join(
-                ['| {0:<15}| {1:<15}\n'.format(i, repr(self._availables[i])) for i in self._availables])
+                ['| {0:<15}| {1:<15}\n'.format(i, repr(self._availables[i]))\
+                    for i in self._availables])
         )
 
     def set(self, typ, name, opts):
@@ -216,12 +219,15 @@ connections = Connections.instance()
 def keep_connections():
     for facility, connMap in connections._availables.iteritems():
         for name, conn in connMap.iteritems():
-            try:
-                logging.info('check connection {0} - {1}'.format(facility, name))
-                globals()['ping_' + facility](conn)
-            except ConnectionError, e:
-                logging.error('%s - %s lost connection: %s' %\
-                    (facility, name, repr(e)))
+            # try:
+            #     logging.info('check connection {0} - {1}'.format(facility, name))
+            #     globals()['ping_' + facility](conn)
+            # except ConnectionError, e:
+            #     logging.error('%s - %s lost connection: %s' %\
+            #         (facility, name, repr(e)))
+            # see the error as cretical, raise and crash the application
+            logging.info('check connection {0} - {1}'.format(facility, name))
+            globals()['ping_' + facility](conn)
     # TODO try reconnect if lost connection
 
 _KEEPER = PeriodicCallback(keep_connections, options.connection_keep_time)
