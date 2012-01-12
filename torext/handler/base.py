@@ -127,7 +127,9 @@ class _BaseHandler(tornado.web.RequestHandler):
         else:
             error_msg = error
         msg = {'code': code, 'error': error_msg}
-        print 'API ERROR: ', msg
+        if options.application['debug']:
+            chunk = self.dump_dict(msg)
+            logging.info(block_text(chunk))
         self.write(msg)
         if not self._finished:
             self.finish()
