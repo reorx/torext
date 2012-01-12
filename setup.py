@@ -29,9 +29,11 @@ setup(
         'tornado==2.1.1',
         'pyyaml',
         'pymongo>=2.1',
+        'mongokit>=0.7.2',
         'redis>=2.4',
         'pika>=0.9.5',
         'requests>=0.9',
-        'pyflakes>=0.5.0'
+        'pyflakes>=0.5.0',
+        'jsonrpclib>=0.1.3'
     ]
 )
