@@ -14,7 +14,8 @@ setup(
     description='torext is an instrumental package which aim at easy implementation of tornado based project',
     packages=[
         'torext',
-        'torext.handler',
+        'torext.db',
+        'torext.web',
         'torext.utils',
         'torext.scripts',
         'torext.third'
