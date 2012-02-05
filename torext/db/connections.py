@@ -7,11 +7,62 @@
 # TODO in order to ensure connection is properly established, call ping_$ after first connecting
 
 import logging
-from tornado.options import options
-from tornado.ioloop import PeriodicCallback
-from .utils.format import _json, utf8
-from .utils.factory import OneInstanceImp
-from .errors import ConnectionError
+from ..utils.format import _json, utf8
+from ..utils.factory import OneInstanceImp
+from ..errors import ConnectionError
+
+
+class Connections(OneInstanceImp):
+    """What a connection is, doesn't mean linking with kinda facility,
+    like MySQL, MongoDB, RabbitMQ...
+    but a certain object that can be mainputated uniquely,
+    for example, a session in MySQl, a database of MongoDB,
+    and, as to RabbitMQ, itself fits this concept well enough.
+
+    Connections combine those up.
+    """
+    def __init__(self, opts):
+        # opts = options.connections
+        self.opts = opts
+        self._availables = {}
+        for facility in opts:
+            for ider, args in opts[facility].iteritems():
+                self.set(facility, ider, args)
+
+        logging.info('-> Connections\n' +
+            ''.join(
+                ['| {0:<15}| {1:<15}\n'.format(i, repr(self._availables[i]))\
+                    for i in self._availables])
+        )
+
+    def set(self, typ, name, conn_opts):
+        try:
+            func = globals()['connect_' + typ]
+        except KeyError:
+            raise ConnectionError('Connection type not exist')
+        if not conn_opts['enable']:
+            return
+        conn = func(conn_opts)
+        if conn is None:
+            raise ConnectionError('Set connection %s error' % typ)
+        if not typ in self._availables:
+            self._availables[typ] = {}
+        self._availables[typ][name] = conn
+
+    def get(self, typ, name):
+        try:
+            return self._availables[typ][name]
+        except KeyError:
+            return None
+
+    def reset(self, typ, name):
+        del self._availables[typ][name]
+        self.set(typ, name, self.opts[typ][name])
+
+    def __str__(self):
+        conns_str = ' '.join(['%s(%s)' % (i, len(self._availables[i].keys()))\
+                        for i in self._availables])
+        return '<torext.connections.Connections: ' + conns_str + '>'
 
 
 class MySQLConnection(object):
@@ -64,14 +115,6 @@ def connect_mysql(opts):
         return None
 
 
-def ping_mongodb(self):
-    from pymongo.errors import AutoReconnect
-    try:
-        self.database_names()
-    except AutoReconnect, e:
-        raise ConnectionError(repr(e))
-
-
 def connect_mongodb(opts):
     """
     opts structure:
@@ -82,7 +125,7 @@ def connect_mongodb(opts):
     from mongokit import Connection
     conn = Connection(opts['host'], opts['port'])
     # check connection firstly
-    ping_mongodb(conn)
+    # ping_mongodb(conn)
     return conn
 
 
@@ -125,14 +168,6 @@ def connect_rabbitmq(opts):
     return conn
 
 
-def ping_redis(self):
-    from redis.exceptions import ConnectionError as RedisConnectionError
-    try:
-        self.get('KEEPER')
-    except RedisConnectionError, e:
-        raise ConnectionError(repr(e))
-
-
 def connect_redis(opts):
     import redis
     if opts['use_socket']:
@@ -141,23 +176,8 @@ def connect_redis(opts):
         pool = redis.ConnectionPool(host=opts['host'], port=opts['port'], db=0)
         conn = redis.Redis(connection_pool=pool)
     # check connection firstly
-    ping_redis(conn)
+    # ping_redis(conn)
     return conn
-
-
-def ping_rpc(self):
-    import socket
-    import xmlrpclib
-    import jsonrpclib.jsonrpc
-    try:
-        self.test('test')
-    except jsonrpclib.jsonrpc.ProtocolError:
-        try:
-            self.checkin('test')
-        except (socket.error, socket.gaierror, xmlrpclib.ProtocolError) as e:
-            raise ConnectionError(repr(e))
-        except Exception, e:
-            logging.warning('rpc checking unsuccess: ' + repr(e))
 
 
 def connect_rpc(opts):
@@ -165,70 +185,5 @@ def connect_rpc(opts):
     conn_path = '{protocol}://{host}:{port}'.format(**opts)
     conn = Server(conn_path)
     # check connection firstly
-    ping_rpc(conn)
+    # ping_rpc(conn)
     return conn
-
-
-class Connections(OneInstanceImp):
-    """What a connection is, doesn't mean linking with kinda facility,
-    like MySQL, MongoDB, RabbitMQ...
-    but a certain object that can be mainputated uniquely,
-    for example, a session in MySQl, a database of MongoDB,
-    and, as to RabbitMQ, itself fits this concept well enough
-    """
-    def __init__(self):
-        self._availables = {}
-        opts = options.connections
-        for facility in opts:
-            for ider, args in opts[facility].iteritems():
-                self.set(facility, ider, args)
-
-        logging.info('-> Connections\n' +
-            ''.join(
-                ['| {0:<15}| {1:<15}\n'.format(i, repr(self._availables[i]))\
-                    for i in self._availables])
-        )
-
-    def set(self, typ, name, opts):
-        try:
-            func = globals()['connect_' + typ]
-        except KeyError:
-            raise ConnectionError('Connection type not exist')
-        if not opts['enable']:
-            return
-        conn = func(opts)
-        if conn is None:
-            raise ConnectionError('Set connection %s error' % typ)
-        if not typ in self._availables:
-            self._availables[typ] = {}
-        self._availables[typ][name] = conn
-
-    def get(self, typ, name):
-        try:
-            return self._availables[typ][name]
-        except KeyError:
-            return None
-
-    def reset(self, typ, name):
-        del self._availables[typ][name]
-        self.set(typ, name, options.connections[typ][name])
-
-connections = Connections.instance()
-
-
-def keep_connections():
-    for facility, connMap in connections._availables.iteritems():
-        for name, conn in connMap.iteritems():
-            # try:
-            #     logging.info('check connection {0} - {1}'.format(facility, name))
-            #     globals()['ping_' + facility](conn)
-            # except ConnectionError, e:
-            #     logging.error('%s - %s lost connection: %s' %\
-            #         (facility, name, repr(e)))
-            # see the error as cretical, raise and crash the application
-            logging.info('check connection {0} - {1}'.format(facility, name))
-            globals()['ping_' + facility](conn)
-    # TODO try reconnect if lost connection
-
-_KEEPER = PeriodicCallback(keep_connections, options.connection_keep_time)
-_KEEPER.start()

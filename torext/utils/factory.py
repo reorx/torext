@@ -1,9 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-class OneInstanceImp(dict):
+
+class OneInstanceImp(object):
     """Our global program options, an dictionary with object-like access.
-    
+
     Usage::
         >>> class SpecObject(OneInstanceImp):
         >>>     pass
