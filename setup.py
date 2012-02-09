@@ -16,6 +16,7 @@ setup(
         'torext',
         'torext.db',
         'torext.web',
+        'torext.web.handlers',
         'torext.utils',
         'torext.scripts',
         'torext.third'
@@ -28,7 +29,6 @@ setup(
 
     install_requires=[
         'tornado==2.1.1',
-        'pyyaml',
         'pymongo>=2.1',
         'mongokit>=0.7.2',
         'redis>=2.4',
