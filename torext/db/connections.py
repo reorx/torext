@@ -59,7 +59,7 @@ class Connections(OneInstanceImp):
         try:
             return self._availables[typ][name]
         except KeyError:
-            return None
+            raise ConnectionError('connection %s:%s not exist' % (typ, name))
 
     def reset(self, typ, name):
         del self._availables[typ][name]
