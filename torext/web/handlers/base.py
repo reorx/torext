@@ -31,9 +31,9 @@ import tornado.locale
 
 from tornado.web import HTTPError
 from tornado import escape
-from tornado.options import options
 
-from ..utils.format import _json, _dict
+from torext import settings
+from torext.utils.format import _json, _dict
 
 
 def block_text(text, width=80, limit=800):
@@ -106,7 +106,7 @@ class _BaseHandler(tornado.web.RequestHandler):
             chunk = self.dump_dict(chunk)
             self.set_header("Content-Type", "application/json; charset=UTF-8")
         chunk = escape.utf8(chunk)
-        if options.application['debug']:
+        if settings.application['debug']:
             logging.info(block_text(chunk))
         if json:
             self.set_header("Content-Type", "application/json; charset=UTF-8")
@@ -127,7 +127,7 @@ class _BaseHandler(tornado.web.RequestHandler):
         else:
             error_msg = error
         msg = {'code': code, 'error': error_msg}
-        if options.application['debug']:
+        if settings.application['debug']:
             chunk = self.dump_dict(msg)
             logging.info(block_text(chunk))
         self.write(msg)
@@ -158,7 +158,7 @@ class _BaseHandler(tornado.web.RequestHandler):
         """
         like a middleware between raw request and handling process,
         """
-        if options.application['debug']:
+        if settings.application['debug']:
             self._prepare_debug()
             if self._finished:
                 return
@@ -183,6 +183,10 @@ class _BaseHandler(tornado.web.RequestHandler):
                 block += tmpl.format(repr(k), repr(v))
 
         logging.info(block)
+
+    def render(self, template_name, context={}):
+        """for web using"""
+        return super(_BaseHandler, self).render(template_name, **context)
 
 
 def api_authenticated(method):

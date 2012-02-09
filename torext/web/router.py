@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
-from tornado.options import options
+from torext import settings
 
 
 class HandlersContainer(object):
@@ -12,12 +12,12 @@ class HandlersContainer(object):
 
 class Module(HandlersContainer):
     def __init__(self, svc_label):
-        self.import_path = options.package + '.' + svc_label
+        self.import_path = settings.package + '.' + svc_label
         self._handlers = []
 
         try:
             logging.debug('import %s' % self.import_path)
-            module = __import__(self.import_path, fromlist=[options.package])
+            module = __import__(self.import_path, fromlist=[settings.package])
             self._handlers = getattr(module, 'handlers')
         except ImportError, e:
             print 'import path', self.import_path

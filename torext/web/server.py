@@ -10,12 +10,12 @@
 import logging
 from tornado.ioloop import IOLoop
 from tornado.httpserver import HTTPServer
-from tornado.options import options
+
+from torext import settings
 
 
 def run_api_server(application):
-    global options
-    opts = options.application
+    opts = settings.application
     http_server = HTTPServer(application)
 
     # NOTE could not use multiprocess mode under debug

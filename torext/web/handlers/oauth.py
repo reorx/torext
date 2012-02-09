@@ -17,9 +17,10 @@ from tornado import httpclient
 from tornado import gen
 from tornado.escape import json_decode
 from tornado.httputil import url_concat
-from tornado.options import options
 from tornado.auth import OAuthMixin, OAuth2Mixin
 from tornado.util import bytes_type
+
+from torext import settings
 
 #
 # TODO transmist the consumer_* arguments out of classes
@@ -81,8 +82,8 @@ class TwitterOAuthMixin(OAuthMixin):
 
     def _oauth_consumer_token(self):
         return dict(
-            key=options.networks['twitter']['consumer_key'],
-            secret=options.networks['twitter']['consumer_secret'])
+            key=settings.networks['twitter']['consumer_key'],
+            secret=settings.networks['twitter']['consumer_secret'])
 
     def _oauth_get_user(self, access_token, callback):
         callback = self.async_callback(self._parse_user_response, callback)
@@ -132,8 +133,8 @@ class WeiboOAuthMixin(OAuthMixin):
         callback(escape.json_decode(response.body))
 
     def _oauth_consumer_token(self):
-        return dict(key=options.networks['weibo']['consumer_key'],
-                     secret=options.networks['weibo']['consumer_secret'])
+        return dict(key=settings.networks['weibo']['consumer_key'],
+                     secret=settings.networks['weibo']['consumer_secret'])
 
     def _oauth_get_user(self, access_token, callback):
         callback = self.async_callback(self._parse_user_response, callback)
@@ -201,8 +202,8 @@ class DoubanOAuthMixin(OAuthMixin):
         callback(escape.json_decode(response.body))
 
     def _oauth_consumer_token(self):
-        return dict(key=options.networks['douban']['consumer_key'],
-                     secret=options.networks['douban']['consumer_secret'])
+        return dict(key=settings.networks['douban']['consumer_key'],
+                     secret=settings.networks['douban']['consumer_secret'])
 
     def _oauth_get_user(self, access_token, callback):
         callback = self.async_callback(self._parse_user_response, callback)
@@ -266,8 +267,8 @@ class TencentOAuthMixin(OAuthMixin):
         callback(escape.json_decode(response.body))
 
     def _oauth_consumer_token(self):
-        return dict(key=options.networks['tencent']['consumer_key'],
-                     secret=options.networks['tencent']['consumer_secret'])
+        return dict(key=settings.networks['tencent']['consumer_key'],
+                     secret=settings.networks['tencent']['consumer_secret'])
 
     def _oauth_get_user(self, access_token, callback):
         callback = self.async_callback(self._parse_user_response, callback)
@@ -412,7 +413,7 @@ class WeiboOAuth2Mixin(object):
         display = ','.join(display_list)
         all_args = {
             'client_id': consumer_token['client_id'],
-            'redirect_uri': options.networks['weibo']['redirect_uri'],
+            'redirect_uri': settings.networks['weibo']['redirect_uri'],
             'response_type': response_type,
             'display': display,
         }
@@ -432,7 +433,7 @@ class WeiboOAuth2Mixin(object):
         }
         if 'authorization_code' == grant_type:
             all_args['code'] = code
-            all_args['redirect_uri'] = options.networks['weibo']['redirect_uri']
+            all_args['redirect_uri'] = settings.networks['weibo']['redirect_uri']
         elif 'password' == grant_type:
             for k in ('username', 'password'):
                 assert k in kwgs, 'argument:%s is required' % k
@@ -463,8 +464,8 @@ class WeiboOAuth2Mixin(object):
         callback(token_dict)
 
     def _oauth_consumer_token(self):
-        token = dict(client_id=options.networks['weibo']['consumer_key'],
-                     client_secret=options.networks['weibo']['consumer_secret'],)
+        token = dict(client_id=settings.networks['weibo']['consumer_key'],
+                     client_secret=settings.networks['weibo']['consumer_secret'],)
         return token
 
 
@@ -608,8 +609,8 @@ class RenrenOAuth2Mixin(object):
         return
 
     def _oauth_consumer_token(self):
-        return dict(key=options.networks['renren']['consumer_key'],
-                     secret=options.networks['renren']['consumer_secret'])
+        return dict(key=settings.networks['renren']['consumer_key'],
+                     secret=settings.networks['renren']['consumer_secret'])
 
 
 ##########
