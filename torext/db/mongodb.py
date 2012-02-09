@@ -28,14 +28,21 @@ import logging
 from pymongo.objectid import ObjectId
 from pymongo.cursor import Cursor as PymongoCursor
 
+from torext.errors import ConnectionError
 from torext.utils.debugtools import pprint
-from torext.schema import StructedSchema
+from torext.db.schema import StructedSchema
 
 
 class CollectionDeclarer(object):
     connection = None
 
     def __init__(self, _db, _col):
+        if self.connection is None:
+            raise ConnectionError("""
+    MongoDB connection is None in CollectionDeclarer,
+    it may happen when your settings.py file is incorrect,
+    or you involve the project in an outer place without properly configuration.
+                """)
         self._db = _db
         self._col = _col
         self.col = None
@@ -61,15 +68,9 @@ class Document(StructedSchema):
     >>> class ADoc(Document):
     ...     col = CollectionDeclarer('dbtest', 'coltest')
     ...
-    >>> d = ADoc()
-    >>> d['name'] = 'abs'
-    >>> d['_id']
-    < ObjectId .. >
-    >>> d.save()
 
     2. init from existing document
-    >>> d = ADoc(exist_dict)
-    >>> d.save()
+
     """
     __safe__ = True
     __id_map__ = False

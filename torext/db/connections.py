@@ -21,9 +21,15 @@ class Connections(OneInstanceImp):
 
     Connections combine those up.
     """
-    def __init__(self, opts):
-        # opts = options.connections
+    def __init__(self, opts={}):
+        """
+        if opts is an empty dict, or is not passed, this indicates that
+        the configuration will be done in certain service.
+        """
         self.opts = opts
+        self.configure(opts)
+
+    def configure(self, opts):
         self._availables = {}
         for facility in opts:
             for ider, args in opts[facility].iteritems():
@@ -187,3 +193,6 @@ def connect_rpc(opts):
     # check connection firstly
     # ping_rpc(conn)
     return conn
+
+
+connections = Connections.instance()

@@ -16,7 +16,6 @@ connections_opts = {
             'username': None,
             'password': None,
             'keep_time': 7200,
-            'database': 'nodelink'
         }
     }
 }
@@ -33,3 +32,27 @@ print connections
 
 mdb = connections.get('mongodb', 'core')
 print mdb
+
+#############
+# models.py #
+#############
+
+from torext.db.mongodb import *
+
+class CollectionDeclarer(CollectionDeclarer):
+    connection = connections.get('mongodb', 'core')
+
+class TestDoc(Document):
+    col = CollectionDeclarer('test', 'col0')
+    __id_map__ = True
+    struct = {
+        'id': ObjectId,
+        'name': str,
+        'age': int,
+    }
+
+td = TestDoc.new()
+
+print td
+
+td.save()
