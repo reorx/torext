@@ -28,7 +28,7 @@ for name, version in config.items('requirements'):
             print 'version number is low (%s > %s), upgrade package' %\
                     (version, _version)
             os.system('easy_install -U %s' % name)
-            
+
     except ImportError:
         print 'missing package:', name
         os.system('easy_install %s' % name)
