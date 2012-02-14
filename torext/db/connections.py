@@ -6,6 +6,9 @@
 # TODO function ping_rabbitmq
 # TODO in order to ensure connection is properly established, call ping_$ after first connecting
 
+# NOTE 如果connections 在 torext.db中，那么不应包含非db连接如rabbitmq ?
+#
+
 import logging
 from ..utils.format import _json, utf8
 from ..utils.factory import OneInstanceImp

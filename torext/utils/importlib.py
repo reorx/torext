@@ -20,6 +20,7 @@ def import_underpath_module(path, name):
     logging.warning('loading handler module: ' + name)
     return importer.find_module(name).load_module(name)
 
+
 def autoload_submodules(dirpath):
     """Load submodules by dirpath
     NOTE. ignore packages
@@ -29,11 +30,10 @@ def autoload_submodules(dirpath):
     return (importer.find_module(name).load_module(name)\
             for name, is_pkg in importer.iter_modules())
 
-#####################################################
-#                                                   #
-#    some may-be-userful code pieces from django    #
-#                                                   #
-#####################################################
+
+######################################
+# borrow from django.utils.importlib #
+######################################
 
 # Taken from Python 2.7 with permission from/by the original author.
 
