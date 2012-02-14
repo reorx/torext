@@ -7,9 +7,14 @@ import logging
 from tornado.options import enable_pretty_logging
 
 
+ENV_VAR_NAME = 'TOREXT_SETTINGS_MODULE'
+
+
 def initialize(settings_module):
     # step 0. use settings_module find and add project parent path to sys.path,
     # to ensure project can be imported
+    if settings_module is None:
+        pass
     sys.path.insert(0,
         os.path.abspath(
             os.path.join(

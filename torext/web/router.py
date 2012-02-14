@@ -49,6 +49,9 @@ class Router(HandlersContainer):
                 )
 
     def handlers(self):
+        if settings.application['debug']:
+            log = '-> Handlers\n[' + ', '.join(['"%s"' % i[0] for i in self._handlers]) + ']'
+            logging.info(log)
         return self._handlers
 
 
