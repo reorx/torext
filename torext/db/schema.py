@@ -53,6 +53,8 @@ data = {
 }
 """
 import logging
+logger = logging.getLogger('torext.db.schema')
+logger.setLevel('INFO')
 from hashlib import md5
 from pymongo.objectid import ObjectId
 from torext.errors import ValidationError
@@ -81,6 +83,7 @@ class StructedSchema(object):
         1. instance has the same keys, no less, no more, with defined struct.
         2. when initializing instance, if no default value input, key-value will be auto created.
         3. when auto creating and validating, if key isn't in `force_type`, None will be allowed.
+        4. no unique judgements
 
     >>> class SomeStruct(StructedSchema):
     ...     struct = {
@@ -150,12 +153,12 @@ class _Gen(object):
 def validate_doc(doc, struct):
     def iter_struct(st, ck):
         #time.sleep(0.3)
-        logging.debug('@ ' + ck)
+        logger.debug('@ ' + ck)
         if isinstance(st, type):
             typ = st
         else:
             typ = type(st)
-        logging.debug('define: %s' % typ)
+        logger.debug('define: %s' % typ)
 
         # index in doc
         try:
@@ -163,14 +166,14 @@ def validate_doc(doc, struct):
         except KeyError:
             raise ValidationError(ck + ' could not index out')
 
-        logging.debug('obj: %s %s' % (o, type(o)))
+        logger.debug('obj: %s %s' % (o, type(o)))
         if not isinstance(o, tuple):
             o = (o, )
         # so if o is an empty iterable (originally list), this step will pass
         for i in o:
-            logging.debug('item: %s %s' % (i, type(i)))
+            logger.debug('item: %s %s' % (i, type(i)))
             if not isinstance(i, typ):
-                if (typ is unicode or typ is str) and i is None:
+                if (typ is unicode or typ is str or typ is ObjectId) and i is None:
                     # at this point, i should be (or must be?) the end of
                     # a dot_key, so if value is None, as to str and unicode,
                     # it is kinda acceptable
@@ -182,7 +185,7 @@ def validate_doc(doc, struct):
                 raise ValidationError(
                     '{0}: invalid {1}, should be {2}, value: {3}'.format(ck, type(i), typ, repr(i)))
 
-        logging.debug('---')
+        logger.debug('---')
         # iter down step
         if isinstance(st, dict):
             for k, v in st.iteritems():
@@ -197,7 +200,7 @@ def validate_doc(doc, struct):
         else:  # isinstance(st, type)
             return
     iter_struct(struct, '$')
-    logging.debug('all passed !')
+    logger.debug('all passed !')
 
 
 def build_dict(struct, default={}):
@@ -216,7 +219,7 @@ def build_dict(struct, default={}):
                 nk = k
             else:
                 nk = ck + '.' + k
-            logging.debug('set value to: ' + nk)
+            logger.debug('set value to: ' + nk)
 
             # if dot_key is find in default, stop recurse and set value immediatelly
             # this may make the dict structure broken (not valid with struct),
@@ -239,7 +242,7 @@ def build_dict(struct, default={}):
             # auto transfer str into ObjectId if possible
             if v is ObjectId and isinstance(kv, str):
                 kv = ObjectId(kv)
-            logging.debug('value is: %s' % kv)
+            logger.debug('value is: %s' % kv)
             cd[k] = kv
         return cd
 
@@ -362,7 +365,7 @@ if '__main__' == __name__:
     class ValidateTestCase(unittest.TestCase):
         def setUp(self):
             self._t_data = {
-                'object_id': ObjectId(),
+                'object_id': None,
                 'name': 'reorx is the god',
                 'nature': {'luck': 10},
                 'people': ['aoyi'],
