@@ -76,6 +76,24 @@ class GenCaller(object):
 
 
 class StructedSchema(object):
+    """
+    Philosophy.
+        1. instance has the same keys, no less, no more, with defined struct.
+        2. when initializing instance, if no default value input, key-value will be auto created.
+        3. when auto creating and validating, if key isn't in `force_type`, None will be allowed.
+
+    >>> class SomeStruct(StructedSchema):
+    ...     struct = {
+    ...         'id': ObjectId,
+    ...         'name': str,
+    ...         'description': str,
+    ...     }
+    ...
+    ...     force_type = [
+    ...         'name',
+    ...     ]
+    ...
+    """
     current_struct = None
     gen = GenCaller()
     # TODO rewrite validators ability, has been moved due to multi structs definition
@@ -217,6 +235,10 @@ def build_dict(struct, default={}):
                         kv = DEFAULT_TYPE_VALUE[v]()
                     else:
                         kv = None
+
+            # auto transfer str into ObjectId if possible
+            if v is ObjectId and isinstance(kv, str):
+                kv = ObjectId(kv)
             logging.debug('value is: %s' % kv)
             cd[k] = kv
         return cd
@@ -317,6 +339,7 @@ if '__main__' == __name__:
 
     class TestSchema(StructedSchema):
         struct = {
+            'object_id': ObjectId,
             'name': str,
             'nature': {'luck': int},
             'people': [str],
@@ -339,6 +362,7 @@ if '__main__' == __name__:
     class ValidateTestCase(unittest.TestCase):
         def setUp(self):
             self._t_data = {
+                'object_id': ObjectId(),
                 'name': 'reorx is the god',
                 'nature': {'luck': 10},
                 'people': ['aoyi'],
@@ -376,3 +400,9 @@ if '__main__' == __name__:
     logger.addHandler(streamHandler)
 
     unittest.main()
+
+    print 'another un-unittest test:'
+    import pprint
+    pprint.PrettyPrinter(indent=4).pprint(
+        TestSchema.build_instance(default={'object_id': '4f3c807c312f91112a010101'})
+    )

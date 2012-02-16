@@ -19,14 +19,14 @@ def start_shell(local_vars={}):
     readline.parse_and_bind("tab: complete")
     readline.set_completer(irlcompleter().complete)
 
-    # pythonrc = os.environ.get("PYTHONSTARTUP")
-    # if pythonrc and os.path.isfile(pythonrc):
-    #     try:
-    #         execfile(pythonrc)
-    #     except NameError:
-    #         pass
-    # # This will import .pythonrc.py as a side-effect
-    # import user
+    pythonrc = os.environ.get("PYTHONSTARTUP")
+    if pythonrc and os.path.isfile(pythonrc):
+        try:
+            execfile(pythonrc)
+        except NameError:
+            pass
+    # This will import .pythonrc.py as a side-effect
+    import user
 
     _locals = locals()
     for i in _locals:
