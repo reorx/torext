@@ -182,6 +182,8 @@ def validate_doc(doc, struct):
                     (type(i) is unicode and typ is str):
                     # NOTE temporarily let unicode and str compatable
                     continue
+                if type(i) is long and typ is int:
+                    continue
                 raise ValidationError(
                     '{0}: invalid {1}, should be {2}, value: {3}'.format(ck, type(i), typ, repr(i)))
 
