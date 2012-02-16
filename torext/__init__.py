@@ -1,8 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import os
-import sys
+# import os
+# import sys
 import logging
 from tornado.options import enable_pretty_logging
 
@@ -11,14 +11,15 @@ ENV_VAR_NAME = 'TOREXT_SETTINGS_MODULE'
 
 
 def initialize(settings_module):
-    # step 0. use settings_module find and add project parent path to sys.path,
-    # to ensure project can be imported
     if settings_module is None:
         pass
-    sys.path.insert(0,
-        os.path.abspath(
-            os.path.join(
-                os.path.dirname(settings_module.__file__), '..')))
+    # NOTE [20120214] discard this step.
+    # step 0. use settings_module find and add project parent path to sys.path,
+    # to ensure project can be imported
+    # sys.path.insert(0,
+    #     os.path.abspath(
+    #         os.path.join(
+    #             os.path.dirname(settings_module.__file__), '..')))
 
     # setp 1. set torext using settings (internally used in torext)
     global settings
