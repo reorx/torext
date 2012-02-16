@@ -32,6 +32,13 @@ def start_shell(local_vars={}):
     for i in _locals:
         if not i.startswith('__') and i != 'local_vars':
             local_vars[i] = _locals[i]
+    local_vars.update({
+        '__name__': '__main__',
+        '__package__': None,
+        '__doc__': None,
+    })
+
+    # TODO problem: could not complete exising vars.
 
     code.interact(local=local_vars)
 

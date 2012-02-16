@@ -74,6 +74,7 @@ class Document(StructedSchema):
     """
     __safe__ = True
     __id_map__ = False
+    # TODO key_map = {'id': '_id'}
 
     def __init__(self, raw=None):
         """ wrapper of raw data from cursor
