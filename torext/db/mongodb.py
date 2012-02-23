@@ -33,6 +33,17 @@ from torext.utils.debugtools import pprint
 from torext.db.schema import StructedSchema
 
 
+def oid(id):
+    if isinstance(id, ObjectId):
+        return id
+    elif isinstance(id, (str, unicode)):
+        if isinstance(id, unicode):
+            id = id.encode('utf8')
+        return ObjectId(id)
+    else:
+        raise ValueError('should str or ObjectId')
+
+
 class CollectionDeclarer(object):
     connection = None
 
@@ -198,6 +209,8 @@ class Document(StructedSchema):
 
     @classmethod
     def find(cls, *args, **kwgs):
+        # TODO compability of 'id' and '_id' in str type
+        # as to 'id', '__id_map__' value should be judged first
         kwgs['wrap'] = cls
         cursor = Cursor(cls.col, *args, **kwgs)
         return cursor

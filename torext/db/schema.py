@@ -84,6 +84,10 @@ class StructedSchema(object):
         2. when initializing instance, if no default value input, key-value will be auto created.
         3. when auto creating and validating, if key isn't in `force_type`, None will be allowed.
         4. no unique judgements
+        5. keys not in struct could not be read or set.
+
+    TODO.
+        * auto_fix for raw doc in mongodb to fit struct (always use in developing at which time struct changes frequently)
 
     >>> class SomeStruct(StructedSchema):
     ...     struct = {
