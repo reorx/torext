@@ -1,32 +1,65 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+
+"""
+errors:
+
+    ConnectionError
+
+    ValidationError
+
+    AuthenticationNotPass
+
+    ObjectNotFound
+
+    MultiObjectsReturned
+
+    ParametersInvalid
+"""
+
+
 import logging
 
 
-class BaseError(Exception):
+class TorextBaseException(Exception):
     def __init__(self, msg):
         self.msg = msg
-        logging.debug('{0}: {1}'.format(self.__class__.__name__, msg))
+        self.__str = '%s %s' % (self.__class__.__name__, self)
+        logging.debug(self.__str)
 
     def __str__(self):
-        return 'exception:: %s: %s' % (self.__class__.__name__, self.msg)
+        return self.__str
 
 
-class ConnectionError(BaseError):
+# class OperationError(TorextBaseException):
+#     pass
+
+
+class ConnectionError(TorextBaseException):
     """
-    Use in:
-        connections.py
+    error occurs in connection
     """
     pass
 
 
-class OperationError(BaseError):
+class ValidationError(TorextBaseException):
+    """
+    error occur when validating values
+    """
     pass
 
 
-class ValidationError(BaseError):
-    """
-    Use in:
-        schema.py
-    """
+class AuthenticationNotPass(TorextBaseException):
+    pass
+
+
+class ObjectNotFound(TorextBaseException):
+    pass
+
+
+class MultiObjectsReturned(TorextBaseException):
+    pass
+
+
+class ParametersInvalid(TorextBaseException):
     pass

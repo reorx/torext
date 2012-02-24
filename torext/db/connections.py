@@ -10,9 +10,8 @@
 #
 
 import logging
-from ..utils.format import _json, utf8
-from ..utils.factory import OneInstanceImp
-from ..errors import ConnectionError
+from torext.utils.factory import OneInstanceImp
+from torext.errors import ConnectionError
 
 
 class Connections(OneInstanceImp):
@@ -51,9 +50,10 @@ class Connections(OneInstanceImp):
             raise ConnectionError('Connection type not exist')
         if not conn_opts['enable']:
             return
-        conn = func(conn_opts)
-        if conn is None:
-            raise ConnectionError('Set connection %s error' % typ)
+        try:
+            conn = func(conn_opts)
+        except Exception, e:
+            raise ConnectionError('Set connection %s failed, original error: %s' % (typ, e))
         if not typ in self._availables:
             self._availables[typ] = {}
         self._availables[typ][name] = conn
@@ -62,7 +62,7 @@ class Connections(OneInstanceImp):
         try:
             return self._availables[typ][name]
         except KeyError:
-            raise ConnectionError('connection %s:%s not exist' % (typ, name))
+            raise ConnectionError('Connection %s:%s not exist' % (typ, name))
 
     def reset(self, typ, name):
         del self._availables[typ][name]
@@ -78,17 +78,10 @@ class MySQLConnection(object):
     def __init__(self, e, s):
         self.engine = e
         self.session = s
+        self.check_connection()
 
     def check_connection(self):
-        from sqlalchemy import exc
-        try:
-            self.engine.connect()
-            return True
-        except exc.OperationalError:
-            return False
-
-    def keep_connection(self):
-        pass
+        self.engine.connect()
 
 
 """
@@ -118,10 +111,7 @@ def connect_mysql(opts):
                            pool_recycle=opts['pool_recycle'])
     session = scoped_session(sessionmaker(bind=engine))
     conn = MySQLConnection(engine, session)
-    if conn.check_connection():
-        return conn
-    else:
-        return None
+    return conn
 
 
 def connect_mongodb(opts):
@@ -133,36 +123,35 @@ def connect_mongodb(opts):
     """
     from mongokit import Connection
     conn = Connection(opts['host'], opts['port'])
-    # check connection firstly
-    # ping_mongodb(conn)
+    # execute this function to ensure succeed
+    conn.database_names()
     return conn
 
 
-# deprecated
-class RabbitMQConnection(object):
-    def __init__(self, _conn, queues):
-        # this is the real connection, but we see itself as the connection
-        self._conn = _conn
-        self.channel = self._conn.channel()
-        self.declared_queues = []
-        for i in queues:
-            self.channel.queue_declare(queue=i)
-            self.declared_queues.append(i)
+# # deprecated
+# class RabbitMQConnection(object):
+#     def __init__(self, _conn, queues):
+#         # this is the real connection, but we see itself as the connection
+#         self._conn = _conn
+#         self.channel = self._conn.channel()
+#         self.declared_queues = []
+#         for i in queues:
+#             self.channel.queue_declare(queue=i)
+#             self.declared_queues.append(i)
 
-    def push(self, queue, msg):
-        queue = utf8(queue)
-        logging.info('push to queue: %s' % queue)
-        if not queue in self.declared_queues:
-            self.channel.queue_declare(queue=queue)
-        if isinstance(msg, (dict, list)):
-            msg = _json(msg)
-        self.channel.basic_publish(routing_key=utf8(queue),
-                                   body=msg,
-                                   exchange='')
+#     def push(self, queue, msg):
+#         queue = utf8(queue)
+#         logging.info('push to queue: %s' % queue)
+#         if not queue in self.declared_queues:
+#             self.channel.queue_declare(queue=queue)
+#         if isinstance(msg, (dict, list)):
+#             msg = _json(msg)
+#         self.channel.basic_publish(routing_key=utf8(queue),
+#                                    body=msg,
+#                                    exchange='')
 
 
 def connect_rabbitmq(opts):
-    import socket
     from pika import BlockingConnection, ConnectionParameters
     from pika import PlainCredentials
     cred = PlainCredentials(opts['username'], opts['password'])
@@ -170,10 +159,7 @@ def connect_rabbitmq(opts):
                                   port=opts['port'],
                                   virtual_host=opts['virtual_host'],
                                   credentials=cred)
-    try:
-        conn = BlockingConnection(params)
-    except (socket.gaierror, socket.error), e:
-        raise ConnectionError(repr(e))
+    conn = BlockingConnection(params)
     return conn
 
 
@@ -184,17 +170,19 @@ def connect_redis(opts):
     else:
         pool = redis.ConnectionPool(host=opts['host'], port=opts['port'], db=0)
         conn = redis.Redis(connection_pool=pool)
-    # check connection firstly
-    # ping_redis(conn)
+    # get empty string key to ensure succeed
+    conn.get('')
     return conn
 
 
 def connect_rpc(opts):
+    """
+    Unfortunately, there is no common way to check rpc server connection,
+    projects that use torext should do this manually if nesessary.
+    """
     from jsonrpclib import Server
     conn_path = '{protocol}://{host}:{port}'.format(**opts)
     conn = Server(conn_path)
-    # check connection firstly
-    # ping_rpc(conn)
     return conn
 
 

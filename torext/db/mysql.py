@@ -27,6 +27,7 @@ from .connections import connections
 
 mysql = connections.get('mysql', 'master')
 
+
 class _Model(object):
     id = Column(Integer, primary_key=True)
     # NOTE #1 temporarily use binded attribute `query` for compatible

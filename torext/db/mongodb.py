@@ -28,9 +28,9 @@ import logging
 from pymongo.objectid import ObjectId
 from pymongo.cursor import Cursor as PymongoCursor
 
-from torext.errors import ConnectionError
 from torext.utils.debugtools import pprint
 from torext.db.schema import StructedSchema
+from torext import errors
 
 
 def oid(id):
@@ -49,6 +49,7 @@ class CollectionDeclarer(object):
 
     def __init__(self, _db, _col):
         if self.connection is None:
+            from torext.errors import ConnectionError
             raise ConnectionError("""
     MongoDB connection is None in CollectionDeclarer,
     it may happen when your settings.py file is incorrect,
@@ -141,7 +142,7 @@ class Document(StructedSchema):
     #def autofix(self):
         #pass
 
-    def identify(self):
+    def identifier(self):
         return {'_id': self['_id']}
 
     @property
@@ -150,6 +151,10 @@ class Document(StructedSchema):
 
     def validate_self(self):
         self.__class__.validate(self._)
+
+    #################
+    # db operations #
+    #################
 
     def save(self):
         self.validate_self()
@@ -168,7 +173,7 @@ class Document(StructedSchema):
         self._in_db = False
 
     def update(self, to_update):
-        ro = self.col.update(self.identify(),
+        ro = self.col.update(self.identifier(),
                 to_update,
                 safe=self.__safe__)
         return ro
@@ -188,7 +193,10 @@ class Document(StructedSchema):
             '$push': {index: value}
         })
 
-################
+    #################
+    # class methods #
+    #################
+
     @classmethod
     def new(cls, **kwgs):
         """Designed only to init from self struct
@@ -220,9 +228,10 @@ class Document(StructedSchema):
         cursor = cls.find(*args, **kwgs)
         count = cursor.count()
         if count == 0:
-            return None
+            raise errors.ObjectNotFound('query dict: ' + repr(args[0]))
         if count > 1:
-            logging.warning('multi results found in Document.one, query dict: ' + repr(args[0]))
+            raise errors.MultiObjectsReturned('multi results found in Document.one,\
+                    query dict: ' + repr(args[0]))
         return cursor.next()
 
     @classmethod
