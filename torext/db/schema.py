@@ -55,6 +55,7 @@ data = {
 import logging
 logger = logging.getLogger('torext.db.schema')
 logger.setLevel('INFO')
+
 from hashlib import md5
 from pymongo.objectid import ObjectId
 from torext.errors import ValidationError
