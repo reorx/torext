@@ -19,20 +19,18 @@ errors:
 
 
 import logging
+from tornado.web import HTTPError
+
+HTTPError = HTTPError
 
 
 class TorextBaseException(Exception):
     def __init__(self, msg):
         self.msg = msg
-        self.__str = '%s %s' % (self.__class__.__name__, self)
-        logging.debug(self.__str)
+        logging.debug(self.msg)
 
     def __str__(self):
-        return self.__str
-
-
-# class OperationError(TorextBaseException):
-#     pass
+        return self.msg
 
 
 class ConnectionError(TorextBaseException):

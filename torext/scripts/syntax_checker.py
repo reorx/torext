@@ -12,6 +12,7 @@ checker = __import__('pyflakes.checker').checker
 
 LOG_FILE_NAME_SUFFIX = '.syntax.log'
 
+
 def check(codeString, filename):
     """
     Check the Python source given by C{codeString} for flakes.
@@ -47,11 +48,11 @@ def check(codeString, filename):
                 offset = offset - (len(text) - len(line))
 
             logging.error('[{0:4}] {1}'.format(lineno, msg))
-            gap = ' '*7
+            gap = ' ' * 7
             logging.error(gap + line)
 
             if offset is not None:
-                logging.error(gap + ' '*offset + '^')
+                logging.error(gap + ' ' * offset + '^')
 
         return 1
     else:
@@ -75,6 +76,7 @@ def checkPath(filename):
     except IOError, msg:
         print >> sys.stderr, "%s: %s" % (filename, msg.args[1])
         return 1
+
 
 class SharedLogFormatter(logging.Formatter):
     #def __init__(self):

@@ -41,7 +41,7 @@ def oid(id):
             id = id.encode('utf8')
         return ObjectId(id)
     else:
-        raise ValueError('should str or ObjectId')
+        raise ValueError('get type %s, should str\unicode or ObjectId' % type(id))
 
 
 class CollectionDeclarer(object):
@@ -57,6 +57,7 @@ class CollectionDeclarer(object):
                 """)
         self._db = _db
         self._col = _col
+        # NOTE this is the raw collection object from pymongo
         self.col = None
         self._fetch_col()
 
@@ -233,6 +234,13 @@ class Document(StructedSchema):
             raise errors.MultiObjectsReturned('multi results found in Document.one,\
                     query dict: ' + repr(args[0]))
         return cursor.next()
+
+    @classmethod
+    def exist(cls, *args, **kwgs):
+        try:
+            return cls.one(*args, **kwgs)
+        except errors.ObjectNotFound:
+            return None
 
     @classmethod
     def by_oid(cls, id, key='_id'):
