@@ -24,7 +24,7 @@ import logging
 import urllib
 import urlparse
 import functools
-import copy
+import traceback
 
 import tornado.web
 import tornado.locale
@@ -36,22 +36,21 @@ from torext import settings
 from torext.utils.format import _json, _dict
 
 
-def block_text(text, width=80, limit=800):
-    text = copy.copy(text)
+def block_response_text(text, width=80, limit=800):
     if isinstance(text, str):
         text = text.decode('utf-8')
+
     if len(text) > limit:
-        text = text[:limit]
+        text = text[:limit - 1]
         end = ' ...'
     else:
-        end = None
+        end = ''
 
     block = '-> Response\n'
-    height = (len(text) / width) + 1
-    for i in range(height):
-        block += ' | ' + text[i * width:(i + 1) * width - 1] + '\n'
-    if end:
-        block += end
+    while text:
+        block += '| ' + text[:width] + '\n'
+        text = text[width:]
+    block += end
     return block
 
 
@@ -99,40 +98,55 @@ class _BaseHandler(tornado.web.RequestHandler):
         return _dict
 
     def json_write(self, chunk, json=False, headers={}):
-        """Used globally, not special in ApiHandler
+        """
+        Used globally, not special in ApiHandler
         chunk could be any type of str, dict, list
         """
-        if isinstance(chunk, dict) or isinstance(chunk, list):
-            chunk = self.dump_dict(chunk)
-            self.set_header("Content-Type", "application/json; charset=UTF-8")
-        chunk = escape.utf8(chunk)
-        if settings.application['debug']:
-            logging.info(block_text(chunk))
         if json:
             self.set_header("Content-Type", "application/json; charset=UTF-8")
         if headers:
             for k, v in headers.iteritems():
                 self.set_header(k, str(v))
+        if isinstance(chunk, dict) or isinstance(chunk, list):
+            chunk = self.dump_dict(chunk)
+            self.set_header("Content-Type", "application/json; charset=UTF-8")
+        chunk = escape.utf8(chunk)
+
         self.write(chunk)
         if not self._finished:
             self.finish()
+
+        if settings.application['debug']:
+            logging.info(block_response_text(chunk))
 
     def json_error(self, code, error=None):
         """Used globally, not special in ApiHandler
         """
         # TODO show message on logging
         self.set_status(code)
+
+        msg = {
+            'code': code,
+            'error': '',
+            'traceback': ''
+        }
         if isinstance(error, Exception):
-            error_msg = str(error)
+            msg['error'] = error.__str__()
+            if settings.application['debug']:
+                msg['traceback'] = '\n' + traceback.format_exc()
+        elif isinstance(error, str):
+            msg['error'] = error
         else:
-            error_msg = error
-        msg = {'code': code, 'error': error_msg}
-        if settings.application['debug']:
-            chunk = self.dump_dict(msg)
-            logging.info(block_text(chunk))
+            raise ValueError('error object should be either Exception or str')
+
         self.write(msg)
         if not self._finished:
             self.finish()
+
+        if settings.application['debug']:
+            logging.error(msg['error'] + '\n' + msg['traceback'])
+            # logging.info(
+            #     block_response_text(self.dump_dict(msg)))
 
     def file_write(self, byteStream, mime='text/plain'):
         self.set_header("Content-Type", mime)
@@ -180,7 +194,13 @@ class _BaseHandler(tornado.web.RequestHandler):
             block += '-----Arguments-----\n'
             for k, v in self.request.arguments.iteritems():
                 tmpl = '| {0:<15} | {1:<15} \n'
-                block += tmpl.format(repr(k), repr(v))
+                req_body = tmpl.format(repr(k), repr(v))
+                if not settings.application['debug_full_request']:
+                    if req_body[1000:]:
+                        req_body = req_body[:1000] + '... ...'
+                    else:
+                        req_body = req_body[:1000]
+                block += req_body
 
         logging.info(block)
 
