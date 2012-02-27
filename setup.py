@@ -36,6 +36,5 @@ setup(
         'requests>=0.9',
         'pyflakes>=0.5.0',
         'jsonrpclib>=0.1.3',
-        'tweepy'
     ]
 )
