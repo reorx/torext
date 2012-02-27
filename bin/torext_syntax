@@ -1,7 +1,5 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
-
-from torext.scripts.syntax_checker import main
-
-
-main()
+# EASY-INSTALL-SCRIPT: 'torext==0.1','torext_syntax'
+__requires__ = 'torext==0.1'
+import pkg_resources
+pkg_resources.run_script('torext==0.1', 'torext_syntax')
