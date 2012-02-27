@@ -25,6 +25,7 @@ __all__ = (
 )
 
 import logging
+import copy
 from pymongo.objectid import ObjectId
 from pymongo.cursor import Cursor as PymongoCursor
 
@@ -130,6 +131,7 @@ class Document(StructedSchema):
     def doc_set(self, dot_key, value):
         keys = dot_key.split('.')
         last_key = keys.pop(-1)
+        # TODO check if there is any problem with self.get(
         op = self.get('.'.join(keys))
         op[last_key] = value
 
@@ -139,6 +141,9 @@ class Document(StructedSchema):
         last_key = keys.pop(-1)
         op = self.get('.'.join(keys))
         del op[last_key]
+
+    def doc_copy(self, exclude=[]):
+        return copy.deepcopy(self._)
 
     #def autofix(self):
         #pass
