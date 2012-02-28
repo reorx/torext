@@ -31,25 +31,24 @@ def print_service_info():
     s = settings
     info = tmpl.format(
         s.package,
-        s.application['port'],
-        s.application['debug'] and 1 or s.application['processes'],
+        s.port,
+        s.debug and 1 or s.processes,
         s.logging,
-        s.application['debug'] and 'on' or 'off',
-        s.application['locale'],
+        s.debug and 'on' or 'off',
+        s.locale,
         connsText)
     logging.info(info)
 
 
 def run_api_server(app):
-    opts = settings.application
     http_server = HTTPServer(app)
 
     # NOTE could not use multiprocess mode under debug
-    if opts['debug']:
-        http_server.listen(opts['port'])
+    if settings.debug:
+        http_server.listen(settings.port)
     else:
-        http_server.bind(opts['port'])
-        http_server.start(opts['processes'])
+        http_server.bind(settings.port)
+        http_server.start(settings.processes)
 
     print_service_info()
     IOLoop.instance().start()

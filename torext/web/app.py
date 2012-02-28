@@ -9,7 +9,7 @@ class BaseApplication(TornadoApplication):
     def __init__(self):
         # TODO resort settings
         self.settings = dict(
-            debug=settings.application['debug'],
+            debug=settings.debug,
             logging=settings.logging,
             template_path=settings.web['template_path'],
             autoescape=None,

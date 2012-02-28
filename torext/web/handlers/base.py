@@ -116,8 +116,8 @@ class _BaseHandler(tornado.web.RequestHandler):
         if not self._finished:
             self.finish()
 
-        if settings.application['debug']:
-            logging.info(block_response_text(chunk))
+        if settings.debug:
+            logging.debug(block_response_text(chunk))
 
     def json_error(self, code, error=None):
         """Used globally, not special in ApiHandler
@@ -128,11 +128,10 @@ class _BaseHandler(tornado.web.RequestHandler):
         msg = {
             'code': code,
             'error': '',
-            'traceback': ''
         }
         if isinstance(error, Exception):
             msg['error'] = error.__str__()
-            if settings.application['debug']:
+            if settings.debug:
                 msg['traceback'] = '\n' + traceback.format_exc()
         elif isinstance(error, str):
             msg['error'] = error
@@ -143,10 +142,8 @@ class _BaseHandler(tornado.web.RequestHandler):
         if not self._finished:
             self.finish()
 
-        if settings.application['debug']:
+        if settings.debug:
             logging.error(msg['error'] + '\n' + msg['traceback'])
-            # logging.info(
-            #     block_response_text(self.dump_dict(msg)))
 
     def file_write(self, byteStream, mime='text/plain'):
         self.set_header("Content-Type", mime)
@@ -172,7 +169,7 @@ class _BaseHandler(tornado.web.RequestHandler):
         """
         like a middleware between raw request and handling process,
         """
-        if settings.application['debug']:
+        if settings.debug:
             self._prepare_debug()
             if self._finished:
                 return
@@ -195,7 +192,7 @@ class _BaseHandler(tornado.web.RequestHandler):
             for k, v in self.request.arguments.iteritems():
                 tmpl = '| {0:<15} | {1:<15} \n'
                 req_body = tmpl.format(repr(k), repr(v))
-                if not settings.application['debug_full_request']:
+                if not settings.debug_full_request:
                     if req_body[1000:]:
                         req_body = req_body[:1000] + '... ...'
                     else:
