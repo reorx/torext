@@ -21,10 +21,8 @@ setup(
         'torext.scripts',
         'torext.third'
     ],
-    package_data = {
-        'torext': ['fixtures/base_options.yaml', 
-                   'fixtures/custom_options_template.yaml']
-    },
+    # package_data = {
+    # },
     scripts=['bin/torext_syntax'],
 
     install_requires=[
