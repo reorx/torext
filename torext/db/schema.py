@@ -52,10 +52,11 @@ data = {
     ]
 }
 """
+
 import logging
 from torext.logger import BaseFormatter
 logger = logging.getLogger('test')
-logger.setLevel('DEBUG')
+logger.setLevel(logging.INFO)
 lh = logging.StreamHandler()
 lh.setFormatter(BaseFormatter(color=True, datefmt='%M:%S'))
 logger.addHandler(lh)
@@ -407,6 +408,8 @@ if '__main__' == __name__:
         def test_base(self):
             self.TS.validate(self._t_data)
             print 'done test_base'
+
+    logger.setLevel('DEBUG')
 
     unittest.main()
 
