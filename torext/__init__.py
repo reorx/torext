@@ -28,7 +28,8 @@ def initialize(settings_module):
         level = getattr(logging, settings.logging.upper())
     else:
         level = settings.logging
-    root_logger.setLevel(level)
+    print 'logging level: ', level
+    root_logger.setLevel('INFO')
     streamHandler = logging.StreamHandler()
     streamHandler.setFormatter(BaseFormatter(color=True))
     root_logger.addHandler(streamHandler)

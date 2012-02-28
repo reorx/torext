@@ -106,7 +106,7 @@ class BaseFormatter(logging.Formatter):
 # 1. test - propagate 0
 # 2. system - propagate 1 - for seperately output system level logs
 
-testLogger = logging.getLogger('plain')
+testLogger = logging.getLogger('test')
 testLogger.propagate = 0
 testLogger.setLevel(logging.DEBUG)
 
@@ -118,6 +118,7 @@ if __name__ == '__main__':
     streamHandler.setFormatter(BaseFormatter(color=True))
     root_logger.addHandler(streamHandler)
 
+    root_logger.debug('bug..')
     root_logger.info('hello')
     root_logger.warning('\nholy a shit')
     try:
@@ -127,7 +128,7 @@ if __name__ == '__main__':
 
     # this logger's log will be handled only once, due to the bool False value
     # of testLogger's attribute `propagate`
-    testLogger.addHandler(logging.StreamHandler())
+    # testLogger.addHandler(logging.StreamHandler())
     testLogger.info('my name is testLogger')
 
     # this logger's log will be handled twice, one by its self, with uncustomized StreamHandler instance,
