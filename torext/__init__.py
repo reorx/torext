@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import os
+import sys
 import logging
 
 ENV_VAR_NAME = 'TOREXT_SETTINGS_MODULE'
@@ -16,6 +18,12 @@ def initialize(settings_module):
     #     os.path.abspath(
     #         os.path.join(
     #             os.path.dirname(settings_module.__file__), '..')))
+
+    # step 0. add torext/third to sys.path
+    sys.path.insert(0,
+        os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__), 'third')))
 
     # setp 1. set torext using settings (internally used in torext)
     global settings

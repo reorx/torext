@@ -1,32 +1,32 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+#
+# Dependences:
+#     * requests
+#     * simplejson
+#
 
-"""
-Dependences:
-    * python-requests
-    * simplejson
-"""
 import urllib
+import logging
 import requests
 import simplejson
 
 _dict = lambda x: simplejson.loads(x, encoding='utf-8')
-_json = lambda x: simplejson.dumps(x, ensure_ascii=False, cls=DateTimeJSONEncoder)
+_json = lambda x: simplejson.dumps(x, ensure_ascii=False)
+
+
+class FacebookAPIRequestError(Exception):
+    pass
+
 
 class Api(object):
     _API_PROTOCOL = 'https://'
     _API_DOMAIN = 'graph.facebook.com'
 
     def __init__(self,
-                 app_id=None,
-                 app_secret=None,
-                 access_token=None):
-        if not app_id or not app_secret:
-            app_id = FB_APP_ID
-            app_secret = FB_APP_SECRET
-        if not access_token:
-            raise ValueError
-
+                 app_id,
+                 app_secret,
+                 access_token):
         self.set_credential(app_id, app_secret, access_token)
 
     def set_credential(self, app_id, app_secret, access_token):
@@ -35,62 +35,55 @@ class Api(object):
         self._access_token = access_token
 
     def _fetch(self, url):
-        url_params = {
+        params = {
             'access_token': self._access_token,
         }
         url = self._API_PROTOCOL +\
               self._API_DOMAIN +\
               url + '?' +\
-              urllib.urlencode(url_params)
+              urllib.urlencode(params)
 
         resp = requests.get(url)
-        print url
+        self._check_resp(resp)
+
         raw_data = resp.content
-        print raw_data
-        #try:
-        data = _dict(raw_data)
-        #except:
-            #raise FacebookParseError('JSON Handle Error')
+        try:
+            data = _dict(raw_data)
+        except:
+            raise ValueError('Raw fetched data json parsing error')
         return data
 
     def _post(self, url, data):
-        #req_url_headers = { 'access_token': self._access_token}
         url = self._API_PROTOCOL +\
               self._API_DOMAIN + url
         data.update({'access_token': self._access_token})
-
         resp = requests.post(url, data=data)
-        return resp
+        self._check_resp(resp)
+
+    def _check_resp(self, resp):
+        if resp.status_code > 399:
+            raise FacebookAPIRequestError(resp)
+        elif resp.status_code > 299:
+            logging.warning('FacebookAPI request %s return code %s'\
+                % (resp.request.url, resp.status_code))
+        logging.debug('url: %s, resp_body: %s' % (resp.request.url, resp.content))
 
     def GetFriends(self):
-        data = self._fetch('/me/friends')
-        return data['data']
+        return self._fetch('/me/friends')['data']
 
     def GetMeProfile(self):
-        data = self._fetch('/me')
-        return data
+        return self._fetch('/me')
 
     def GetMeStatuses(self):
-        data = self._fetch('/me/statuses')
-        return data['data']
+        return self._fetch('/me/statuses')['data']
 
     def GetUserStatuses(self, id):
-        url = '/%s/statuses' % id
-        data = self._fetch(url)
-        return data['data']
+        return self._fetch('/%s/statuses' % id)['data']
 
     def PostStatus(self, content):
-        url = '/me/feed'
-        print 'facebook post content: ', content, type(content)
-        content = content.encode('utf-8')
-        postData = dict(
-            message = content
-        )
-        resp = self._post(url, postData)
-
-class FacebookParseError(Exception):
-    def __init__(self, msg):
-        self._msg = msg
-
-    def __str__(self):
-        return self._msg
+        if isinstance(content, unicode):
+            content = content.encode('utf-8')
+        assert isinstance(content, str), 'PostStatus content must be str, not %s' % type(content)
+        self._post('/me/feed', {
+            'message': content
+        })
