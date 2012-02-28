@@ -14,9 +14,35 @@ from tornado.httpserver import HTTPServer
 from torext import settings
 
 
-def run_api_server(application):
+def print_service_info():
+    tmpl = """\nService Info::
+    Name:       {0}
+    Port:       {1}
+    Processes:  {2}
+    Logging:    {3}
+    Debug:      {4}
+    Locale:     {5}
+    Connections:{6}
+    """
+    from torext.db.connections import connections as conns
+    connsText = ''
+    for k, v in conns._availables.iteritems():
+        connsText += '\n        {0:<10} {1}'.format(k + ':', v)
+    s = settings
+    info = tmpl.format(
+        s.package,
+        s.application['port'],
+        s.application['debug'] and 1 or s.application['processes'],
+        s.logging,
+        s.application['debug'] and 'on' or 'off',
+        s.application['locale'],
+        connsText)
+    logging.info(info)
+
+
+def run_api_server(app):
     opts = settings.application
-    http_server = HTTPServer(application)
+    http_server = HTTPServer(app)
 
     # NOTE could not use multiprocess mode under debug
     if opts['debug']:
@@ -25,13 +51,10 @@ def run_api_server(application):
         http_server.bind(opts['port'])
         http_server.start(opts['processes'])
 
-    logging.info('api server starting')
+    print_service_info()
     IOLoop.instance().start()
 
 
-def run_rpc_server(application, opts):
-    pass
-
-
-def run_web_server(application, opts):
+def run_web_server(app, opts):
+    # print_service_info()
     pass
