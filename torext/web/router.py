@@ -16,7 +16,6 @@ class Module(HandlersContainer):
         self._handlers = []
 
         # try:
-        logging.debug('import %s' % self.import_path)
         module = __import__(self.import_path, fromlist=[settings.package])
         self._handlers = getattr(module, 'handlers')
         # except ImportError, e:
@@ -49,9 +48,9 @@ class Router(HandlersContainer):
                 )
 
     def handlers(self):
-        if settings.application['debug']:
-            log = '-> Handlers\n[' + ', '.join(['"%s"' % i[0] for i in self._handlers]) + ']'
-            logging.info(log)
+        # if settings.application['debug']:
+        #     log = '-> Handlers\n[' + ', '.join(['"%s"' % i[0] for i in self._handlers]) + ']'
+        #     logging.info(log)
         return self._handlers
 
 
