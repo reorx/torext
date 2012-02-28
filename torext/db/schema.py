@@ -53,8 +53,12 @@ data = {
 }
 """
 import logging
-logger = logging.getLogger('torext.db.schema')
-logger.setLevel('INFO')
+from torext.logger import BaseFormatter
+logger = logging.getLogger('test')
+logger.setLevel('DEBUG')
+lh = logging.StreamHandler()
+lh.setFormatter(BaseFormatter(color=True, datefmt='%M:%S'))
+logger.addHandler(lh)
 
 from hashlib import md5
 from pymongo.objectid import ObjectId
@@ -403,11 +407,6 @@ if '__main__' == __name__:
         def test_base(self):
             self.TS.validate(self._t_data)
             print 'done test_base'
-
-    from torext.logger import streamHandler
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-    logger.addHandler(streamHandler)
 
     unittest.main()
 
