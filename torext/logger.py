@@ -59,16 +59,21 @@ class BaseFormatter(logging.Formatter):
         color = False
         if 'color' in kwgs:
             color = kwgs.pop('color')
+        datefmt = '%Y-%m-%d %H:%M:%S'
+        if 'datefmt' in kwgs:
+            datefmt = kwgs['datefmt']
         logging.Formatter.__init__(self, *args, **kwgs)
         self.color = color
+        self.datefmt = datefmt
 
     def format(self, record):
         try:
             message = record.getMessage()
         except Exception, e:
             message = 'Could not get message, error: %s' % e
-        record.asctime = time.strftime(
-            '%Y-%m-%d %H:%M:%S', self.converter(record.created))
+        # record.asctime = time.strftime(
+        #     , self.converter(record.created))
+        # record.asctime =
         levelname = record.levelname
         if record.levelname == 'DEBUG':
             levelname = 'DBG'
@@ -80,7 +85,7 @@ class BaseFormatter(logging.Formatter):
             levelname = _color(record.levelno, levelname)
         record_dict = {
             'levelname': levelname,
-            'asctime': record.asctime,
+            'asctime': self.formatTime(record, self.datefmt),
             'module_with_lineno': '%s-%s' %\
                 (record.module, record.lineno),
             'message': message
