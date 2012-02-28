@@ -1,11 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-# import os
-# import sys
 import logging
-from tornado.options import enable_pretty_logging
-
 
 ENV_VAR_NAME = 'TOREXT_SETTINGS_MODULE'
 
@@ -26,12 +22,16 @@ def initialize(settings_module):
     settings._configure(settings_module)
 
     # setp 2. set logging
+    from torext.logger import BaseFormatter
+    root_logger = logging.getLogger()
     if not isinstance(settings.logging, int):
         level = getattr(logging, settings.logging.upper())
     else:
         level = settings.logging
-    logging.getLogger().setLevel(level)
-    enable_pretty_logging()
+    root_logger.setLevel(level)
+    streamHandler = logging.StreamHandler()
+    streamHandler.setFormatter(BaseFormatter(color=True))
+    root_logger.addHandler(streamHandler)
 
     # setp 3. configure connections
     if hasattr(settings, 'connections'):
