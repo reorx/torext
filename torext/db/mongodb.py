@@ -21,7 +21,7 @@
 # * bottom data storage (database)
 
 __all__ = (
-    'CollectionDeclarer', 'Document', 'ObjectId'
+    'CollectionDeclarer', 'Document', 'ObjectId', 'oid',
 )
 
 import logging
