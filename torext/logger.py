@@ -69,6 +69,9 @@ class BaseFormatter(logging.Formatter):
     def format(self, record):
         try:
             message = record.getMessage()
+            # message may be unicode due to passing chinese characters
+            if isinstance(message, unicode):
+                message = message.encode('utf8')
         except Exception, e:
             message = 'Could not get message, error: %s' % e
         # record.asctime = time.strftime(
@@ -76,7 +79,7 @@ class BaseFormatter(logging.Formatter):
         # record.asctime =
         levelname = record.levelname
         if record.levelname == 'DEBUG':
-            levelname = 'DBG'
+            levelname = 'DEBG'
         elif record.levelname == 'WARNING':
             levelname = 'WARN'
         elif record.levelname == 'ERROR':
