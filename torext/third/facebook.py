@@ -6,8 +6,9 @@
 #     * simplejson
 #
 
-import urllib
 import logging
+test = logging.getLogger('test')
+import urllib
 import requests
 import simplejson
 
@@ -66,7 +67,7 @@ class Api(object):
         elif resp.status_code > 299:
             logging.warning('FacebookAPI request %s return code %s'\
                 % (resp.request.url, resp.status_code))
-        logging.debug('url: %s, resp_body: %s' % (resp.request.url, resp.content))
+        test.debug('url: %s, resp_body: %s' % (resp.request.url, resp.content))
 
     def GetFriends(self):
         return self._fetch('/me/friends')['data']

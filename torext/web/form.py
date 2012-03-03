@@ -18,6 +18,7 @@ from wtforms import IntegerField
 from wtforms import ValidationError
 from wtforms import validators
 
+
 class TornadoArgumentsWrapper(dict):
     def __getattr__(self, key):
         try:
@@ -46,6 +47,7 @@ class TornadoArgumentsWrapper(dict):
         except KeyError:
             raise AttributeError
 
+
 class TornadoLocaleWrapper(object):
     def __init__(self, code):
         self.locale = tornado.locale.get(code)
@@ -55,6 +57,7 @@ class TornadoLocaleWrapper(object):
 
     def ngettext(self, message, plural_message, count):
         return self.locale.translate(message, plural_message, count)
+
 
 class Form(wtForm):
     """

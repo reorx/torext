@@ -11,11 +11,11 @@ class ThreadWorker(threading.Thread):
         super(ThreadWorker, self).__init__()
 
     def run(self, *args, **kwgs):
-        logging.info('worker:: start..')
+        logging.debug('worker:: start..')
         self.task_fn(*args, **kwgs)
-        logging.info('worker:: done..')
+        logging.debug('worker:: done..')
 
 
 def do_task(task_fn, *args, **kwgs):
-    logging.info('task:: init %s' % repr(task_fn))
+    logging.debug('task:: init %s' % repr(task_fn))
     ThreadWorker(task_fn).start(*args, **kwgs)

@@ -25,6 +25,8 @@ __all__ = (
 )
 
 import logging
+test = logging.getLogger('test')
+test.setLevel(logging.INFO)
 import copy
 from pymongo.objectid import ObjectId
 from pymongo.cursor import Cursor as PymongoCursor
@@ -167,7 +169,7 @@ class Document(StructedSchema):
         ro = self.col.save(self._,
                            manipulate=True,
                            safe=self.__safe__)
-        # logging.info('mongodb:: save return id: %s' % ro)
+        # test.debug('mongodb:: save return id: %s' % ro)
         self._in_db = True
         return ro
 
@@ -218,7 +220,7 @@ class Document(StructedSchema):
             ins['_id'] = ins['id']
         else:
             ins['_id'] = ObjectId()
-        logging.info('mongodb:: generated id: %s' % ins['_id'])
+        test.debug('mongodb:: generated id: %s' % ins['_id'])
         return ins
 
     @classmethod
@@ -281,7 +283,7 @@ class Cursor(PymongoCursor):
         db = self.__collection.database
         if len(self.__data) or self._refresh():
             if self.__manipulate:
-                logging.debug('manipulate in cursor')
+                test.debug('__manipulate in cursor')
                 # NOTE this line will return a SON object, which isnt used normally,
                 # but may cause problems if leave orignial
                 raw = db._fix_outgoing(self.__data.pop(0), self.__collection)
@@ -289,10 +291,10 @@ class Cursor(PymongoCursor):
                 raw = self.__data.pop(0)
 
             if self.__wrap is not None:
-                logging.debug('get wrap')
+                test.debug('get wrap')
                 return self.__wrap(raw)
             else:
-                logging.debug('wrap unget')
+                test.debug('wrap unget')
                 return raw
         else:
             raise StopIteration

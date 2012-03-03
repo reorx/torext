@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+
 class SDict(dict):
     """
     flexiblely set & get key-value
