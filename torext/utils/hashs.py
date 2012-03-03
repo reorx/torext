@@ -9,44 +9,54 @@ from hashlib import md5
 
 CHARS = string.letters + string.digits
 
+
 def RandomHash(id):
     CHARS = string.digits
     LIMIT = 8
     id_str = str(id)
-    prefix = ''.join([choice(CHARS) for i in range(LIMIT-len(id_str))])
+    prefix = ''.join([choice(CHARS) for i in range(LIMIT - len(id_str))])
     return prefix + id_str
+
 
 def create_password(raw):
     PREFIX = 'NODEMIX_USER_PASSWORD'
-    return md5(PREFIX+raw).hexdigest()
+    return md5(PREFIX + raw).hexdigest()
+
 
 def check_password(raw, indb):
     return create_password(raw) == indb
+
 
 def Md5(s):
     if not isinstance(s, str):
         s = s.encode('utf-8')
     return md5(s).hexdigest()
 
+
 def GenerateAbsoluteID(name):
     s = '%s+%s+%s' % (str(time.time()), name,
         ''.join([choice(CHARS) for i in range(4)]))
     return md5(s).hexdigest()
 
+
 def CreateNid(id):
-    length = 8 # if id shorter than this
+    length = 8  # if id shorter than this
     id_len = len(str(id))
     if not id_len > length:
-        nid = choice('123456789') + ''.join([choice(string.digits) for i in range(length-1-id_len)]) + str(id)
+        nid = choice('123456789') +\
+              ''.join([choice(string.digits) for i in range(length - 1 - id_len)]) + str(id)
     else:
         nid = id
     return nid
 
+
 def RandomString(length=10):
     return ''.join([choice(CHARS) for i in range(length)])
 
+
 def SaltMd5(s):
     return Md5(s + RandomString(5))
+
 
 def RandomInsertMd5(s):
     HEXCHAR = '0123456789ABCDEF'
@@ -63,10 +73,12 @@ def RandomInsertMd5(s):
             p5
     return ss.lower()
 
+
 def generate_cookie_secret():
     import uuid
     import base64
     return base64.b64encode(uuid.uuid4().bytes + uuid.uuid4().bytes)
+
 
 if '__main__' == __name__:
     CHARS += string.punctuation

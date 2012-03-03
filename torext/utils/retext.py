@@ -3,6 +3,7 @@
 
 import re
 
+
 # zh_CN
 def sharp(s):
     if not isinstance(s, unicode):
@@ -14,12 +15,14 @@ def sharp(s):
             re.search(ur'[\w\u2E80-\u9FFF]+', i).group())
     return fits
 
+
 # zh_CN
 def frank(s):
     if not isinstance(s, unicode):
         s = unicode(s, 'utf8')
     rep = re.compile(ur'[\w\u2E80-\u9FFF]+')
     return rep.findall(s)
+
 
 def src2name(src):
     rep = re.compile(ur'[\w]+')
@@ -28,12 +31,14 @@ def src2name(src):
         return None
     return '_'.join(src_red)
 
+
 def plainstr(s):
     rep = re.compile(ur'[\w][^\n]+')
     s_red = rep.findall(s)
     if not s_red:
         return None
     return s_red[0]
+
 
 class TextFilter(object):
     def __init__(self, mode=str):

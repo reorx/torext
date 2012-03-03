@@ -1,11 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-
-# TODO try..except shouldnt be in connect_$ functions
-# TODO function ping_mysql
-# TODO function ping_rabbitmq
-# TODO in order to ensure connection is properly established, call ping_$ after first connecting
-
+#
 # NOTE 如果connections 在 torext.db中，那么不应包含非db连接如rabbitmq ?
 #
 

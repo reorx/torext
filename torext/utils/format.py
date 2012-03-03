@@ -5,6 +5,7 @@ import datetime
 import simplejson as pyjson
 from pymongo.objectid import ObjectId
 
+
 class CustomJSONEncoder(pyjson.JSONEncoder):
     """
     copy from django.core.serializers.json
@@ -24,11 +25,14 @@ class CustomJSONEncoder(pyjson.JSONEncoder):
         else:
             return super(CustomJSONEncoder, self).default(o)
 
+
 def _dict(json):
     return pyjson.loads(json, encoding='utf-8')
 
+
 def _json(dic):
     return pyjson.dumps(dic, ensure_ascii=False, cls=CustomJSONEncoder)
+
 
 def force_int(value, desire=0, limit=100):
     try:
@@ -38,6 +42,7 @@ def force_int(value, desire=0, limit=100):
     if value > limit:
         return limit / 2
     return value
+
 
 def timesince(time):
     import datetime
@@ -57,6 +62,8 @@ def timesince(time):
 
 
 _UTF8_TYPES = (bytes, type(None))
+
+
 def utf8(value):
     """Converts a string argument to a byte string.
 
@@ -67,3 +74,10 @@ def utf8(value):
         return value
     assert isinstance(value, unicode)
     return value.encode("utf-8")
+
+
+def uni(s):
+    assert s is not None, 'uni() require input not None'
+    if isinstance(s, str):
+        s = s.decode('utf-8')
+    return s

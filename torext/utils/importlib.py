@@ -17,7 +17,7 @@ def import_underpath_module(path, name):
     :name :: note that name do not contain `.py` at the end
     """
     importer = pkgutil.get_importer(path)
-    logging.warning('loading handler module: ' + name)
+    logging.debug('loading handler module: ' + name)
     return importer.find_module(name).load_module(name)
 
 

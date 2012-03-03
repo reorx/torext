@@ -55,11 +55,8 @@ data = {
 
 import logging
 from torext.logger import BaseFormatter
-logger = logging.getLogger('test')
-logger.setLevel(logging.INFO)
-lh = logging.StreamHandler()
-lh.setFormatter(BaseFormatter(color=True, datefmt='%M:%S'))
-logger.addHandler(lh)
+test = logging.getLogger('test')
+test.setLevel(logging.INFO)
 
 from hashlib import md5
 from pymongo.objectid import ObjectId
@@ -163,12 +160,12 @@ class _Gen(object):
 def validate_doc(doc, struct):
     def iter_struct(st, ck):
         #time.sleep(0.3)
-        logger.debug('@ ' + ck)
+        test.debug('@ ' + ck)
         if isinstance(st, type):
             typ = st
         else:
             typ = type(st)
-        logger.debug('define: %s' % typ)
+        test.debug('define: %s' % typ)
 
         # index in doc
         try:
@@ -176,12 +173,12 @@ def validate_doc(doc, struct):
         except KeyError:
             raise ValidationError(ck + ' could not index out')
 
-        logger.debug('obj: %s %s' % (o, type(o)))
+        test.debug('obj: %s %s' % (o, type(o)))
         if not isinstance(o, tuple):
             o = (o, )
         # so if o is an empty iterable (originally list), this step will pass
         for i in o:
-            logger.debug('item: %s %s' % (i, type(i)))
+            test.debug('item: %s %s' % (i, type(i)))
             if not isinstance(i, typ):
                 if (typ is unicode or typ is str or typ is ObjectId) and i is None:
                     # at this point, i should be (or must be?) the end of
@@ -197,7 +194,7 @@ def validate_doc(doc, struct):
                 raise ValidationError(
                     '{0}: invalid {1}, should be {2}, value: {3}'.format(ck, type(i), typ, repr(i)))
 
-        logger.debug('---')
+        test.debug('---')
         # iter down step
         if isinstance(st, dict):
             for k, v in st.iteritems():
@@ -212,7 +209,7 @@ def validate_doc(doc, struct):
         else:  # isinstance(st, type)
             return
     iter_struct(struct, '$')
-    logger.debug('all passed !')
+    test.debug('all passed !')
 
 
 def build_dict(struct, default={}):
@@ -231,7 +228,7 @@ def build_dict(struct, default={}):
                 nk = k
             else:
                 nk = ck + '.' + k
-            logger.debug('set value to: ' + nk)
+            test.debug('set value to: ' + nk)
 
             # if dot_key is find in default, stop recurse and set value immediatelly
             # this may make the dict structure broken (not valid with struct),
@@ -254,7 +251,7 @@ def build_dict(struct, default={}):
             # auto transfer str into ObjectId if possible
             if v is ObjectId and isinstance(kv, str):
                 kv = ObjectId(kv)
-            logger.debug('value is: %s' % kv)
+            test.debug('value is: %s' % kv)
             cd[k] = kv
         return cd
 
@@ -409,7 +406,10 @@ if '__main__' == __name__:
             self.TS.validate(self._t_data)
             print 'done test_base'
 
-    logger.setLevel('DEBUG')
+    test.setLevel('DEBUG')
+    lh = logging.StreamHandler()
+    lh.setFormatter(BaseFormatter(color=True, datefmt='%M:%S'))
+    test.addHandler(lh)
 
     unittest.main()
 
