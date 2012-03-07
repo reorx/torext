@@ -4,13 +4,14 @@
 import os
 import sys
 import logging
+import optparse
 
 ENV_VAR_NAME = 'TOREXT_SETTINGS_MODULE'
 
 
 def initialize(settings_module):
-    if settings_module is None:
-        pass
+    assert hasattr(settings_module, '__file__'), 'settings passed in initialize( must be a module'
+
     # NOTE [20120214] discard this step.
     # step 0. use settings_module find and add project parent path to sys.path,
     # to ensure project can be imported
@@ -19,15 +20,25 @@ def initialize(settings_module):
     #         os.path.join(
     #             os.path.dirname(settings_module.__file__), '..')))
 
-    # step 0. add torext/third to sys.path
-    sys.path.insert(0,
-        os.path.abspath(
-            os.path.join(
-                os.path.dirname(__file__), 'third')))
-
-    # setp 1. set torext using settings (internally used in torext)
+    # setp 1. reset settings from file and command line options
     global settings
     settings._configure(settings_module)
+
+    parser = optparse.OptionParser()
+    parser.add_option('-p', '--port', type='int')
+    parser.add_option('-l', '--logging', type='str')
+    parser.add_option('-P', '--processes', type='int')
+    options, args = parser.parse_args()
+    logging.debug('options %s' % options)
+    for k, v in options.__dict__.iteritems():
+        if v:
+            setattr(settings, k, v)
+
+    # step 0. add third-party lib to sys.path from project
+    project_path = os.path.abspath(os.path.dirname(settings_module.__file__))
+    lib_path = os.path.join(project_path, settings.third_lib)
+    assert os.path.exists(lib_path), 'the third_lib you indicated is not exist'
+    sys.path.insert(0, os.path.abspath(lib_path))
 
     # setp 2. set logging
     from torext.logger import BaseFormatter
@@ -48,14 +59,16 @@ def initialize(settings_module):
         connections.configure(settings.connections)
 
 
-########################################
-# borrow way from django.conf.Settings #
-########################################
-
 class Settings(object):
-    """docstring for Settings"""
+    """
+    Philosophy was borrow from django.conf.Settings
 
+    NOTE settings object is internally used in torext and project
+    """
     def __init__(self):
+        """
+        Setting definitions in base_settings are indispensable
+        """
         from torext import base_settings
         for setting in dir(base_settings):
             if not setting.startswith('_'):
