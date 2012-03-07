@@ -19,8 +19,6 @@ setup(
         'torext.web.handlers',
         'torext.utils',
         'torext.scripts',
-        'torext.third',
-        'torext.third.tweepy'
     ],
     # package_data = {
     # },
