@@ -133,6 +133,7 @@ class _BaseHandler(tornado.web.RequestHandler):
             msg['error'] = error.__str__()
             if settings.debug:
                 msg['traceback'] = '\n' + traceback.format_exc()
+                logging.error(msg['error'] + '\n' + msg['traceback'])
         elif isinstance(error, str):
             msg['error'] = error
         else:
@@ -141,9 +142,6 @@ class _BaseHandler(tornado.web.RequestHandler):
         self.write(msg)
         if not self._finished:
             self.finish()
-
-        if settings.debug:
-            logging.error(msg['error'] + '\n' + msg['traceback'])
 
     def file_write(self, byteStream, mime='text/plain'):
         self.set_header("Content-Type", mime)
