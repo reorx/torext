@@ -16,7 +16,7 @@ from torext import settings
 
 def print_service_info():
     tmpl = """\nService Info::
-    Name:       {0}
+    Project:    {0}
     Port:       {1}
     Processes:  {2}
     Logging:    {3}
@@ -30,7 +30,7 @@ def print_service_info():
         connsText += '\n        {0:<10} {1}'.format(k + ':', v)
     s = settings
     info = tmpl.format(
-        s.package,
+        s.project,
         s.port,
         s.debug and 1 or s.processes,
         s.logging,
