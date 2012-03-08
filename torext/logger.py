@@ -2,9 +2,12 @@
 # -*- coding: utf-8 -*-
 #
 
+
 import logging
 import traceback
 import sys
+
+print '-1 ', logging.getLogger().handlers
 
 
 # borrow from tornado.options._LogFormatter.__init__

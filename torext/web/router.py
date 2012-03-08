@@ -12,11 +12,11 @@ class HandlersContainer(object):
 
 class Module(HandlersContainer):
     def __init__(self, svc_label):
-        self.import_path = settings.package + '.' + svc_label
+        self.import_path = settings.project + '.' + svc_label
         self._handlers = []
 
         # try:
-        module = __import__(self.import_path, fromlist=[settings.package])
+        module = __import__(self.import_path, fromlist=[settings.project])
         self._handlers = getattr(module, 'handlers')
         # except ImportError, e:
         #     print 'import path', self.import_path
