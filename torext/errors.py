@@ -61,3 +61,7 @@ class MultiObjectsReturned(TorextBaseException):
 
 class ParametersInvalid(TorextBaseException):
     pass
+
+
+class SettingUndefined(TorextBaseException):
+    pass

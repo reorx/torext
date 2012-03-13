@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # NOTE: this script require setuptools (easy_install) to run properly
+# NOTE current not use, only if manually-install module is required will this script be useful
 #
 
 import os

@@ -77,16 +77,15 @@ class _BaseHandler(tornado.web.RequestHandler):
     def mysql(self):
         """Return the default master MySQL session"""
         raise NotImplementedError
-        #return self.application.connections.get('mysql', 'master')
 
     @property
     def mongodb(self):
         """Return the default MongoDB databse"""
         raise NotImplementedError
-        #return self.application.connections.get('mongodb', 'master')
 
     @property
     def mq(self):
+        """Return the default Message Queue connection"""
         raise NotImplementedError
 
     @property
@@ -131,7 +130,7 @@ class _BaseHandler(tornado.web.RequestHandler):
         }
         if isinstance(error, Exception):
             msg['error'] = error.__str__()
-            if settings.debug:
+            if settings.debug and not isinstance(error, HTTPError):
                 msg['traceback'] = '\n' + traceback.format_exc()
                 logging.error(msg['error'] + '\n' + msg['traceback'])
         elif isinstance(error, str):
@@ -180,7 +179,7 @@ class _BaseHandler(tornado.web.RequestHandler):
     def _prepare_debug(self, with_value=True):
         """
         """
-        block = '-> Request\n'
+        block = 'Request Infomations ->\n'
         block += '-----Headers-----\n'
         for k, v in self.request.headers.iteritems():
             tmpl = '| {0:<15} | {1:<15} \n'
@@ -190,11 +189,6 @@ class _BaseHandler(tornado.web.RequestHandler):
             for k, v in self.request.arguments.iteritems():
                 tmpl = '| {0:<15} | {1:<15} \n'
                 req_body = tmpl.format(repr(k), repr(v))
-                if not settings.debug_full_request:
-                    if req_body[1000:]:
-                        req_body = req_body[:1000] + '... ...'
-                    else:
-                        req_body = req_body[:1000]
                 block += req_body
 
         logging.info(block)

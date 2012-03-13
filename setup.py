@@ -8,22 +8,23 @@ from setuptools import setup
 setup(
     name='torext',
     version=__version__,
-    author='Nodemix',
+    author='reorx',
     author_email='novoreorx@gmail.com',
-    url='http://nodemix.com',
+    url='http://github.com/nodemix/torext',
     description='torext is an instrumental package which aim at easy implementation of tornado based project',
     packages=[
         'torext',
         'torext.db',
-        'torext.web',
-        'torext.web.handlers',
+        'torext.handlers',
         'torext.utils',
         'torext.scripts',
     ],
-    # package_data = {
-    # },
-    scripts=['bin/torext_syntax'],
-
+    entry_points={
+        'console_scripts': [
+            'torext.flake = torext.scripts.syntax_checker:main',
+            'torext.sketch = torext.scripts.sketch_maker:main',
+        ]
+    },
     install_requires=[
         'tornado==2.1.1',
         'pymongo>=2.1',
@@ -33,5 +34,7 @@ setup(
         'requests>=0.9',
         'pyflakes>=0.5.0',
         'jsonrpclib>=0.1.3',
-    ]
+    ],
+    # package_data = {
+    # },
 )

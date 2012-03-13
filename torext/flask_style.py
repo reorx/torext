@@ -4,14 +4,17 @@
 
 import string
 import logging
-from tornado.web import RequestHandler, Application
-from tornado.ioloop import IOLoop
+import torext
+from torext.handlers import _BaseHandler
+from torext.app import BaseApplication
+from torext.server import run_api_server
 
 
 class FlaskStyleApp(object):
     def __init__(self, brand):
         self.brand = brand
         self.handlers = {}
+        torext.initialize()
 
     def _hdr_name(self, url):
         digit = 3
@@ -31,7 +34,7 @@ class FlaskStyleApp(object):
         if url in self.handlers:
             hdr = self.handlers[url]
         else:
-            exec 'class %s(RequestHandler): pass' % hdr_name in globals(), locals()
+            exec 'class %s(_BaseHandler): pass' % hdr_name in globals(), locals()
             hdr = locals()[hdr_name]
             self.handlers[url] = hdr
 
@@ -40,12 +43,11 @@ class FlaskStyleApp(object):
         return route_adaptor
 
     def run(self):
-        app = Application(
-            [i for i in self.handlers.iteritems()],
-            debug=True
+        run_api_server(
+            BaseApplication(
+                handlers=[i for i in self.handlers.iteritems()],
+            )
         )
-        app.listen(19010)
-        IOLoop.instance().start()
 
 
 if __name__ == '__main__':
