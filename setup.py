@@ -19,6 +19,14 @@ setup(
         'torext.utils',
         'torext.scripts',
     ],
+    package_data={
+        'torext': [
+            'templates/flask_style.py',
+            'templates/project/__init__.py',
+            'templates/project/app.py',
+            'templates/project/settings.py',
+        ]
+    },
     entry_points={
         'console_scripts': [
             'torext.flake = torext.scripts.syntax_checker:main',
@@ -35,6 +43,4 @@ setup(
         'pyflakes>=0.5.0',
         'jsonrpclib>=0.1.3',
     ],
-    # package_data = {
-    # },
 )
