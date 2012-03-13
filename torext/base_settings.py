@@ -10,11 +10,10 @@
 # only if no definition in 1 and 2 will setting in 3 become effective.
 
 
-project = 'torext'
+################
+# indispensable
 
-debug_full_request = False
-
-third_lib = 'third'
+project = 'torext_powered'
 
 locale = 'en_US'
 
@@ -23,8 +22,17 @@ locale = 'en_US'
 
 processes = 1
 
-port = 19010
+port = 8000
 
-debug = True
+debug = False
 
 logging = 'INFO'
+
+
+
+###########
+# optional
+
+# third_lib = 'third'
+
+# template_path = 'web/template'
