@@ -7,7 +7,7 @@ from torext import settings
 
 class BaseApplication(TornadoApplication):
     """
-    Two way to implement an application::
+    Two ways to implement an application::
         1. Redefine the class
         >>> class Application(BaseApplication):
         >>>     def _setup(self):
