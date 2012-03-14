@@ -342,6 +342,43 @@ def dict_hash(o):
         string += i + repr(mapping[i]) + '\n'
     return md5(string).hexdigest()
 
+
+class DotDict(dict):
+    """
+    get value in dot retrieve style
+    """
+    def __init__(self, raw=None):
+        super(DotDict, self).__init__()
+        if raw is not None:
+            assert isinstance(raw, dict), 'DotDict initializing argument is not a dict'
+            for k, v in raw.iteritems():
+                self[k] = v
+
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(key)
+
+    def __setattr__(self, key, value):
+        self[key] = value
+
+    def __delattr__(self, key):
+        try:
+            del self[key]
+        except KeyError:
+            raise AttributeError(key)
+
+    def __str__(self):
+        return '<DotDict %s >' % self.normalize()
+
+    def normalize(self):
+        d = {}
+        for k in self.keys():
+            d[k] = self[k]
+        return d
+
+
 ##############
 #  unittest  #
 ##############

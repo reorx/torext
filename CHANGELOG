@@ -1,3 +1,15 @@
+2012-03-14. v1.0 -> v1.1
+    * utils -> lib
+    * + lib/utils.py
+    * - lib/factory.py & lib/debugtools.py, goes to lib/utils.py
+    * db/schema.py -> lib/dictext.py
+    * - lib/datastructures.py, goes to lib/dictext.py
+    * lib/interactive.py -> lib/shell.py
+    * lib/retext.py -> lib/reg.py
+    * - lib/task.py
+    * logger.py -> lib/logger.py
+
+
 2012-03-13. v0.1 -> v1.0
     * spread out torext.web and it dont exist now
     * new flask_style module
