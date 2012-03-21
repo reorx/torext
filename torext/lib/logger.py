@@ -1,11 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-#
 
-
-import logging
-import traceback
 import sys
+import logging
+from nose.tools import nottest
+from torext.lib.utils import kwgs_filter
 
 
 # borrow from tornado.options._LogFormatter.__init__
@@ -53,55 +52,85 @@ def _color(lvl, s):
 #  formatters  #
 ################
 
+FORMATS = {
+    'detailed': '. {levelname:<4} {asctime} {module_with_lineno:<10}. {message}',
+    'simple': '. {message}'
+}
+
+
+LEVELNAMES = {
+    'DEBUG': 'DEBG',
+    'WARNING': 'WARN',
+    'ERROR': 'ERRO'
+}
+
 
 class BaseFormatter(logging.Formatter):
-    def __init__(self, *args, **kwgs):
-        color = False
-        if 'color' in kwgs:
-            color = kwgs.pop('color')
-        datefmt = '%Y-%m-%d %H:%M:%S'
-        if 'datefmt' in kwgs:
-            datefmt = kwgs['datefmt']
-        logging.Formatter.__init__(self, *args, **kwgs)
-        self.color = color
+    def __init__(self,
+        fmt=FORMATS['detailed'],
+        datefmt='%Y-%m-%d %H:%M:%S',
+        color=False,
+        newlinetab='  ',
+        **kwgs):
+        """
+        ::params:kwarg fmt
+        ::params:kwarg datefmt
+        ::params:kwarg color
+        ::params:kwarg newlinetab
+        """
+        # as origin __init__ function is very simple (store two attributes on self: _fmt & datafmt),
+        # execute it firstly
+        logging.Formatter.__init__(self)
+
+        self._fmt = fmt
         self.datefmt = datefmt
+        self.color = color
+        self.newlinetab = newlinetab
 
     def format(self, record):
-        try:
-            message = record.getMessage()
-            # message may be unicode due to passing chinese characters
-            if isinstance(message, unicode):
-                message = message.encode('utf8')
-        except Exception, e:
-            message = 'Could not get message, error: %s' % e
-        # record.asctime = time.strftime(
-        #     , self.converter(record.created))
-        # record.asctime =
-        levelname = record.levelname
-        if record.levelname == 'DEBUG':
-            levelname = 'DEBG'
-        elif record.levelname == 'WARNING':
-            levelname = 'WARN'
-        elif record.levelname == 'ERROR':
-            levelname = 'ERRO'
+        """
+        Discard using of old format way ( '%(asctime)' ) and turing into new way '{asctime}'
+
+        add a new format argument: module_with_lineno
+        """
+        # handle record firstly
+        _message = record.getMessage()
+        if isinstance(_message, unicode):
+            _message = _message.encode('utf8')
+        record.message = _message
+
+        if '{asctime}' in self._fmt:
+            record.asctime = self.formatTime(record, self.datefmt)
+
+        record.levelname = LEVELNAMES.get(record.levelname, record.levelname)
         if self.color:
-            levelname = _color(record.levelno, levelname)
-        record_dict = {
-            'levelname': levelname,
-            'asctime': self.formatTime(record, self.datefmt),
-            'module_with_lineno': '%s-%s' %\
-                (record.module, record.lineno),
-            'message': message
-        }
-        log = '. {levelname:<4} {asctime} {module_with_lineno:<10}. {message}'.format(**record_dict)
+            record.levelname = _color(record.levelno, record.levelname)
+
+        record.module_with_lineno = '%s-%s' % (record.module, record.lineno)
+
+        log = self._fmt.format(**record.__dict__)
+
         if record.exc_info:
-            log += '\n' + traceback.format_exc()
-            # log += err_info
-        if '\n' in log and not log.endswith('\n'):
-            suffix = '\n'
-        else:
-            suffix = ''
-        return log.replace('\n', '\n  ') + suffix
+            if not record.exc_text:
+                record.exc_text = self.formatException(record.exc_info)
+        if record.exc_text:
+            if log[-1:] != '\n':
+                log += '\n'
+            log += record.exc_text
+
+        if self.newlinetab:
+            log = log.replace('\n', '\n' + self.newlinetab)
+
+        return log
+
+
+class BaseStreamHandler(logging.StreamHandler):
+    def __init__(self, *args, **kwgs):
+        _kwgs = kwgs_filter(('_fmt', 'datefmt', 'color', 'newlinetab'), kwgs)
+
+        super(BaseStreamHandler, self).__init__(*args, **kwgs)
+
+        self.setFormatter(BaseFormatter(**_kwgs))
 
 #############
 #  loggers  #
@@ -109,17 +138,43 @@ class BaseFormatter(logging.Formatter):
 # 1. test - propagate 0
 # 2. system - propagate 1 - for seperately output system level logs
 
-testLogger = logging.getLogger('test')
-testLogger.propagate = 0
-testLogger.setLevel(logging.DEBUG)
+root_logger = logging.getLogger()
+
+
+def enable_root_logger(level=logging.DEBUG, **kwgs):
+    disable_root_logger()
+    root_logger.setLevel(level)
+    root_logger.addHandler(BaseStreamHandler(**kwgs))
+
+
+def disable_root_logger():
+    logging.getLogger().handlers = []
+
+
+test_logger = logging.getLogger('test')
+test_logger.propagate = 0
+test_logger.setLevel(logging.DEBUG)
+
+
+@nottest
+def enable_test_logger(level=logging.DEBUG, **kwgs):
+    disable_test_logger()
+    test_logger.setLevel(level)
+    test_logger.addHandler(BaseStreamHandler(**kwgs))
+
+
+@nottest
+def disable_test_logger():
+    test_logger.handlers = []
 
 
 if __name__ == '__main__':
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
-    streamHandler = logging.StreamHandler()
-    streamHandler.setFormatter(BaseFormatter(color=True))
-    root_logger.addHandler(streamHandler)
+    # root_logger.setLevel(logging.INFO)
+    # streamHandler = logging.StreamHandler()
+    # streamHandler.setFormatter(BaseFormatter(color=True))
+    # root_logger.addHandler(streamHandler)
+    enable_root_logger(level=logging.DEBUG, color=True)
 
     root_logger.debug('bug..')
     root_logger.info('hello')
@@ -132,7 +187,7 @@ if __name__ == '__main__':
     # this logger's log will be handled only once, due to the bool False value
     # of testLogger's attribute `propagate`
     # testLogger.addHandler(logging.StreamHandler())
-    testLogger.info('my name is testLogger')
+    # testLogger.info('my name is testLogger')
 
     # this logger's log will be handled twice, one by its self, with uncustomized StreamHandler instance,
     # the other by rootLogger, which is the parent of otherLogger, see quote below::
@@ -146,11 +201,11 @@ if __name__ == '__main__':
     #     logger and create child loggers as needed. (You can, however, turn
     #     off propagation by setting the propagate attribute of a logger to
     #     False.) "
-    otherLogger = logging.getLogger('other')
-    otherLogger.addHandler(logging.StreamHandler())
-    otherLogger.info('here is otherLogger')
+    # otherLogger = logging.getLogger('other')
+    # otherLogger.addHandler(logging.StreamHandler())
+    # otherLogger.info('here is otherLogger')
 
     # and this logger, its log will ofcoursely be handled three times
-    otherBabyLogger = logging.getLogger('other.baby')
-    otherBabyLogger.addHandler(logging.StreamHandler())
-    otherBabyLogger.info('here is otherBabyLogger')
+    # otherBabyLogger = logging.getLogger('other.baby')
+    # otherBabyLogger.addHandler(logging.StreamHandler())
+    # otherBabyLogger.info('here is otherBabyLogger')
