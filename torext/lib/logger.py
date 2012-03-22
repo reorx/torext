@@ -3,7 +3,6 @@
 
 import sys
 import logging
-from nose.tools import nottest
 from torext.lib.utils import kwgs_filter
 
 
@@ -53,8 +52,9 @@ def _color(lvl, s):
 ################
 
 FORMATS = {
-    'detailed': '. {levelname:<4} {asctime} {module_with_lineno:<10}. {message}',
-    'simple': '. {message}'
+    'detailed': '. {levelname:<4} {asctime} {module_with_lineno:<10} {funcName}(. {message} {msecs:>10}',
+    'simple': '. {message:<50} {asctime}',
+    'testcase': '- {message}'
 }
 
 
@@ -99,8 +99,11 @@ class BaseFormatter(logging.Formatter):
             _message = _message.encode('utf8')
         record.message = _message
 
-        if '{asctime}' in self._fmt:
+        if '{asctime' in self._fmt:
             record.asctime = self.formatTime(record, self.datefmt)
+
+        if '{secs' in self._fmt:
+            record.secs = record.msecs / 1000
 
         record.levelname = LEVELNAMES.get(record.levelname, record.levelname)
         if self.color:
@@ -126,7 +129,7 @@ class BaseFormatter(logging.Formatter):
 
 class BaseStreamHandler(logging.StreamHandler):
     def __init__(self, *args, **kwgs):
-        _kwgs = kwgs_filter(('_fmt', 'datefmt', 'color', 'newlinetab'), kwgs)
+        _kwgs = kwgs_filter(('fmt', 'datefmt', 'color', 'newlinetab'), kwgs)
 
         super(BaseStreamHandler, self).__init__(*args, **kwgs)
 
@@ -141,71 +144,68 @@ class BaseStreamHandler(logging.StreamHandler):
 root_logger = logging.getLogger()
 
 
-def enable_root_logger(level=logging.DEBUG, **kwgs):
-    disable_root_logger()
-    root_logger.setLevel(level)
-    root_logger.addHandler(BaseStreamHandler(**kwgs))
+def enable_logger(name, level=logging.DEBUG, propagate=1, **kwgs):
+    disable_logger(name)
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+    logger.propagate = propagate
+    logger.addHandler(BaseStreamHandler(**kwgs))
 
 
-def disable_root_logger():
-    logging.getLogger().handlers = []
+def disable_logger(name):
+    logging.getLogger(name).handlers = []
 
 
-test_logger = logging.getLogger('test')
-test_logger.propagate = 0
-test_logger.setLevel(logging.DEBUG)
-
-
-@nottest
-def enable_test_logger(level=logging.DEBUG, **kwgs):
-    disable_test_logger()
-    test_logger.setLevel(level)
-    test_logger.addHandler(BaseStreamHandler(**kwgs))
-
-
-@nottest
-def disable_test_logger():
-    test_logger.handlers = []
+# test_logger = logging.getLogger('test')
+# test_logger.propagate = 0
+# test_logger.setLevel(logging.DEBUG)
 
 
 if __name__ == '__main__':
-    root_logger = logging.getLogger()
-    # root_logger.setLevel(logging.INFO)
-    # streamHandler = logging.StreamHandler()
-    # streamHandler.setFormatter(BaseFormatter(color=True))
-    # root_logger.addHandler(streamHandler)
-    enable_root_logger(level=logging.DEBUG, color=True)
+    def test_all():
+        root_logger = logging.getLogger()
+        # root_logger.setLevel(logging.INFO)
+        # streamHandler = logging.StreamHandler()
+        # streamHandler.setFormatter(BaseFormatter(color=True))
+        # root_logger.addHandler(streamHandler)
+        enable_logger('', level=logging.DEBUG, color=True)
 
-    root_logger.debug('bug..')
-    root_logger.info('hello')
-    root_logger.warning('\nholy a shit')
-    try:
-        tuple()[0]
-    except Exception, e:
-        root_logger.error(e, exc_info=True)
+        root_logger.debug('bug..')
+        root_logger.info('hello')
+        root_logger.warning('\nholy a shit')
+        try:
+            tuple()[0]
+        except Exception, e:
+            root_logger.error(e, exc_info=True)
 
-    # this logger's log will be handled only once, due to the bool False value
-    # of testLogger's attribute `propagate`
-    # testLogger.addHandler(logging.StreamHandler())
-    # testLogger.info('my name is testLogger')
+        # this logger's log will be handled only once, due to the bool False value
+        # of testLogger's attribute `propagate`
+        # testLogger.addHandler(logging.StreamHandler())
+        # testLogger.info('my name is testLogger')
 
-    # this logger's log will be handled twice, one by its self, with uncustomized StreamHandler instance,
-    # the other by rootLogger, which is the parent of otherLogger, see quote below::
-    #
-    # http://docs.python.org/howto/logging.html#loggers
-    #
-    #     " Child loggers propagate messages up to the handlers associated
-    #     with their ancestor loggers. Because of this, it is unnecessary to
-    #     define and configure handlers for all the loggers an application
-    #     uses. It is sufficient to configure handlers for a top-level
-    #     logger and create child loggers as needed. (You can, however, turn
-    #     off propagation by setting the propagate attribute of a logger to
-    #     False.) "
-    # otherLogger = logging.getLogger('other')
-    # otherLogger.addHandler(logging.StreamHandler())
-    # otherLogger.info('here is otherLogger')
+        # this logger's log will be handled twice, one by its self, with uncustomized StreamHandler instance,
+        # the other by rootLogger, which is the parent of otherLogger, see quote below::
+        #
+        # http://docs.python.org/howto/logging.html#loggers
+        #
+        #     " Child loggers propagate messages up to the handlers associated
+        #     with their ancestor loggers. Because of this, it is unnecessary to
+        #     define and configure handlers for all the loggers an application
+        #     uses. It is sufficient to configure handlers for a top-level
+        #     logger and create child loggers as needed. (You can, however, turn
+        #     off propagation by setting the propagate attribute of a logger to
+        #     False.) "
+        otherLogger = logging.getLogger('other')
+        # otherLogger.addHandler(BaseStreamHandler(fmt=FORMATS['simple']))
+        fmter = logging.Formatter(fmt='%(message)s %(msecs)s')
+        hdr = logging.StreamHandler()
+        hdr.setFormatter(fmter)
+        otherLogger.addHandler(hdr)
+        otherLogger.info('here is otherLogger')
 
-    # and this logger, its log will ofcoursely be handled three times
-    # otherBabyLogger = logging.getLogger('other.baby')
-    # otherBabyLogger.addHandler(logging.StreamHandler())
-    # otherBabyLogger.info('here is otherBabyLogger')
+        # and this logger, its log will ofcoursely be handled three times
+        otherBabyLogger = logging.getLogger('other.baby')
+        otherBabyLogger.addHandler(hdr)
+        otherBabyLogger.info('here is otherBabyLogger')
+
+    test_all()
