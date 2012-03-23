@@ -1,18 +1,23 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import os
-import sys
-import logging
-import optparse
-from .errors import SettingUndefined
-from . import base_settings
+__version__ = '1.1'
+
 
 # temporarily not used
 ENV_VAR_NAME = 'TOREXT_SETTINGS_MODULE'
 
 
+from .errors import SettingUndefined
+from . import base_settings
+
+
 def initialize(settings_module=None):
+    import os
+    import sys
+    # import logging
+    import optparse
+
     # settings
     global settings
     if settings_module:
@@ -47,16 +52,8 @@ def initialize(settings_module=None):
                 sys.path.insert(0, path)
 
     # logging
-    from torext.logger import BaseFormatter
-    root_logger = logging.getLogger()
-    root_logger.setLevel(settings.logging)
-    streamHandler = logging.StreamHandler()
-    streamHandler.setFormatter(BaseFormatter(color=True))
-    # NOTE before logging is set detaily(eg. add a handler), it will be added
-    # a handler automatically if it was used (eg. logging.debug),
-    # pre-set handlers to [], to ensure no unexpected handler is on root logger
-    root_logger.handlers = []
-    root_logger.addHandler(streamHandler)
+    from torext.lib.logger import enable_logger
+    enable_logger('', level=settings.logging, color=True)
 
     # connections
     if settings.has('connections'):

@@ -1,21 +1,18 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+#
+# use nose for testing. eg. nosetest test_general.py
 
 import logging
 from unittest import TestCase
-from . import logger
 
 
 class _TestCase(TestCase):
-    _logger_name = 'testcase'
+    # no need to indicate level because logs of all level will be displayed by nose
+    logger_name = 'testcase'
 
-    def _setup_logger(self):
+    @property
+    def logger(self):
         if not hasattr(self, '_logger'):
-            self._logger = logging.getLogger(self._logger_name)
-        if not self._logger.handlers or\
-            self._logger.handlers[0].formatter._fmt != logger.FORMATS['testcase']:
-                logger.enable_logger(self._logger_name, level=logging.INFO, fmt=logger.FORMATS['testcase'])
-
-    def _log(self, msg):
-        self._setup_logger()
-        self._logger.info(msg)
+            self._logger = logging.getLogger(self.logger_name)
+        return self._logger
