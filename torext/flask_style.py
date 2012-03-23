@@ -8,12 +8,14 @@ import torext
 from torext.handlers import _BaseHandler
 from torext.app import BaseApplication
 from torext.server import run_api_server
+from torext import settings
 
 
 class FlaskStyleApp(object):
     def __init__(self, brand):
         self.brand = brand
         self.handlers = {}
+        self.settings = settings
         torext.initialize()
 
     def _hdr_name(self, url):
@@ -28,18 +30,29 @@ class FlaskStyleApp(object):
             body += str(num)
         return prefix + body + suffix
 
+    def _no_endslash_url(self, url):
+        if url.endswith('/'):
+            return url[-1:]
+        return url
+
     def route(self, method, url):
+        url = self._no_endslash_url(url)
         hdr_name = self._hdr_name(url)
         logging.debug(hdr_name)
+
         if url in self.handlers:
             hdr = self.handlers[url]
         else:
-            exec 'class %s(_BaseHandler): pass' % hdr_name in globals(), locals()
-            hdr = locals()[hdr_name]
+            # exec 'class %s(_BaseHandler): pass' % hdr_name in globals(), locals()
+            # hdr = locals()[hdr_name]
+            hdr = type(hdr_name, (_BaseHandler, ), {})
             self.handlers[url] = hdr
 
         def route_adaptor(fn):
             setattr(hdr, method, fn)
+            # hold a reference of app on the funciton
+            fn.app = self
+            return fn
         return route_adaptor
 
     def run(self):
@@ -51,11 +64,15 @@ class FlaskStyleApp(object):
 
 
 if __name__ == '__main__':
-    app = FlaskStyleApp('justTest')
+    app = FlaskStyleApp('demoapp')
+    app.settings.set('debug', True)
 
     @app.route('get', '/')
     def hello(hdr):
         hdr.write('ok')
+
+    logging.info(hello)
+    logging.info(hello.app)
 
     @app.route('post', '/user/profile')
     def hello_post(hdr):
