@@ -5,6 +5,8 @@ import sys
 import logging
 from torext.lib.utils import kwgs_filter
 
+print 'torext.lib.logger module loading, NOTE something about logging will be changed'
+
 
 # borrow from tornado.options._LogFormatter.__init__
 def _color(lvl, s):
@@ -52,7 +54,7 @@ def _color(lvl, s):
 ################
 
 FORMATS = {
-    'detailed': '. {levelname:<4} {asctime} {module_with_lineno:<10} {funcName}(. {message} {msecs:>10}',
+    'detailed': '. {levelname:<4} {asctime} {module_with_lineno:<10} {funcName}(. {message}',
     'simple': '. {message:<50} {asctime}',
     'testcase': '- {message}'
 }
@@ -141,11 +143,13 @@ class BaseStreamHandler(logging.StreamHandler):
 # 1. test - propagate 0
 # 2. system - propagate 1 - for seperately output system level logs
 
-root_logger = logging.getLogger()
-
 
 def enable_logger(name, level=logging.DEBUG, propagate=1, **kwgs):
+    # NOTE before logging is set detaily(eg. add a handler), it will be added
+    # a handler automatically if it was used (eg. logging.debug),
+    # pre-set handlers to [], to ensure no unexpected handler is on root logger
     disable_logger(name)
+
     logger = logging.getLogger(name)
     logger.setLevel(level)
     logger.propagate = propagate
