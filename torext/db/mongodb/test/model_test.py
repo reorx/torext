@@ -1,7 +1,28 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+#
+# To test:
+#   - Document define
+#   - .new()  # include consistency and inner operations
+#   - .find()
+#   - .exist()
+#   - .one()
+#   - .by__id()
+#   - .by__id_str()
+#
+#   - .save()
+#   - .copy()
+#   - .remove()
 
+import logging
 from torext.lib.testing import _TestCase
+
+
+def random_str(length):
+    import string
+    from random import choice
+    s = ''.join([choice(string.letters) for i in range(length)])
+    return s
 
 
 class TestModel(_TestCase):
@@ -9,6 +30,10 @@ class TestModel(_TestCase):
     def setUp(self):
         from torext.db.connections import connections
         from torext.db.mongodb.model import _CollectionDeclarer, Document, Struct, ObjectId
+
+        # configure test logger
+        test_logger = logging.getLogger('test')
+        test_logger.propagate = 1
 
         SETTINGS = {
             'mongodb': {
@@ -45,56 +70,104 @@ class TestModel(_TestCase):
         self.Model = TestDoc
 
     def test_new(self):
-        doc = self.Model.new(default={
-            'friends': [self.Model.gen.friends(default={'nick': 'uo'})]
-        })
-        for i in self.Model.struct:
-            self.assertTrue(i in doc)
-        self.assertTrue(len(doc['friends']) == 1)
-
-    def test_save(self):
-        doc = self.Model.new()
-        doc.save()
-        self.assertTrue(self.Model.find(doc.identifier).count() is 1)
-
-        doc['name'] = 'inserted'
-        doc.save()
-        self.assertTrue(self.Model.find(doc.identifier).next()['name'] == 'inserted')
-
-    def test_consistency(self):
         default = {
+            # 'name': 'zorro',
             'age': 20,
             'friends': [
-                {'nick': 'zorro'},
-                {'nick': 'webber'}
+                self.Model.gen.friends({'nick': 'zorro'}),
+                self.Model.gen.friends({'nick': 'webber'})
             ]
         }
         doc = self.Model.new(default=default)
-        self.logger.info(doc)
-        self.logger.info(default)
 
+        self.log.quiet(doc)
+        self.log.quiet(default)
+
+        for i in self.Model.struct:
+            self.assertTrue(i in doc)
+
+        # consistency
         self.assertEqual(doc['name'], '')
         self.assertEqual(doc['age'], default['age'])
         self.assertEqual(doc['friends'][0]['nick'], default['friends'][0]['nick'])
 
-    def test_inner_operations(self):
-        default = {
-            'name': '抚剑扬眉',
-            'age': 16,
-            'friends': [
-                {'nick': 'zorro'},
-                {'nick': 'webber'}
-            ]
-        }
-        doc = self.Model.new(default=default)
-        self.logger.info(default)
-
-        self.assertEqual(doc.inner_get('name'), default['name'])
-        self.assertEqual(doc.inner_get('friends.[1].nick'),
+        # inner operations
+        got_name = doc.inner_get('age')
+        self.assertEqual(got_name, default['age'])
+        got_friend_nick = doc.inner_get('friends.[1].nick')
+        self.assertEqual(got_friend_nick,
                             default['friends'][1]['nick'])
+
         doc.inner_set('friends.[1].nick', 'tk')
         self.assertEqual(doc.inner_get('friends.[1].nick'), 'tk')
+
         doc.inner_del('friends.[0].nick')
         self.assertTrue('nick' not in doc.inner_get('friends.[0]'))
+
         doc.inner_del('friends.[0]')
         self.assertTrue(len(doc.inner_get('friends')) is 1)
+
+    def test_save_and_find(self):
+        name = random_str(10)
+
+        doc_0 = self.Model.new(default={
+            'name': name,
+            'age': 0
+        })
+        doc_0.save()
+        self.assertTrue(self.Model.find(doc_0.identifier).count() is 1)
+
+        doc_1 = self.Model.new(default={
+            'name': name,
+            'age': 1
+        })
+        doc_1.save()
+        self.assertTrue(self.Model.find(doc_1.identifier).count() is 1)
+
+        cur = self.Model.find({'name': name})
+        self.assertTrue(cur.count() >= 2)
+
+        for i in cur:
+            self.log.quiet('i age %s' % i['age'])
+            self.assertTrue(i['age'] in (0, 1))
+
+    def test_exist(self):
+        from pymongo.objectid import ObjectId
+        _id = ObjectId()
+
+        self.assertFalse(self.Model.exist({'_id': _id}))
+
+        doc = self.Model.new()
+        doc.save()
+        self.assertTrue(self.Model.exist({'_id': doc['_id']}))
+
+    def test_one(self):
+        from torext.errors import ObjectNotFound, MultiObjectsReturned
+        nick = random_str(10)
+        friends = [
+            {
+                'nick': nick
+            }
+        ]
+
+        doc = self.Model.new({
+            'friends': friends
+        })
+        self.assertRaises(ObjectNotFound, self.Model.one, doc.identifier)
+
+        doc.save()
+        self.assertEqual(doc, self.Model.one(doc.identifier))
+
+        doc_dup = self.Model.new({
+            'friends': friends
+        })
+        doc_dup.save()
+
+        self.assertRaises(MultiObjectsReturned, self.Model.one, {'friends': friends})
+
+    def test_by__id_and_by__id_str(self):
+        doc = self.Model.new()
+        doc.save()
+
+        self.assertEqual(doc, self.Model.by__id(doc['_id']))
+        self.assertEqual(doc, self.Model.by__id_str(str(doc['_id'])))

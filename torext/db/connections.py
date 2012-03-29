@@ -5,7 +5,7 @@
 #
 
 import logging
-from torext.utils.factory import OneInstanceImp
+from torext.lib.utils import OneInstanceImp
 from torext.errors import ConnectionError
 
 
@@ -110,7 +110,8 @@ def connect_mongodb(opts):
     : port
     : database
     """
-    from mongokit import Connection
+    # from mongokit import Connection
+    from pymongo import Connection
     conn = Connection(opts['host'], opts['port'])
     # execute this function to ensure succeed
     conn.database_names()
