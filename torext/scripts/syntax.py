@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-
+#
+# syntax checker, walk through the project or just a single file.
 
 import os
 import sys

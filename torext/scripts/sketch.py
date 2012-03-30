@@ -1,5 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+#
+# make a project sketch.
 
 import os
 import re
@@ -7,7 +9,7 @@ import sys
 import shutil
 import optparse
 import torext
-from torext.utils.importlib import import_module
+from torext.lib.importlib import import_module
 
 
 parser = optparse.OptionParser(usage='Usage: %prog [options] arg1')
