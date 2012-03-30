@@ -71,7 +71,7 @@ class Settings(object):
     object called Settings instead of options. Settings file writting will be
     much eaiser and comfortable for pycoders.
 
-    NOTE settings object is internally used in torext and project
+    NOTE settings object is internally used in torext and the project
     """
     def __init__(self):
         """

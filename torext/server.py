@@ -4,6 +4,7 @@
 # simplified implementation of server process running
 #
 
+import sys
 import logging
 from tornado.ioloop import IOLoop
 from tornado.httpserver import HTTPServer
@@ -46,7 +47,7 @@ def print_service_info():
 def run_api_server(app):
     http_server = HTTPServer(app)
 
-    # NOTE could not use multiprocess mode under debug
+    # multiprocess could not be used in debug mode
     if settings.debug:
         http_server.listen(settings.port)
     else:
@@ -54,4 +55,11 @@ def run_api_server(app):
         http_server.start(settings.processes)
 
     print_service_info()
-    IOLoop.instance().start()
+
+    try:
+        IOLoop.instance().start()
+    except KeyboardInterrupt:
+        print '\nStoping the ioloop.. ',
+        IOLoop.instance().stop()
+        print 'Exit'
+        sys.exit()

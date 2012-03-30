@@ -19,7 +19,7 @@ class BaseApplication(TornadoApplication):
         >>> app = BaseApplication(some_handlers)
 
     NOTE if you redefine you own application class, the setup function
-    `_setup` must at least set `_handlers`as applications'sattributes
+    `_setup` must at least set `_handlers`as applications's attributes
     """
     def __init__(self, handlers=None):
         self.settings = {

@@ -14,9 +14,11 @@ setup(
     description='torext is an instrumental package which aim at easy implementation of tornado based project',
     packages=[
         'torext',
+        'torext.lib',
         'torext.db',
+        'torext.db.mongodb',
+        'torext.db.mysql',
         'torext.handlers',
-        'torext.utils',
         'torext.scripts',
     ],
     package_data={
@@ -29,14 +31,14 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'torext.flake = torext.scripts.syntax_checker:main',
-            'torext.sketch = torext.scripts.sketch_maker:main',
+            'torext.flake = torext.scripts.syntax:main',
+            'torext.sketch = torext.scripts.sketch:main',
         ]
     },
     install_requires=[
         'tornado==2.1.1',
         'pymongo>=2.1',
-        'mongokit>=0.7.2',
+        # 'mongokit>=0.7.2',
         'redis>=2.4',
         'pika>=0.9.5',
         'requests>=0.9',
