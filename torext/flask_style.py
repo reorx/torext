@@ -6,7 +6,7 @@ import string
 import logging
 import torext
 from torext.handlers import _BaseHandler
-from torext.app import BaseApplication
+from torext.app import SettingsBasedApplication
 from torext.server import run_api_server
 from torext import settings
 
@@ -57,7 +57,7 @@ class FlaskStyleApp(object):
 
     def run(self):
         run_api_server(
-            BaseApplication(
+            SettingsBasedApplication(
                 handlers=[i for i in self.handlers.iteritems()],
             )
         )

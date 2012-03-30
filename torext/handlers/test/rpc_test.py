@@ -1,77 +1,62 @@
-import sys
-from torext.handlers.rpc import start_server
-from torext.handlers.rpc import BaseRPCHandler
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+# from tornado.testing import AsyncHTTPTestCase
+from torext.lib.testing import _TestCase
+from jsonrpclib import Server
+from tornado.web import Application
+from torext.handlers.rpc import JSONRPCHandler
+from tornado.httpserver import HTTPServer
+from tornado.ioloop import IOLoop
+from multiprocessing import Process
 
 
-def start_server(handlers, route=r'/', port=8080):
-    """
-    This is just a friendly wrapper around the default
-    Tornado instantiation calls. It simplifies the imports
-    and setup calls you'd make otherwise.
-    USAGE:
-        start_server(handler_class, route=r'/', port=8181)
-    """
-    if type(handlers) not in (types.ListType, types.TupleType):
-        handler = handlers
-        handlers = [(route, handler), ]
-        if route != '/RPC2':
-            # friendly addition for /RPC2 if it's the only one
-            handlers.append(('/RPC2', handler))
-    application = tornado.web.Application(handlers)
-    http_server = tornado.httpserver.HTTPServer(application)
-    http_server.listen(port)
-    loop_instance = tornado.ioloop.IOLoop.instance()
-    """ Setting the '_server' attribute if not set """
-    for (route, handler) in handlers:
-        try:
-            server_attrib = setattr(handler, '_server', loop_instance)
-        except AttributeError:
-            handler._server = loop_instance
-    loop_instance.start()
-    return loop_instance
+_next_port = 59000
 
 
-class TestMethodTree(object):
-    def power(self, x, y=2):
-        return pow(x, y)
-
-    @private
-    def private(self):
-        # Shouldn't be called
-        return False
+def get_unused_port():
+    """Returns a (hopefully) unused port number."""
+    global _next_port
+    port = _next_port
+    _next_port = _next_port + 1
+    return port
 
 
-class TestRPCHandler(BaseRPCHandler):
-
-    _RPC_ = None
-
-    def add(self, x, y):
-        return x+y
-
-    def ping(self, x):
-        return x
-
-    def noargs(self):
-        return 'Works!'
-
-    tree = TestMethodTree()
-
-    def _private(self):
-        # Shouldn't be called
-        return False
-
-    @private
-    def private(self):
-        # Also shouldn't be called
-        return False
+def func_add(x, y):
+    return x + y
 
 
-class TestJSONRPC(TestRPCHandler):
-    _RPC_ = JSONRPCParser(JSONRPCLibraryWrapper)
+class RPCHdr(JSONRPCHandler):
+    def add(self, *args, **kwgs):
+        return func_add(*args, **kwgs)
 
-port = 8181
-if len(sys.argv) > 1:
-    port = int(sys.argv[1])
+    def obj(self):
+        return self
 
-print 'Starting server on port %s' % port
-start_server(TestJSONRPC, port=port)
+
+class JSONRPCTest(_TestCase):
+    def setUp(self):
+        self._http_server = HTTPServer(Application([(r'/rpc', RPCHdr)]))
+        self._port = get_unused_port()
+        self._http_server.listen(self._port)
+
+        self._io_loop = IOLoop.instance()
+
+        self.rpc = Server('http://127.0.0.1:%s/rpc' % self._port)
+
+        self.process = Process(target=self._io_loop.start)
+        self.process.start()
+        self.log.quiet('process started')
+
+    def test_add(self):
+        args = (1, 2)
+        res = self.rpc.add(*args)
+        self.log.quiet('rpc result: %s' % res)
+        self.assertEqual(func_add(*args), res)
+
+    def test_bad_return(self):
+        self.assertRaises(Exception, self.rpc.obj)
+
+    def tearDown(self):
+        self.process.terminate()
+        self.log.quiet('process terminated')
