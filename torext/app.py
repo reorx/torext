@@ -5,18 +5,18 @@ from tornado.web import Application as TornadoApplication
 from torext import settings
 
 
-class BaseApplication(TornadoApplication):
+class SettingsBasedApplication(TornadoApplication):
     """
     Two ways to implement an application::
         1. Redefine the class
-        >>> class Application(BaseApplication):
+        >>> class Application(SettingsBasedApplication):
         >>>     def _setup(self):
         >>>         self._handlers = some_handlers
         >>>
         >>> app = Application()
 
-        2. Directly use BaseApplication
-        >>> app = BaseApplication(some_handlers)
+        2. Directly use SettingsBasedApplication
+        >>> app = SettingsBasedApplication(some_handlers)
 
     NOTE if you redefine you own application class, the setup function
     `_setup` must at least set `_handlers`as applications's attributes
@@ -35,4 +35,4 @@ class BaseApplication(TornadoApplication):
             self._setup()
         if not hasattr(self, '_handlers'):
             raise NotImplementedError("`_handlers` must be set as App's attributes")
-        super(BaseApplication, self).__init__(self._handlers, **self.settings)
+        super(SettingsBasedApplication, self).__init__(self._handlers, **self.settings)
