@@ -54,13 +54,13 @@ data = {
 """
 
 import logging
-from torext.logger import BaseFormatter
-test = logging.getLogger('test')
-test.setLevel(logging.INFO)
-
 from hashlib import md5
 from pymongo.objectid import ObjectId
 from torext.errors import ValidationError
+
+
+test = logging.getLogger('test')
+test.setLevel(logging.INFO)
 
 
 DEFAULT_TYPE_VALUE = {
@@ -77,10 +77,10 @@ DEFAULT_TYPE_VALUE = {
 
 class GenCaller(object):
     def __get__(self, ins, owner):
-        return _Gen(owner)
+        return Gen(owner)
 
 
-class StructedSchema(object):
+class StructuredDict(dict):
     """
     Philosophy.
         1. instance has the same keys, no less, no more, with defined struct.
@@ -88,39 +88,60 @@ class StructedSchema(object):
         3. when auto creating and validating, if key isn't in `force_type`, None will be allowed.
         4. no unique judgements
         5. keys not in struct could not be read or set.
+        6. validator is not included in concept, it should be outside of structure.
 
     TODO.
         * auto_fix for raw doc in mongodb to fit struct (always use in developing at which time struct changes frequently)
 
-    >>> class SomeStruct(StructedSchema):
+    NOTE.
+        * '' and None. When a key has no input default value, it will be asigned as None
+          unless it's in strict_indexes
+
+    >>> class SomeStruct(StructuredDict):
     ...     struct = {
     ...         'id': ObjectId,
     ...         'name': str,
     ...         'description': str,
+    ...         'flag': str,
     ...     }
     ...
-    ...     force_type = [
-    ...         'name',
+    ...     default_values = {
+    ...         'flag': 'fuck-you',
+    ...     }
+    ...
+    ...     allow_None_types = [
+    ...         str,
     ...     ]
     ...
     """
-    current_struct = None
     gen = GenCaller()
-    # TODO rewrite validators ability, has been moved due to multi structs definition
 
-    # open
+    allow_None_types = [str, unicode, ]
+
+    brother_types = [
+        (str, unicode),
+        (int, long),
+    ]
+
     @classmethod
     def validate(cls, doc):
-        validate_doc(doc, cls.struct)
-        # use validator TODO
+        validate_dict(doc, cls.struct, allow_nones=cls.allow_None_types)
 
-    # open
     @classmethod
     def build_instance(cls, **kwgs):
-        return build_dict(cls.struct, **kwgs)
+        kwgs['dict_class'] = cls
+        instance = build_dict(cls.struct, **kwgs)
+        # return instance
+
+        try:
+            validate_dict(instance, cls.struct, cls.allow_None_types)
+        except ValidationError, e:
+            raise ValidationError('validate error in build_dict(), may be\
+                    dict structure is broken by default ? | %s' % e)
+        return instance
 
 
-class _Gen(object):
+class Gen(object):
     def __init__(self, structObj):
         self.__structObj = structObj
         self.__dot_key = '$'
@@ -157,9 +178,9 @@ class _Gen(object):
         return self
 
 
-def validate_doc(doc, struct):
+def validate_dict(doc, struct, allow_nones=[], brother_types=[]):
     def iter_struct(st, ck):
-        #time.sleep(0.3)
+        # `ck` means current key
         test.debug('@ ' + ck)
         if isinstance(st, type):
             typ = st
@@ -174,23 +195,32 @@ def validate_doc(doc, struct):
             raise ValidationError(ck + ' could not index out')
 
         test.debug('obj: %s %s' % (o, type(o)))
+
+        # so that if o is an empty iterable (originally list), this step will pass
         if not isinstance(o, tuple):
             o = (o, )
-        # so if o is an empty iterable (originally list), this step will pass
+
         for i in o:
             test.debug('item: %s %s' % (i, type(i)))
             if not isinstance(i, typ):
-                if (typ is unicode or typ is str or typ is ObjectId) and i is None:
-                    # at this point, i should be (or must be?) the end of
-                    # a dot_key, so if value is None, as to str and unicode,
-                    # it is kinda acceptable
+                if i is None and typ in allow_nones:
+                    test.debug('allowing condition: %s can be None' % ck)
                     continue
-                if (type(i) is str and typ is unicode) or\
-                    (type(i) is unicode and typ is str):
-                    # NOTE temporarily let unicode and str compatable
+
+                _brother_types_pass = False
+                for bro in brother_types:
+                    if type(i) in bro and typ in bro:
+                        test.debug('allowing condition: (%s, %s) in brother_types' % (type(i), typ))
+                        _brother_types_pass = True
+                        continue
+                if _brother_types_pass:
                     continue
-                if type(i) is long and typ is int:
-                    continue
+                # if (type(i) is str and typ is unicode) or\
+                #     (type(i) is unicode and typ is str):
+                #     # NOTE temporarily let unicode and str compatable
+                #     continue
+                # if type(i) is long and typ is int:
+                #     continue
                 raise ValidationError(
                     '{0}: invalid {1}, should be {2}, value: {3}'.format(ck, type(i), typ, repr(i)))
 
@@ -212,7 +242,7 @@ def validate_doc(doc, struct):
     test.debug('all passed !')
 
 
-def build_dict(struct, default={}):
+def build_dict(struct, default={}, dict_class=dict):
     """
     build a dict from struct,
     struct & the result can only be dict
@@ -222,7 +252,7 @@ def build_dict(struct, default={}):
      * KeyError will be raised if not all dot_keys in default are properly set
     """
     def recurse_struct(dst, ck):
-        cd = {}
+        cd = dict_class()
         for k, v in dst.iteritems():
             if not ck:
                 nk = k
@@ -256,15 +286,10 @@ def build_dict(struct, default={}):
         return cd
 
     builtDict = recurse_struct(struct, '')
-    if len(default.keys()) > 0:
-        raise KeyError('index default value `%s` failed' % default)
 
-    # this step is a bit unnesessary for struct will be checked in Document before save(),
-    # put it just to ensure build_dict() runs properly, for test use
-    try:
-        validate_doc(builtDict, struct)
-    except ValidationError, e:
-        raise ValidationError('validate error in build_dict(), may be dict structure is broken by default ?|' + str(e))
+    if len(default.keys()) > 0:
+        raise KeyError('Assignments of default value `%s` failed' % default)
+
     return builtDict
 
 
@@ -377,81 +402,3 @@ class DotDict(dict):
         for k in self.keys():
             d[k] = self[k]
         return d
-
-
-##############
-#  unittest  #
-##############
-if '__main__' == __name__:
-    # below are test codes
-    import unittest
-
-    class TestSchema(StructedSchema):
-        struct = {
-            'object_id': ObjectId,
-            'name': str,
-            'nature': {'luck': int},
-            'people': [str],
-            'disks': [
-                {
-                    'title': str,
-                    'volums': [
-                        {
-                            'size': int,
-                            'block': [int],
-                        }
-                    ]
-                }
-            ]
-        }
-        struct_sub = {
-            'hello': str
-        }
-
-    class ValidateTestCase(unittest.TestCase):
-        def setUp(self):
-            self._t_data = {
-                'object_id': None,
-                'name': 'reorx is the god',
-                'nature': {'luck': 10},
-                'people': ['aoyi'],
-                'disks': [
-                    {
-                        'title': 'My Passport',
-                        'volums': [
-                            {
-                                'size': 1,
-                                'block': [12, 4, 32]
-                            }
-                        ]
-                    },
-                    {
-                        'title': 'DATA',
-                        'volums': [
-                            {
-                                'size': 2,
-                                'block': [1, 2, 3]
-                            }
-                        ]
-                    }
-                ],
-                'extra': 'oos'
-            }
-            self.TS = TestSchema
-
-        def test_base(self):
-            self.TS.validate(self._t_data)
-            print 'done test_base'
-
-    test.setLevel('DEBUG')
-    lh = logging.StreamHandler()
-    lh.setFormatter(BaseFormatter(color=True, datefmt='%M:%S'))
-    test.addHandler(lh)
-
-    unittest.main()
-
-    print 'another un-unittest test:'
-    import pprint
-    pprint.PrettyPrinter(indent=4).pprint(
-        TestSchema.build_instance(default={'object_id': '4f3c807c312f91112a010101'})
-    )
