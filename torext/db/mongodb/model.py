@@ -2,15 +2,13 @@
 # -*- coding: utf-8 -*-
 
 # simple wrapper of MongoDB using pymongo
-# NOTE this code is semi-manufactured, now using mongokit with torext
-# in practicing product
 
 # NOTE pymongo.collection only apply dict object to save
 # TODO django manager like attribute binding with Document,
 # use for attaching logical-data-operation packed functions.
 # Philosophe:
 #
-# * application level involvings
+# * application level invokings
 #           ^
 #           |
 #   [middleware attach to models]
