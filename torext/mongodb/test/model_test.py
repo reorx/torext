@@ -28,8 +28,8 @@ def random_str(length):
 class TestModel(_TestCase):
 
     def setUp(self):
-        from torext.db.connections import connections
-        from torext.db.mongodb.model import _CollectionDeclarer, Document, Struct, ObjectId
+        from torext.connections import connections
+        from torext.mongodb.model import _CollectionDeclarer, Document, Struct, ObjectId
 
         # configure test logger
         test_logger = logging.getLogger('test')

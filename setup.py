@@ -39,9 +39,8 @@ setup(
     packages=[
         'torext',
         'torext.lib',
-        'torext.db',
-        'torext.db.mongodb',
-        'torext.db.mysql',
+        'torext.mongodb',
+        'torext.rdbs',
         'torext.handlers',
         'torext.scripts',
     ],
@@ -63,7 +62,7 @@ setup(
         'tornado==2.1.1',
         'pymongo>=2.1',
         'redis>=2.4',
-        # consider to write a new package for rabbitmq connection and move this requirements to it.
+        # consider to write a new package for rabbitmq connection and move this requirements into it.
         # 'pika>=0.9.5',
         'requests>=0.9',
         'pyflakes>=0.5.0',

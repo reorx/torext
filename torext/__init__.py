@@ -57,7 +57,7 @@ def initialize(settings_module=None):
 
     # connections
     if settings.has('connections'):
-        from torext.db.connections import connections
+        from torext.connections import connections
         connections.configure(settings.connections)
 
 

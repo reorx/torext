@@ -18,7 +18,7 @@
 import logging
 from functools import partial
 
-from torext.db.mongodb.dstruct import (
+from torext.mongodb.dstruct import (
     ValidationError,
     validate_dict,
     build_dict,
@@ -210,7 +210,7 @@ class TestFunctions(_TestCase):
 
     def test_map_dict(self):
         doc_map = map_dict(self.doc)
-        self.log.show(doc_map)
+        self.log.quiet(doc_map)
         self.assertTrue('name' in doc_map)
         self.assertTrue('people.[0]' in doc_map)
         self.assertTrue('disks.[0].volums.[0].size' in doc_map)
@@ -278,7 +278,7 @@ class TestStruct(_TestCase):
                 })
             ]
         })
-        self.log.show(ins)
+        self.log.quiet(ins)
 
         # test if keys in ins
         self.assertTrue(len(ins['disks']) == 1)
