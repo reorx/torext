@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-
-# MySQL using SQLAlchemy
+#
+# An intergration of sqlalchemy
 
 __all__ = (
     'Column', 'Table', 'ForeignKey', 'Sequence',

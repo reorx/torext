@@ -22,7 +22,7 @@ def print_service_info():
     url:         {6}
     Connections: {7}
     """
-    from torext.db.connections import connections as conns
+    from torext.connections import connections as conns
     connsText = ''
     for k, v in conns._availables.iteritems():
         connsText += '\n        {0:<10} {1}'.format(k + ':', v)
