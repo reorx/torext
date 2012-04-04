@@ -32,8 +32,9 @@ import tornado.locale
 from tornado.web import HTTPError
 from tornado import escape
 
-from torext import settings
+from torext import settings, errors
 from torext.lib.format import _json, _dict
+from torext.lib.utils import ObjectDict
 
 
 def block_response_text(text, width=80, limit=800):
@@ -115,7 +116,7 @@ class _BaseHandler(tornado.web.RequestHandler):
         if not self._finished:
             self.finish()
 
-        if settings.debug:
+        if settings['DEBUG']:
             logging.debug(block_response_text(chunk))
 
     def json_error(self, code, error=None):
@@ -130,7 +131,7 @@ class _BaseHandler(tornado.web.RequestHandler):
         }
         if isinstance(error, Exception):
             msg['error'] = error.__str__()
-            if settings.debug and not isinstance(error, HTTPError):
+            if settings['DEBUG'] and not isinstance(error, HTTPError):
                 msg['traceback'] = '\n' + traceback.format_exc()
                 logging.error(msg['error'] + '\n' + msg['traceback'])
         elif isinstance(error, str):
@@ -166,7 +167,7 @@ class _BaseHandler(tornado.web.RequestHandler):
         """
         like a middleware between raw request and handling process,
         """
-        if settings.debug:
+        if settings['DEBUG']:
             self._prepare_debug()
             if self._finished:
                 return
@@ -222,5 +223,40 @@ def api_authenticated(method):
     return wrapper
 
 
-def api_define(method):
-    pass
+class api_define(object):
+    def __init__(self, rules):
+        """
+        :defs::
+        [
+            ('arg_name0', ),
+            ('arg_name1', int)
+        ]
+        """
+        self.rules = rules
+
+    def __call__(self, method):
+
+        def wrapper(hdr, *args, **kwgs):
+            params = ObjectDict()
+            for rule in self.rules:
+                if not isinstance(rule, tuple):
+                    rule = (rule, )
+                key = rule[0]
+                value = hdr.get_argument(key, None)
+
+                if value is None:
+                    raise errors.ParametersInvalid('missing param: %s' % key)
+
+                if len(rule) == 2:
+                    typ = rule[1]
+                    try:
+                        value = typ(value)
+                    except ValueError:
+                        raise errors.ParametersInvalid('error type of param %s, should be %s' % (key, typ))
+
+                params[key] = value
+
+            hdr.params = params
+            return method(hdr, *args, **kwgs)
+
+        return wrapper

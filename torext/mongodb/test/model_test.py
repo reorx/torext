@@ -28,8 +28,8 @@ def random_str(length):
 class TestModel(_TestCase):
 
     def setUp(self):
-        from torext.connections import connections
-        from torext.mongodb.model import _CollectionDeclarer, Document, Struct, ObjectId
+        from torext.conns import conns, configure_conns
+        from torext.mongodb.model import Document, Struct, ObjectId
 
         # configure test logger
         test_logger = logging.getLogger('test')
@@ -47,15 +47,12 @@ class TestModel(_TestCase):
                 }
             }
         }
-        connections.configure(SETTINGS)
-        mdb = connections.get('mongodb', 'core')
+        configure_conns(SETTINGS)
+        mdb = conns.get('mongodb', 'core')
         self.assertTrue(mdb)
 
-        class CollectionDeclarer(_CollectionDeclarer):
-            connection = mdb
-
         class TestDoc(Document):
-            col = CollectionDeclarer('test', 'col0')
+            col = mdb['test']['col0']
             struct = Struct({
                 'id': ObjectId,
                 'name': str,

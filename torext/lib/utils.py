@@ -8,8 +8,8 @@ def pprint(o):
     pprinter.pprint(o)
 
 
-class OneInstanceImp(object):
-    """Our global program options, an dictionary with object-like access.
+class OneInstanceObject(object):
+    """Globally hold one instance class
 
     Usage::
         >>> class SpecObject(OneInstanceImp):
@@ -31,3 +31,26 @@ def kwgs_filter(kwgs_tuple, kwgs):
         if i in kwgs:
             _kwgs[i] = kwgs.pop(i)
     return _kwgs
+
+
+class ObjectDict(dict):
+    """
+    retrieve value of dict in dot style
+    """
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError('has no attribute %s' % key)
+
+    def __setattr__(self, key, value):
+        self[key] = value
+
+    def __delattr__(self, key):
+        try:
+            del self[key]
+        except KeyError:
+            raise AttributeError(key)
+
+    def __str__(self):
+        return '<ObjectDict %s >' % self.__to_dict()

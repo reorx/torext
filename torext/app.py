@@ -5,34 +5,33 @@ from tornado.web import Application as TornadoApplication
 from torext import settings
 
 
-class SettingsBasedApplication(TornadoApplication):
-    """
-    Two ways to implement an application::
-        1. Redefine the class
-        >>> class Application(SettingsBasedApplication):
-        >>>     def _setup(self):
-        >>>         self._handlers = some_handlers
-        >>>
-        >>> app = Application()
+UNLOG_URIS = [
+    '/favicon.ico',
+]
 
-        2. Directly use SettingsBasedApplication
-        >>> app = SettingsBasedApplication(some_handlers)
 
-    NOTE if you redefine you own application class, the setup function
-    `_setup` must at least set `_handlers`as applications's attributes
+class TorextApp(TornadoApplication):
     """
-    def __init__(self, handlers=None):
-        self.settings = {
-            'debug': settings.debug,
-            'logging': settings.logging,
+    Simplify the way to setup and run an app instance
+    """
+    def __init__(self, handlers):
+        """
+        Automatically involves torext's settings
+        """
+        options = {
+            'debug': settings['DEBUG'],
+            'logging': settings['LOGGING'],
         }
-        if settings.has('template_path'):
-            self.settings['template_path'] = settings.template_path
+        if 'TEMPLATE_PATH' in settings:
+            options['template_path'] = settings['TEMPLATE_PATH']
 
-        if handlers:
-            self._handlers = handlers
-        if hasattr(self, '_setup'):
-            self._setup()
-        if not hasattr(self, '_handlers'):
-            raise NotImplementedError("`_handlers` must be set as App's attributes")
-        super(SettingsBasedApplication, self).__init__(self._handlers, **self.settings)
+        super(TorextApp, self).__init__(handlers, **options)
+
+    def log_request(self, handler, *args, **kwgs):
+        if handler.request.uri in UNLOG_URIS:
+            return
+        super(TorextApp, self).log_request(handler, *args, **kwgs)
+
+    def run(self):
+        from torext.server import run_server
+        run_server(self)

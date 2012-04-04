@@ -24,7 +24,7 @@ from tornado.web import HTTPError
 HTTPError = HTTPError
 
 
-class TorextBaseException(Exception):
+class TorextException(Exception):
     def __init__(self, msg):
         self.msg = msg
         logging.debug(self.msg)
@@ -33,35 +33,42 @@ class TorextBaseException(Exception):
         return self.msg
 
 
-class ConnectionError(TorextBaseException):
+class URLRouteError(TorextException):
+    """
+    error in router
+    """
+    pass
+
+
+class ConnectionError(TorextException):
     """
     error occurs in connection
     """
     pass
 
 
-class ValidationError(TorextBaseException):
+class ValidationError(TorextException):
     """
     error occur when validating values
     """
     pass
 
 
-class AuthenticationNotPass(TorextBaseException):
+class AuthenticationNotPass(TorextException):
     pass
 
 
-class ObjectNotFound(TorextBaseException):
+class ObjectNotFound(TorextException):
     pass
 
 
-class MultiObjectsReturned(TorextBaseException):
+class MultiObjectsReturned(TorextException):
     pass
 
 
-class ParametersInvalid(TorextBaseException):
+class ParametersInvalid(TorextException):
     pass
 
 
-class SettingUndefined(TorextBaseException):
+class SettingUndefined(TorextException):
     pass
