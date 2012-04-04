@@ -19,13 +19,14 @@
 # * bottom data storage (database)
 
 __all__ = (
-    '_CollectionDeclarer', 'Document', 'Struct', 'ObjectId', 'oid',
+    'Document', 'Struct', 'ObjectId', 'oid',
 )
 
 import copy
 import logging
 from torext import errors
 from pymongo.objectid import ObjectId
+from pymongo.collection import Collection
 from .dstruct import Struct, StructuredDict
 from .base import Cursor
 
@@ -45,30 +46,19 @@ def oid(id):
         raise ValueError('get type %s, should str\unicode or ObjectId' % type(id))
 
 
-class _CollectionDeclarer(object):
-    connection = None
+class DocumentMetaclass(type):
+    """
+    use for judging if Document's subclasses have assign attribute 'col' properly
+    """
+    def __new__(cls, name, bases, attrs):
+        # judge if the target class is Document
+        if not (len(bases) == 1 and bases[0] is StructuredDict):
+            if not ('col' in attrs and isinstance(attrs['col'], Collection)):
+                raise errors.ConnectionError(
+                    'col of a Document is not set properly, passing: %s %s' %\
+                    (attrs['col'], type(attrs['col'])))
 
-    def __init__(self, _db, _col):
-        if self.connection is None:
-            from torext.errors import ConnectionError
-            raise ConnectionError("""
-                MongoDB connection is None in CollectionDeclarer,
-                it may happen when your settings.py file is incorrect,
-                or you involve the project in an outer place without properly configuration.
-                """)
-        self._db = _db
-        self._col = _col
-        # self.col = None
-        # self._fetch_col()
-        self.col = self.connection[self._db][self._col]
-
-    # def _fetch_col(self):
-    #     if self.col is None:
-
-    def __get__(self, ins, owner):
-        # if self.col is None:
-        #     self.col = self.connection[self._db][self._col]
-        return self.col
+        return type.__new__(cls, name, bases, attrs)
 
 
 class Document(StructuredDict):
@@ -80,14 +70,15 @@ class Document(StructuredDict):
     Usage:
     1. create new document
     >>> class ADoc(Document):
-    ...     col = CollectionDeclarer('dbtest', 'coltest')
+    ...     col = mongodb['dbtest']['coltest']
     ...
 
     2. init from existing document
 
     """
+    __metaclass__ = DocumentMetaclass
+
     __write_safe__ = True
-    # __id_map__ = False
 
     def __init__(self, raw={}, from_db=False):
         """ wrapper of raw data from cursor
@@ -170,7 +161,7 @@ class Document(StructuredDict):
         # return ins
 
         instance = cls.build_instance(default=default)
-        # '_id' will not be seen by .validate()
+        # '_id' will not see by .validate()
         instance['_id'] = ObjectId()
         test.debug('generate _id by model: %s' % instance['_id'])
         return instance

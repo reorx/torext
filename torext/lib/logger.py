@@ -5,8 +5,6 @@ import sys
 import logging
 from torext.lib.utils import kwgs_filter
 
-print 'torext.lib.logger module loading, NOTE something about logging will be changed'
-
 
 # borrow from tornado.options._LogFormatter.__init__
 def _color(lvl, s):
@@ -137,28 +135,40 @@ class BaseStreamHandler(logging.StreamHandler):
 
         self.setFormatter(BaseFormatter(**_kwgs))
 
+
+HANDLER_TYPES = {
+    'stream': BaseStreamHandler,
+}
+
+
+def configure_logger(name,
+        level=logging.DEBUG,
+        propagate=1,
+        handler_options={}):
+    """
+    :param handler_options::
+    """
+
+    # NOTE before logging is set detaily(eg. add a handler), it will be added
+    # a handler automatically if it was used (eg. logging.debug),
+    # pre-set handlers to [], to ensure no unexpected handler is on root logger
+    logging.getLogger(name).handlers = []
+
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+    logger.propagate = propagate
+
+    handler_type = handler_options.pop('type')
+    handler_cls = HANDLER_TYPES[handler_type]
+
+    logger.addHandler(handler_cls(**handler_options))
+
+
 #############
 #  loggers  #
 #############
 # 1. test - propagate 0
 # 2. system - propagate 1 - for seperately output system level logs
-
-
-def enable_logger(name, level=logging.DEBUG, propagate=1, **kwgs):
-    # NOTE before logging is set detaily(eg. add a handler), it will be added
-    # a handler automatically if it was used (eg. logging.debug),
-    # pre-set handlers to [], to ensure no unexpected handler is on root logger
-    disable_logger(name)
-
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
-    logger.propagate = propagate
-    logger.addHandler(BaseStreamHandler(**kwgs))
-
-
-def disable_logger(name):
-    logging.getLogger(name).handlers = []
-
 
 # test_logger = logging.getLogger('test')
 # test_logger.propagate = 0
@@ -172,7 +182,8 @@ if __name__ == '__main__':
         # streamHandler = logging.StreamHandler()
         # streamHandler.setFormatter(BaseFormatter(color=True))
         # root_logger.addHandler(streamHandler)
-        enable_logger('', level=logging.DEBUG, color=True)
+        configure_logger('', level=logging.DEBUG, color=True)
+
 
         root_logger.debug('bug..')
         root_logger.info('hello')

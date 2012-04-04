@@ -13,26 +13,26 @@
 ################
 # indispensable
 
-project = 'torext_powered'
+PROJECT = None
 
-locale = 'en_US'
+LOCALE = 'en_US'
 
 
 # variables below can be redefined by commend line options
 
-processes = 1
+PROCESSES = 1
 
-port = 8000
+PORT = 8000
 
-debug = False
+DEBUG = False
 
-logging = 'INFO'
+LOGGING = 'INFO'
 
 
 
 ###########
 # optional
 
-# third_lib = 'third'
+# THIRD_LIB = 'third'
 
-# template_path = 'web/template'
+# TEMPLATE_PATH = 'web/template'

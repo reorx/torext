@@ -3,56 +3,55 @@
 
 import logging
 from torext import settings
+from torext.errors import URLRouteError
 
 
-class HandlersContainer(object):
-    def handlers(self):
+class ModuleSearcher(object):
+    def __init__(self, label):
+        assert settings['PROJECT'], 'you must set PROJECT first'
+        self.import_path = settings['PROJECT'] + '.' + label
+        self._handlers = []
+
+    def get_handlers(self):
+        try:
+            module = __import__(self.import_path, fromlist=[settings['PROJECT']])
+        except ImportError, e:
+            raise URLRouteError('Caught error when router was searching module: %s' % e)
+
+        try:
+            self._handlers = getattr(module, 'handlers')
+        except AttributeError, e:
+            raise URLRouteError('Caught error when router was getting handlers from module: %s' % e)
+
+        logging.debug('got handlers from module %s' % self.import_path)
+
         return self._handlers
 
 
-class Module(HandlersContainer):
-    def __init__(self, svc_label):
-        self.import_path = settings.project + '.' + svc_label
+class Router(object):
+    def __init__(self, rules):
+        self.rules = rules
         self._handlers = []
 
-        # try:
-        module = __import__(self.import_path, fromlist=[settings.project])
-        self._handlers = getattr(module, 'handlers')
-        # except ImportError, e:
-        #     print 'import path', self.import_path
-        #     logging.error('error when get handlers in module: ' + str(e))
-        # except AttributeError, e:
-        #     logging.error('error when get handlers in module: ' + str(e))
-
-
-# TODO considering: if Router can be recursed by Router,
-# so that it may be easier to invoke sub apps
-class Router(HandlersContainer):
-    def __init__(self, map):
-        self.map = map
-        self._handlers = []
-        self._get_handlers()
-
-    def _get_handlers(self):
-        for path, mapper in self.map:
-            if isinstance(mapper, (Module, Router)):
-                for subPath, handler in mapper.handlers():
-                    url = r'%s%s' % (path, subPath)
-                    self._handlers.append(
-                            (format_pattern(url), handler)
-                    )
+    def get_handlers(self):
+        for path, rule_or_hdr in self.rules:
+            if isinstance(rule_or_hdr, ModuleSearcher):
+                for sub_path, hdr in rule_or_hdr.get_handlers():
+                    self.add(r'%s%s' % (path, sub_path), hdr)
             else:
-                url = r'%s' % path
-                self._handlers.append(
-                        (format_pattern(url), mapper)
-                )
+                self.add(r'%s' % path, rule_or_hdr)
 
-    def handlers(self):
         return self._handlers
 
+    def add(self, url, hdr):
+        logging.debug('add url-hdr in router: %s-%s' % (url, hdr))
+        self._handlers.append(
+            (format_pattern(url), hdr)
+        )
 
-def include(*args):
-    return Module(*args)
+
+def include(label):
+    return ModuleSearcher(label)
 
 
 def format_pattern(ptn):
