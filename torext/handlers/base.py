@@ -37,7 +37,7 @@ from torext.lib.format import _json, _dict
 from torext.lib.utils import ObjectDict
 
 
-def block_response_text(text, width=80, limit=800):
+def log_response(text, width=80, limit=800):
     if isinstance(text, str):
         text = text.decode('utf-8')
 
@@ -52,7 +52,24 @@ def block_response_text(text, width=80, limit=800):
         block += '| ' + text[:width] + '\n'
         text = text[width:]
     block += end
-    return block
+
+    logging.info(block)
+
+
+def log_request(handler, with_value=True):
+    """
+    """
+    block = 'Request Infomations ->\n-----Headers-----\n'
+
+    for k, v in handler.request.headers.iteritems():
+        block += '| {0:<15} | {1:<15} \n'.format(k, v)
+
+    if handler.request.arguments:
+        block += '-----Arguments-----\n'
+        for k, v in handler.request.arguments.iteritems():
+            block += '| {0:<15} | {1:<15} \n'.format(repr(k), repr(v))
+
+    logging.info(block)
 
 
 class _BaseHandler(tornado.web.RequestHandler):
@@ -129,6 +146,12 @@ class _BaseHandler(tornado.web.RequestHandler):
     def parse_json(self):
         return _dict
 
+    def write(self, chunk, *args, **kwgs):
+        super(_BaseHandler, self).write(chunk, *args, **kwgs)
+
+        if settings['LOG_RESPONSE']:
+            log_response(chunk)
+
     def json_write(self, chunk, json=False, headers={}):
         """
         Used globally, not special in ApiHandler
@@ -147,9 +170,6 @@ class _BaseHandler(tornado.web.RequestHandler):
         self.write(chunk)
         if not self._finished:
             self.finish()
-
-        if settings['DEBUG']:
-            logging.debug(block_response_text(chunk))
 
     def json_error(self, code, error=None):
         """Used globally, not special in ApiHandler
@@ -201,35 +221,13 @@ class _BaseHandler(tornado.web.RequestHandler):
         """
         like a middleware between raw request and handling process,
         """
-        if settings['DEBUG']:
-            self._prepare_debug()
-            if self._finished:
-                return
+        if settings['LOG_REQUEST']:
+            log_request(self)
 
         for i in self.PREPARES:
             getattr(self, '_prepare_' + i)()
             if self._finished:
                 return
-
-        # self.params = ObjectDict()
-        # for
-
-    def _prepare_debug(self, with_value=True):
-        """
-        """
-        block = 'Request Infomations ->\n'
-        block += '-----Headers-----\n'
-        for k, v in self.request.headers.iteritems():
-            tmpl = '| {0:<15} | {1:<15} \n'
-            block += tmpl.format(k, v)
-        if self.request.arguments:
-            block += '-----Arguments-----\n'
-            for k, v in self.request.arguments.iteritems():
-                tmpl = '| {0:<15} | {1:<15} \n'
-                req_body = tmpl.format(repr(k), repr(v))
-                block += req_body
-
-        logging.info(block)
 
     def render(self, template_name, context={}):
         """for web using"""
