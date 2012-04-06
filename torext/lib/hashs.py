@@ -4,7 +4,7 @@
 import time
 #import datetime
 import string
-from random import choice
+from random import choice, randint
 from hashlib import md5
 
 CHARS = string.letters + string.digits
@@ -18,18 +18,9 @@ def RandomHash(id):
     return prefix + id_str
 
 
-def create_password(raw):
-    PREFIX = 'NODEMIX_USER_PASSWORD'
-    return md5(PREFIX + raw).hexdigest()
-
-
-def check_password(raw, indb):
-    return create_password(raw) == indb
-
-
-def Md5(s):
-    if not isinstance(s, str):
-        s = s.encode('utf-8')
+def md5_string(s):
+    if isinstance(s, unicode):
+        s = s.encode('utf8')
     return md5(s).hexdigest()
 
 
@@ -50,17 +41,21 @@ def CreateNid(id):
     return nid
 
 
-def RandomString(length=10):
+def random_string(length=10):
     return ''.join([choice(CHARS) for i in range(length)])
 
 
+def random_list_item(l):
+    return l[randint(0, len(l) - 1)]
+
+
 def SaltMd5(s):
-    return Md5(s + RandomString(5))
+    return md5_string(s + random_string(5))
 
 
 def RandomInsertMd5(s):
     HEXCHAR = '0123456789ABCDEF'
-    s = Md5(s)
+    s = md5_string(s)
     p1 = s[:2]
     p2 = s[2:6]
     p3 = s[6:14]

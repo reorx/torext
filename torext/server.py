@@ -11,15 +11,16 @@ from tornado.httpserver import HTTPServer
 from torext import settings
 
 
-def print_service_info():
+def print_service_info(app):
     tmpl = """\nMode [{0}], Service info::
     Project:     {1}
     Port:        {2}
     Processes:   {3}
     Logging:     {4}
     Locale:      {5}
-    url:         {6}
-    Connections: {7}
+    Debug:       {6}
+    url:         {7}
+    Connections: {8}
     """
     from torext.conns import conns
     conns_str = ''
@@ -34,6 +35,7 @@ def print_service_info():
         settings['DEBUG'] and 1 or settings['PROCESSES'],
         settings['LOGGING'],
         settings['LOCALE'],
+        settings['DEBUG'],
         'http://127.0.0.1:%s' % settings['PORT'],
         conns_str or '[]'
     )
@@ -51,7 +53,7 @@ def run_server(app):
         http_server.bind(settings['PORT'])
         http_server.start(settings['PROCESSES'])
 
-    print_service_info()
+    print_service_info(app)
 
     try:
         IOLoop.instance().start()

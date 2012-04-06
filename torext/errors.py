@@ -18,7 +18,7 @@ errors:
 """
 
 
-import logging
+import inspect
 from tornado.web import HTTPError
 
 HTTPError = HTTPError
@@ -27,10 +27,11 @@ HTTPError = HTTPError
 class TorextException(Exception):
     def __init__(self, msg):
         self.msg = msg
-        logging.debug(self.msg)
+        self.caller_name = inspect.stack()[1][3]
+        super(TorextException, self).__init__(msg)
 
     def __str__(self):
-        return self.msg
+        return 'From %s() : %s' % (self.caller_name, self.msg)
 
 
 class URLRouteError(TorextException):
@@ -66,8 +67,14 @@ class MultiObjectsReturned(TorextException):
     pass
 
 
+##
 class ParametersInvalid(TorextException):
     pass
+
+
+class OperationNotAllowed(TorextException):
+    pass
+##
 
 
 class SettingUndefined(TorextException):

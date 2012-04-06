@@ -24,7 +24,7 @@ import logging
 import urllib
 import urlparse
 import functools
-import traceback
+# import traceback
 
 import tornado.web
 import tornado.locale
@@ -56,7 +56,7 @@ def block_response_text(text, width=80, limit=800):
 
 
 class _BaseHandler(tornado.web.RequestHandler):
-    __prepares__ = []
+    PREPARES = []
     """
     Request
         header:
@@ -73,6 +73,38 @@ class _BaseHandler(tornado.web.RequestHandler):
         if self.__class__._first_running:
             self.__class__._first_running = False
             logging.debug('%s initializing' % self.__class__.__name__)
+
+    def _handle_request_exception(self, e):
+
+        # from tornado.web
+        if isinstance(e, errors.HTTPError):
+            if e.log_message:
+                format = "%d %s: " + e.log_message
+                args = [e.status_code, self._request_summary()] + list(e.args)
+                logging.warning(format, *args)
+
+            # redefined dealing
+            self.json_error(e.status_code, e)
+
+        # new dealings with exceptions in torext.errors
+        else:
+            status_code = 500
+            if hasattr(self, 'HTTP_STATUS_EXCEPTIONS'):
+                for code, excs in self.HTTP_STATUS_EXCEPTIONS.iteritems():
+                    if isinstance(e, excs):
+                        status_code = code
+
+            if status_code == 500:
+                logging.error("Uncaught exception %s\n%r", self._request_summary(),
+                              self.request, exc_info=True)
+                if 'BUG_REPORTER' in settings:
+                    # TODO
+                    # bug_report.delay(self.get_current_timestamp(), e, traceback.format_exc(),
+                    #     settings.bug_reporter)
+                    pass
+
+            return self.json_error(status_code, e)
+    pass
 
     @property
     def mysql(self):
@@ -131,9 +163,11 @@ class _BaseHandler(tornado.web.RequestHandler):
         }
         if isinstance(error, Exception):
             msg['error'] = error.__str__()
-            if settings['DEBUG'] and not isinstance(error, HTTPError):
-                msg['traceback'] = '\n' + traceback.format_exc()
-                logging.error(msg['error'] + '\n' + msg['traceback'])
+
+            # not using this currently
+            # if settings['DEBUG'] and not isinstance(error, HTTPError):
+            #     msg['traceback'] = '\n' + traceback.format_exc()
+            #     logging.error(msg['error'] + '\n' + msg['traceback'])
         elif isinstance(error, str):
             msg['error'] = error
         else:
@@ -151,16 +185,16 @@ class _BaseHandler(tornado.web.RequestHandler):
 
     # TODO get_user_locale
 
-    def get_auth_value(self, name, value, max_age_days=7):
+    def decode_auth_token(self, name, token, max_age_days=settings['COOKIE_EXPIRE_DAY']):
         """Changed. user new function: tornado.web.RequestHandler.create_signed_value
         """
-        return tornado.web.decode_signed_value(self.application.settings['auth_secret'],
-                                               name, value, max_age_days=max_age_days)
+        return tornado.web.decode_signed_value(settings['COOKIE_SECRET'],
+                                               name, token, max_age_days=max_age_days)
 
-    def set_auth_value(self, name, value):
+    def encode_auth_value(self, name, value):
         """Written as set_secure_cookie works
         """
-        return tornado.web.create_signed_value(self.application.settings['auth_secret'],
+        return tornado.web.create_signed_value(settings['COOKIE_SECRET'],
                                                name, value)
 
     def prepare(self):
@@ -171,11 +205,14 @@ class _BaseHandler(tornado.web.RequestHandler):
             self._prepare_debug()
             if self._finished:
                 return
-        for i in self.__prepares__:
-            logging.debug('prepare:: %s' % i)
+
+        for i in self.PREPARES:
             getattr(self, '_prepare_' + i)()
             if self._finished:
                 return
+
+        # self.params = ObjectDict()
+        # for
 
     def _prepare_debug(self, with_value=True):
         """
@@ -223,40 +260,66 @@ def api_authenticated(method):
     return wrapper
 
 
-class api_define(object):
-    def __init__(self, rules):
+class define_api(object):
+    def __init__(self, rules, extra_validator=None):
         """
         :defs::
         [
             ('arg_name0', ),
-            ('arg_name1', int)
-        ]
+            ('arg_name1', True, int)
+            ('arg_name2', False, int)
+        ], Validator()
         """
         self.rules = rules
+        self.extra_validator = extra_validator
 
     def __call__(self, method):
-
+        @functools.wraps(method)
         def wrapper(hdr, *args, **kwgs):
+
             params = ObjectDict()
+            extra_validator = self.extra_validator
+            error_list = []
+
             for rule in self.rules:
-                if not isinstance(rule, tuple):
-                    rule = (rule, )
+                if isinstance(rule, str):
+                    rule = (rule, False)
+                assert len(rule) > 1 and len(rule) < 4
+
                 key = rule[0]
+                is_required = rule[1]
+
                 value = hdr.get_argument(key, None)
 
+                # judge existence
                 if value is None:
-                    raise errors.ParametersInvalid('missing param: %s' % key)
+                    if not is_required:
+                        continue
+                    error_list.append('missing param: %s' % key)
 
-                if len(rule) == 2:
-                    typ = rule[1]
+                # judge type
+                if len(rule) == 3:
+                    typ = rule[2]
                     try:
                         value = typ(value)
                     except ValueError:
-                        raise errors.ParametersInvalid('error type of param %s, should be %s' % (key, typ))
+                        error_list.append('error type of param %s, should be %s' % (key, typ))
 
                 params[key] = value
 
+            if error_list:
+                raise errors.ParametersInvalid(str(error_list))
+
+            logging.debug('params: %s' % params)
+
+            if extra_validator and not extra_validator(params):
+                msg = 'failed in extra validator checking'
+                if hasattr(extra_validator, 'hint'):
+                    msg = extra_validator.hint
+                raise errors.ParametersInvalid(msg)
+
             hdr.params = params
+
             return method(hdr, *args, **kwgs)
 
         return wrapper

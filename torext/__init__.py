@@ -28,10 +28,11 @@ def initialize(settings_module=None):
         handler_options={
             'type': 'stream',
             'color': True,
+            'fmt': settings['LOGGING_FORMAT'],
         })
 
-    if 'CONNECTIONS' in settings:
-        configure_conns(settings['CONNECTIONS'])
+    if 'CONNS' in settings:
+        configure_conns(settings['CONNS'])
 
 
 def configure_settings_from_module(settings_module):
@@ -49,7 +50,7 @@ def configure_settings_from_commandline():
     parser.add_option('-p', '--PORT', type='int')
     parser.add_option('-l', '--LOGGING', type='str')
     parser.add_option('-P', '--PROCESSES', type='int')
-    parser.add_option('-d', '--DEBUG', action='store_true', default=False)
+    parser.add_option('-d', '--DEBUG', action='store_true', default=None)
     options, args = parser.parse_args()
 
     for k, v in options.__dict__.iteritems():

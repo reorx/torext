@@ -3,6 +3,7 @@
 
 import copy
 import logging
+import datetime
 from hashlib import md5
 from torext.errors import ValidationError
 from pymongo.objectid import ObjectId
@@ -21,7 +22,8 @@ DEFAULT_TYPE_VALUE = {
     list: list,
     dict: dict,
     # to ensure every objectid is generated seperately
-    ObjectId: lambda: ObjectId()
+    ObjectId: lambda: ObjectId(),
+    datetime.datetime: lambda: datetime.datetime.now()
 }
 
 
@@ -97,7 +99,8 @@ class Struct(object):
         str, unicode,
         list,
         dict,
-        ObjectId
+        ObjectId,
+        datetime.datetime,
     )
 
     def __init__(self, struct):
@@ -195,17 +198,13 @@ class StructuredDict(dict):
         use build_dict() to create a dict object,
         return an instance of cls from that dict object.
         """
-        builtDict = build_dict(cls.struct, *args, **kwgs)
-        try:
-            validate_dict(builtDict, cls.struct, cls.allow_None_types)
-        except ValidationError, e:
-            raise ValidationError('validate error in build_dict(), may be\
-                    dict structure is broken by default ? | %s' % e)
-        return cls(builtDict)
+        ins = cls(build_dict(cls.struct, *args, **kwgs))
+        ins.validate()
+        return ins
 
     def validate(self):
         cls = self.__class__
-        validate_dict(self, cls.struct, allow_None_types=cls.allow_None_types)
+        validate_dict(self, cls.struct, allow_None_types=cls.allow_None_types, brother_types=cls.brother_types)
 
     def inner_get(self, dot_key):
         """
