@@ -46,7 +46,7 @@ class Router(object):
     def add(self, url, hdr):
         logging.debug('add url-hdr in router: %s-%s' % (url, hdr))
         self._handlers.append(
-            (format_pattern(url), hdr)
+            (url, hdr)
         )
 
 
