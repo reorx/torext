@@ -52,7 +52,7 @@ def _color(lvl, s):
 ################
 
 FORMATS = {
-    'detailed': '. {levelname:<4} {asctime} {module_with_lineno:<10} {funcName}(. {message}',
+    'detailed': '. {levelname:<4} {asctime} {module_with_lineno}    {funcName}(. {message}',
     'simple': '. {message:<50} {asctime}',
     'testcase': '- {message}'
 }

@@ -37,3 +37,5 @@ Notes
   see how logger work, for example a logger called 'a.b', normally it will search for its own handlers and try to handle the record, then go to its parents respectively (-> logger 'b') and do the same thing, finally come to root logger and end.
   back to test methods, nose adds a very special handler to root logger, it will not show you anything normally, but if a test wasn't pass, nose will show you the captured inputs (from print) and logs in the test.
   in order to see logs even tests are pass, there must be a logger that has its own handler (mostly StreamHandler instance), and to avoid root logger's rehandling the record, its must be seperated from that. Additionally, if 'test' logger is involved in your test method, you should add handler and set level to it in TestCase's setUp method.
+
+* everything tornado gets from get_argument is of unicode type.

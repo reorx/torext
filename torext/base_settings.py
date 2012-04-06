@@ -36,3 +36,11 @@ LOGGING = 'INFO'
 # THIRD_LIB = 'third'
 
 # TEMPLATE_PATH = 'web/template'
+
+# CONNS = {}
+
+# could generated a new one by 'torext.lib.hashs.generate_cookie_secret()'
+# COOKIE_SECRET = ''
+
+# SECURE_COOKIE = ''
+# SECURE_HEADER = ''

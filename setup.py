@@ -40,7 +40,6 @@ setup(
         'torext',
         'torext.lib',
         'torext.mongodb',
-        'torext.rdbs',
         'torext.handlers',
         'torext.scripts',
     ],

@@ -36,6 +36,8 @@ class Connections(OneInstanceObject):
         self._container = {}
 
     def set(self, typ, label, conn):
+        if not typ in self._container:
+            self._container[typ] = {}
         self._container[typ][label] = conn
 
     def get(self, typ, name):

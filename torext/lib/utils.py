@@ -53,4 +53,4 @@ class ObjectDict(dict):
             raise AttributeError(key)
 
     def __str__(self):
-        return '<ObjectDict %s >' % self.__to_dict()
+        return '<ObjectDict %s >' % dict(self)

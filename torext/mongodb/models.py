@@ -106,19 +106,20 @@ class Document(StructuredDict):
     #################
 
     def save(self):
-        test.debug('mongodb: call save()')
         self.validate()
         ro = self.col.save(self,
                            manipulate=True,
                            safe=self.__write_safe__)
-        test.debug('mongodb: ObjectId(%s) saved' % ro)
+        logging.debug('mongodb: ObjectId(%s) saved' % ro)
         self._in_db = True
         return ro
 
     def remove(self):
         assert self._in_db, 'could not remove document which is not in database'
         self._history = self.copy()
-        self.col.remove(self['_id'])
+        _id = self['_id']
+        self.col.remove(_id)
+        logging.debug('mongodb: ObjectId(%s) removed' % _id)
         self = Document()
 
     # def update(self, to_update):
