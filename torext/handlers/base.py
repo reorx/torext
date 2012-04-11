@@ -264,8 +264,8 @@ class define_api(object):
         :defs::
         [
             ('arg_name0', ),
-            ('arg_name1', True, int)
-            ('arg_name2', False, int)
+            ('arg_name1', True, WordsValidator())
+            ('arg_name2', False, IntstringValidator())
         ], Validator()
         """
         self.rules = rules
@@ -290,31 +290,40 @@ class define_api(object):
                 value = hdr.get_argument(key, None)
 
                 # judge existence
-                if value is None:
+                if not value:
                     if not is_required:
                         continue
                     error_list.append('missing param: %s' % key)
 
-                # judge type
+                # judge validator
                 if len(rule) == 3:
-                    typ = rule[2]
+                    validator = rule[2]
                     try:
-                        value = typ(value)
-                    except ValueError:
-                        error_list.append('error type of param %s, should be %s' % (key, typ))
+                        value = validator(value)
+                    except errors.ValidationError, e:
+                        error_list.append('param %s, %s' % (key, e))
+
+                # if len(rule) == 3:
+                #     typ = rule[2]
+                #     try:
+                #         value = typ(value)
+                #     except ValueError:
+                #         error_list.append('error type of param %s, should be %s' % (key, typ))
 
                 params[key] = value
 
             if error_list:
-                raise errors.ParametersInvalid(str(error_list))
+                raise errors.ParametersInvalid(
+                    '; '.join(['%s.%s' % (i + 1, v) for i, v in enumerate(error_list)]))
 
             logging.debug('params: %s' % params)
 
-            if extra_validator and not extra_validator(params):
-                msg = 'failed in extra validator checking'
-                if hasattr(extra_validator, 'hint'):
-                    msg = extra_validator.hint
-                raise errors.ParametersInvalid(msg)
+            if extra_validator:
+                try:
+                    extra_validator(params)
+                except errors.ValidationError, e:
+                    raise errors.ParametersInvalid(e)
+                # message = 'failed in extra validator checking'
 
             hdr.params = params
 

@@ -18,7 +18,7 @@ errors:
 """
 
 
-import inspect
+# import inspect
 from tornado.web import HTTPError
 
 HTTPError = HTTPError
@@ -27,11 +27,11 @@ HTTPError = HTTPError
 class TorextException(Exception):
     def __init__(self, msg):
         self.msg = msg
-        self.caller_name = inspect.stack()[1][3]
+        # self.caller_name = inspect.stack()[1][3]
         super(TorextException, self).__init__(msg)
 
-    def __str__(self):
-        return 'From %s() : %s' % (self.caller_name, self.msg)
+    # def __str__(self):
+        # return 'From %s() : %s' % (self.caller_name, self.msg)
 
 
 class URLRouteError(TorextException):
