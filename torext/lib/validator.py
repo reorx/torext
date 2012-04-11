@@ -28,10 +28,14 @@ class BaseValidator(object):
         self.max = max
         self.message = message  # default message
 
-    def raise_exc(self, message=None):
-        if not message:
-            message = self.message
-        raise ValidationError('%s, value: %s' %\
+    def get_message(self):
+        return self.message or 'missing validation message'
+
+    def raise_exc(self, spec_message=None):
+        message = self.get_message()
+        if spec_message:
+            message = spec_message
+        raise ValidationError('%s, got: %s' %\
                 (message, self.value))
 
     def __call__(self, s):
@@ -43,21 +47,26 @@ class BaseValidator(object):
             if not len(s) <= self.max:
                 self.raise_exc('length is too long, max %s' % self.max)
 
+        return self.value
+
 
 class RegexValidator(BaseValidator):
-    regex = None
 
     def __init__(self, *args, **kwgs):
-
         if 'regex' in kwgs:
             self.regex = kwgs.pop('regex')
-        assert self.regex and isinstance(self.regex, _pattern_class),\
+        assert hasattr(self, 'regex') and isinstance(self.regex, _pattern_class),\
                 'regex should be set'
 
-        message = 'not fit regex(%s, %s)' %\
-                    (self.regex.pattern, self.regex.flags)
-        kwgs['message'] = message
         super(RegexValidator, self).__init__(*args, **kwgs)
+
+    def get_message(self):
+        if self.message:
+            return self.message
+        else:
+            message = 'not fit regex(%s, %s)' %\
+                        (self.regex.pattern, self.regex.flags)
+            return message
 
     def get_pattern(self):
         raise NotImplementedError('get_pattern is expected to be rewritten')
@@ -67,6 +76,8 @@ class RegexValidator(BaseValidator):
 
         if not self.regex.search(s):
             self.raise_exc()
+
+        return self.value
 
 
 class WordsValidator(RegexValidator):
@@ -102,3 +113,5 @@ class IntstringValidator(BaseValidator):
         if self.max:
             if not s <= self.max:
                 self.raise_exc('vaule is too big, max %s' % self.max)
+
+        return self.value
