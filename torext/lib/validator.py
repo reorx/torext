@@ -8,6 +8,7 @@ import re
 from torext.errors import ValidationError
 
 
+# don't know where to find the <type '_sre.SRE_Pattern'>
 _pattern_class = re.compile('').__class__
 
 

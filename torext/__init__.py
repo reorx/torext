@@ -11,18 +11,14 @@ from torext.lib.utils import OneInstanceObject
 from torext import errors
 
 
-def initialize(settings_module=None):
-    if settings_module:
-        assert hasattr(settings_module, '__file__'), 'settings passed in initialize( must be a module'
+def initialize(settings_module):
+    assert hasattr(settings_module, '__file__'), 'settings passed in initialize( must be a module'
 
-        configure_settings_from_module(settings_module)
+    configure_settings_from_module(settings_module)
 
-        configure_settings_from_commandline()
+    configure_settings_from_commandline()
 
-        configure_environ(settings_module)
-    else:
-        configure_settings_from_commandline()
-
+    # logger config should be as early as possible
     configure_logger('',
         level=getattr(logging, settings['LOGGING']),
         handler_options={
@@ -30,6 +26,8 @@ def initialize(settings_module=None):
             'color': True,
             'fmt': settings['LOGGING_FORMAT'],
         })
+
+    configure_environ(settings_module)
 
     if 'CONNS' in settings:
         configure_conns(settings['CONNS'])
@@ -60,7 +58,7 @@ def configure_settings_from_commandline():
 
 def configure_environ(settings_module):
     """
-    Only project with settings file need environ configuration, single file project doesn't.
+    make some environmental change with settings file
     """
     import os
     import sys
@@ -82,6 +80,14 @@ def configure_environ(settings_module):
         path = _abs(path)
         if not path in [_abs(i) for i in sys.path]:
             sys.path.insert(0, path)
+
+    # check importings
+    try:
+        __import__(settings['PROJECT'])
+        logging.debug('try to import %s' % settings['PROJECT'])
+    except ImportError:
+        raise ImportError('PROJECT could not be imported, may be app.py is outside the project\
+            and you havn`t add project parent path to sys.path yet')
 
 
 class Settings(dict, OneInstanceObject):
