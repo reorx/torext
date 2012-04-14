@@ -44,7 +44,7 @@ class Router(object):
         return self._handlers
 
     def add(self, url, hdr):
-        logging.debug('add url-hdr in router: %s-%s' % (url, hdr))
+        logging.debug('add url-hdr in router: %s -> %s' % (url, hdr))
         self._handlers.append(
             (url, hdr)
         )
