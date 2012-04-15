@@ -42,6 +42,8 @@ def _color(lvl, s):
                                  "ascii"),
         logging.ERROR: unicode(curses.tparm(fg_color, 1),  # Red
                                "ascii"),
+        'grey': unicode(curses.tparm(fg_color, 0),  # Grey
+                               "ascii"),
     }
     _normal = unicode(curses.tigetstr("sgr0"), "ascii")
 
@@ -51,14 +53,7 @@ def _color(lvl, s):
 #  formatters  #
 ################
 
-FORMATS = {
-    'detailed': '. {levelname:<4} {asctime} {module_with_lineno}    {funcName}(. {message}',
-    'simple': '. {message:<50} {asctime}',
-    'testcase': '- {message}'
-}
-
-
-LEVELNAMES = {
+FIXED_LEVELNAMES = {
     'DEBUG': 'DEBG',
     'WARNING': 'WARN',
     'ERROR': 'ERRO'
@@ -67,8 +62,9 @@ LEVELNAMES = {
 
 class BaseFormatter(logging.Formatter):
     def __init__(self,
-        fmt=FORMATS['detailed'],
+        fmt='%(message)s',
         datefmt='%Y-%m-%d %H:%M:%S',
+        prefixfmt='[%(fixed_levelname)s %(asctime)s %(module)s:%(lineno)s] ',
         color=False,
         newlinetab='  ',
         **kwgs):
@@ -78,14 +74,35 @@ class BaseFormatter(logging.Formatter):
         ::params:kwarg color
         ::params:kwarg newlinetab
         """
-        # as origin __init__ function is very simple (store two attributes on self: _fmt & datafmt),
+        # as origin __init__ function is very
+        # simple (just store two attributes on self: _fmt & datafmt),
         # execute it firstly
         logging.Formatter.__init__(self)
 
         self._fmt = fmt
         self.datefmt = datefmt
-        self.color = color
+        self.prefixfmt = prefixfmt
+        self.has_color = color
         self.newlinetab = newlinetab
+
+    def _rich_record(self, record):
+        # handle record firstly
+        message = record.getMessage()
+        if isinstance(message, unicode):
+            message = message.encode('utf8')
+        record.message = message
+
+        if 'asctime' in self._fmt + self.prefixfmt:
+            record.asctime = self.formatTime(record, self.datefmt)
+
+        if 'secs' in self._fmt + self.prefixfmt:
+            record.secs = record.msecs / 1000
+
+        record.fixed_levelname = FIXED_LEVELNAMES.get(record.levelname, record.levelname)
+
+        if record.exc_info:
+            if not record.exc_text:
+                record.exc_text = self.formatException(record.exc_info)
 
     def format(self, record):
         """
@@ -93,36 +110,20 @@ class BaseFormatter(logging.Formatter):
 
         add a new format argument: module_with_lineno
         """
-        # handle record firstly
-        _message = record.getMessage()
-        if isinstance(_message, unicode):
-            _message = _message.encode('utf8')
-        record.message = _message
+        self._rich_record(record)
 
-        if '{asctime' in self._fmt:
-            record.asctime = self.formatTime(record, self.datefmt)
+        prefix = self.prefixfmt % record.__dict__
+        if self.has_color:
+            prefix = _color(record.levelno, prefix)
 
-        if '{secs' in self._fmt:
-            record.secs = record.msecs / 1000
+        log = prefix + self._fmt % record.__dict__
 
-        record.levelname = LEVELNAMES.get(record.levelname, record.levelname)
-        if self.color:
-            record.levelname = _color(record.levelno, record.levelname)
-
-        record.module_with_lineno = '%s-%s' % (record.module, record.lineno)
-
-        log = self._fmt.format(**record.__dict__)
-
-        if record.exc_info:
-            if not record.exc_text:
-                record.exc_text = self.formatException(record.exc_info)
         if record.exc_text:
             if log[-1:] != '\n':
                 log += '\n'
             log += record.exc_text
 
-        if self.newlinetab:
-            log = log.replace('\n', '\n' + self.newlinetab)
+        log = log.replace('\n', '\n' + self.newlinetab)
 
         return log
 
@@ -184,7 +185,6 @@ if __name__ == '__main__':
         # root_logger.addHandler(streamHandler)
         configure_logger('', level=logging.DEBUG, color=True)
 
-
         root_logger.debug('bug..')
         root_logger.info('hello')
         root_logger.warning('\nholy a shit')
@@ -211,7 +211,6 @@ if __name__ == '__main__':
         #     off propagation by setting the propagate attribute of a logger to
         #     False.) "
         otherLogger = logging.getLogger('other')
-        # otherLogger.addHandler(BaseStreamHandler(fmt=FORMATS['simple']))
         fmter = logging.Formatter(fmt='%(message)s %(msecs)s')
         hdr = logging.StreamHandler()
         hdr.setFormatter(fmter)
