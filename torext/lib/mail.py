@@ -69,5 +69,11 @@ def send_once_from_gmail(u, p, fr, to, body):
 if __name__ == '__main__':
     import sys
 
-    send_once_from_gmail('admin@nodemix.com', 'xcdswe32',
-        'admin@nodemix.com', sys.argv[1], sys.argv[2])
+    HOST_PORT = 'smtp.gmail.com:587'
+    sender = EmailSender(HOST_PORT, 'reorx.xiao@gmail.com', 'mx320lf2')
+    sender.set_fromaddr('reorx.xiao@gmail.com')
+    sender.set_toaddr('595895020@qq.com')
+    sender.set_toaddr('novoreorx@gmail.com')
+    sender.set_body('wo cao')
+    sender.send()
+    sender.close()

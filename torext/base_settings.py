@@ -28,6 +28,8 @@ DEBUG = False
 
 LOGGING = 'INFO'
 
+LOGGING_FORMAT = ' %(message)s'
+
 
 
 ###########
