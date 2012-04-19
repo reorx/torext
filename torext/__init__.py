@@ -16,7 +16,7 @@ def initialize(settings_module):
 
     configure_settings_from_module(settings_module)
 
-    configure_settings_from_commandline()
+    args = configure_settings_from_commandline()
 
     # logger config should be as early as possible
     configure_logger('',
@@ -31,6 +31,13 @@ def initialize(settings_module):
 
     if 'CONNS' in settings:
         configure_conns(settings['CONNS'])
+
+    if len(args) > 0:
+        if args[0] == 'shell':
+            import sys
+            from torext.lib.shell import start_shell
+            start_shell()
+            sys.exit()
 
 
 def configure_settings_from_module(settings_module):
@@ -54,6 +61,8 @@ def configure_settings_from_commandline():
     for k, v in options.__dict__.iteritems():
         if v is not None:
             settings[k] = v
+
+    return args
 
 
 def configure_environ(settings_module):
