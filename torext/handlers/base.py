@@ -291,9 +291,9 @@ class define_api(object):
 
                 # judge existence
                 if not value:
-                    if not is_required:
-                        continue
-                    error_list.append('missing param: %s' % key)
+                    if is_required:
+                        error_list.append('missing param: %s' % key)
+                    continue
 
                 # judge validator
                 if len(rule) == 3:
