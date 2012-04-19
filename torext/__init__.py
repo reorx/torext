@@ -11,6 +11,9 @@ from torext.lib.utils import OneInstanceObject
 from torext import errors
 
 
+INITIALIZED = False
+
+
 def initialize(settings_module):
     assert hasattr(settings_module, '__file__'), 'settings passed in initialize( must be a module'
 
@@ -38,6 +41,8 @@ def initialize(settings_module):
             from torext.lib.shell import start_shell
             start_shell()
             sys.exit()
+
+    INITIALIZED = True
 
 
 def configure_settings_from_module(settings_module):
