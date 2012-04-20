@@ -171,9 +171,10 @@ def configure_logger(name,
 # 1. test - propagate 0
 # 2. system - propagate 1 - for seperately output system level logs
 
-# test_logger = logging.getLogger('test')
-# test_logger.propagate = 0
-# test_logger.setLevel(logging.DEBUG)
+test_logger = logging.getLogger('test')
+test_logger.propagate = 0
+test_logger.setLevel(logging.INFO)
+test_logger.handlers = []
 
 
 if __name__ == '__main__':

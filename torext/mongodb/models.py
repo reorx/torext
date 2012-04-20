@@ -32,6 +32,7 @@ from .base import Cursor
 
 
 test = logging.getLogger('test')
+test.propagate = 0
 test.setLevel(logging.INFO)
 
 
