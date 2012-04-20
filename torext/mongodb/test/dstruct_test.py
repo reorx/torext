@@ -7,7 +7,6 @@
 #   - index_dict
 #   - map_dict
 #   - hash_dict
-#   - DotDict
 #   - Struct
 #
 #   - class define (in setUp)
@@ -25,7 +24,6 @@ from torext.mongodb.dstruct import (
     index_dict,
     map_dict,
     hash_dict,
-    DotDict,
     StructuredDict,
     Struct,
     ObjectId)
@@ -217,16 +215,6 @@ class TestFunctions(_TestCase):
 
     def test_hash_dict(self):
         self.assertEqual(hash_dict(self.doc), hash_dict(self.doc))
-
-    def test_DotDict(self):
-        dotter = DotDict(self.doc)
-        self.assertEqual(dotter.name, self.doc['name'])
-        self.assertEqual(dotter.disks, self.doc['disks'])
-
-        dotter_dict = dict(dotter)
-        self.log.quiet('dotter dict\n%s' % dotter_dict)
-        self.log.quiet('self.doc\n%s' % self.doc)
-        self.assertTrue(dotter_dict is not self.doc)
 
 
 class TestStruct(_TestCase):

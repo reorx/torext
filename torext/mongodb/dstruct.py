@@ -10,6 +10,7 @@ from pymongo.objectid import ObjectId
 
 
 test = logging.getLogger('test')
+test.propagate = 0
 test.setLevel(logging.INFO)
 
 
