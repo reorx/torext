@@ -91,37 +91,38 @@ class _BaseHandler(tornado.web.RequestHandler):
             self.__class__._first_running = False
             logging.debug('%s initializing' % self.__class__.__name__)
 
+    def _default_handle_exception(self, e):
+        logging.error("Uncaught exception %s\n%r", self._request_summary(),
+                      self.request, exc_info=True)
+        if 'BUG_REPORTER' in settings:
+            # TODO
+            # bug_report.delay(self.get_current_timestamp(), e, traceback.format_exc(),
+            #     settings.bug_reporter)
+            pass
+
+        return self.json_error(500, e)
+
     def _handle_request_exception(self, e):
 
-        # from tornado.web
+        ## Original handling, from tornado.web
         if isinstance(e, errors.HTTPError):
             if e.log_message:
                 format = "%d %s: " + e.log_message
                 args = [e.status_code, self._request_summary()] + list(e.args)
                 logging.warning(format, *args)
 
-            # redefined dealing
+            # Redefined HTTPError handling
             self.json_error(e.status_code, e)
+        ## End original handling
 
-        # new dealings with exceptions in torext.errors
         else:
-            status_code = 500
+            handle_func = self._default_handle_exception
             if hasattr(self, 'HTTP_STATUS_EXCEPTIONS'):
-                for code, excs in self.HTTP_STATUS_EXCEPTIONS.iteritems():
+                for excs, func_name in self.HTTP_STATUS_EXCEPTIONS.iteritems():
                     if isinstance(e, excs):
-                        status_code = code
+                        handle_func = getattr(self, func_name)
 
-            if status_code == 500:
-                logging.error("Uncaught exception %s\n%r", self._request_summary(),
-                              self.request, exc_info=True)
-                if 'BUG_REPORTER' in settings:
-                    # TODO
-                    # bug_report.delay(self.get_current_timestamp(), e, traceback.format_exc(),
-                    #     settings.bug_reporter)
-                    pass
-
-            return self.json_error(status_code, e)
-    pass
+            handle_func(e)
 
     @property
     def mysql(self):
