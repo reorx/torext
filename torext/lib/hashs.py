@@ -1,21 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import time
-#import datetime
 import string
 from random import choice, randint
 from hashlib import md5
 
 CHARS = string.letters + string.digits
-
-
-def RandomHash(id):
-    CHARS = string.digits
-    LIMIT = 8
-    id_str = str(id)
-    prefix = ''.join([choice(CHARS) for i in range(LIMIT - len(id_str))])
-    return prefix + id_str
 
 
 def md5_string(s):
@@ -24,13 +14,7 @@ def md5_string(s):
     return md5(s).hexdigest()
 
 
-def GenerateAbsoluteID(name):
-    s = '%s+%s+%s' % (str(time.time()), name,
-        ''.join([choice(CHARS) for i in range(4)]))
-    return md5(s).hexdigest()
-
-
-def CreateNid(id):
+def longer_int_id(id):
     length = 8  # if id shorter than this
     id_len = len(str(id))
     if not id_len > length:
@@ -49,11 +33,11 @@ def random_list_item(l):
     return l[randint(0, len(l) - 1)]
 
 
-def SaltMd5(s):
+def salt_md5(s):
     return md5_string(s + random_string(5))
 
 
-def RandomInsertMd5(s):
+def random_salt_md5(s):
     HEXCHAR = '0123456789ABCDEF'
     s = md5_string(s)
     p1 = s[:2]
@@ -73,9 +57,3 @@ def generate_cookie_secret():
     import uuid
     import base64
     return base64.b64encode(uuid.uuid4().bytes + uuid.uuid4().bytes)
-
-
-if '__main__' == __name__:
-    CHARS += string.punctuation
-    print CHARS
-    print ''.join([choice(CHARS) for i in range(16)])
