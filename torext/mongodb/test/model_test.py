@@ -129,7 +129,7 @@ class TestModel(_TestCase):
             self.assertTrue(i['age'] in (0, 1))
 
     def test_exist(self):
-        from pymongo.objectid import ObjectId
+        from bson.objectid import ObjectId
         _id = ObjectId()
 
         self.assertFalse(self.Model.exist({'_id': _id}))

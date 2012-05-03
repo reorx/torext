@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
+import traceback
 from torext import settings
 from torext.errors import URLRouteError
 
@@ -16,7 +17,7 @@ class ModuleSearcher(object):
         try:
             module = __import__(self.import_path, fromlist=[settings['PROJECT']])
         except ImportError, e:
-            raise URLRouteError('Caught error when router was searching module: %s' % e)
+            raise URLRouteError('Caught ImportError when router was searching modules: %s\nTracebacks:\n%s' % (e, traceback.format_exc(e)))
 
         try:
             self._handlers = getattr(module, 'handlers')

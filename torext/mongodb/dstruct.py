@@ -6,7 +6,7 @@ import logging
 import datetime
 from hashlib import md5
 from torext.errors import ValidationError
-from pymongo.objectid import ObjectId
+from bson.objectid import ObjectId
 
 
 test = logging.getLogger('test')
