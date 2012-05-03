@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """
@@ -58,13 +58,12 @@ setup(
         ]
     },
     install_requires=[
-        'tornado==2.1.1',
+        'tornado>=2.1.1',
         'pymongo>=2.1',
-        'redis>=2.4',
+        # 'redis>=2.4',
         # consider to write a new package for rabbitmq connection and move this requirements into it.
         # 'pika>=0.9.5',
         'requests>=0.9',
-        'pyflakes>=0.5.0',
         'jsonrpclib>=0.1.3',
     ],
 )
