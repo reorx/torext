@@ -3,7 +3,7 @@
 
 import datetime
 import simplejson as pyjson
-from pymongo.objectid import ObjectId
+from bson.objectid import ObjectId
 
 
 class CustomJSONEncoder(pyjson.JSONEncoder):

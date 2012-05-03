@@ -25,7 +25,7 @@ __all__ = (
 import copy
 import logging
 from torext import errors
-from pymongo.objectid import ObjectId
+from bson.objectid import ObjectId
 from pymongo.collection import Collection
 from .dstruct import Struct, StructuredDict
 from .base import Cursor
