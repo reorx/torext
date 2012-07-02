@@ -79,3 +79,7 @@ class OperationNotAllowed(TorextException):
 
 class SettingUndefined(TorextException):
     pass
+
+
+class CommandArgParseError(TorextException):
+    pass

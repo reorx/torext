@@ -67,3 +67,5 @@ setup(
         'jsonrpclib>=0.1.3',
     ],
 )
+
+def 

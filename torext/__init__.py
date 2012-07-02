@@ -14,12 +14,15 @@ from torext import errors
 INITIALIZED = False
 
 
-def initialize(settings_module):
-    assert hasattr(settings_module, '__file__'), 'settings passed in initialize( must be a module'
+def initialize(settings_module=None):
+    if settings_module:
+        assert hasattr(settings_module, '__file__'), 'settings passed in initialize( must be a module'
 
-    configure_settings_from_module(settings_module)
+        configure_settings_from_module(settings_module)
 
-    args = configure_settings_from_commandline()
+        configure_environ(settings_module)
+
+    configure_settings_from_commandline()
 
     # logger config should be as early as possible
     configure_logger('',
@@ -28,20 +31,13 @@ def initialize(settings_module):
             'type': 'stream',
             'color': True,
             'fmt': settings['LOGGING_FORMAT'],
-        })
-
-    configure_environ(settings_module)
+        }
+    )
 
     if 'CONNS' in settings:
         configure_conns(settings['CONNS'])
 
-    if len(args) > 0:
-        if args[0] == 'shell':
-            import sys
-            from torext.lib.shell import start_shell
-            start_shell()
-            sys.exit()
-
+    global INITIALIZED
     INITIALIZED = True
 
 
@@ -54,20 +50,83 @@ def configure_settings_from_module(settings_module):
 
 
 def configure_settings_from_commandline():
-    import optparse
+    """
+    settings.py is the basement
+    
+    if wants to change them by command line arguments,
+    the existing option will be transformed to the value type in settings.py
+    the unexisting option will be treated as string by default,
+    and force to type if `!<type>` was added after
 
-    parser = optparse.OptionParser()
-    parser.add_option('-p', '--PORT', type='int')
-    parser.add_option('-l', '--LOGGING', type='str')
-    parser.add_option('-P', '--PROCESSES', type='int')
-    parser.add_option('-d', '--DEBUG', action='store_true', default=None)
-    options, args = parser.parse_args()
+    format:
+        python app.py settings:port=1000^int;logging=str
+    """
+    import re
+    import sys
+    from .errors import CommandArgParseError
 
-    for k, v in options.__dict__.iteritems():
-        if v is not None:
+    # recurse settings key-value
+    settings_cmd_keys = []
+    for i in settings:
+        settings_cmd_keys.append(i.lower())
+
+    args = {
+        'existed': {},
+        'new': {}
+    }
+    args_str = None
+    for i in sys.argv[1:]:
+        if i.startswith('settings:'):
+            args_str = i.lstrip('settings:')
+            break
+    # print 'sys argv ', sys.argv
+    if args_str:
+        # print 'get args_str', args_str
+        try:
+            for i in args_str.split(','):
+                kvs = i.split('=')
+                if not len(kvs) == 2 or not kvs[0] or not kvs[1]:
+                    raise CommandArgParseError('Bad key-value: %s' % i)
+                k, v = kvs[0].upper(), kvs[1]
+                if k in settings:
+                    try:
+                        v = type(settings[k.upper()])(v)
+                    except Exception, e:
+                        raise CommandArgParseError('Bad value: %s, %s' % (v, e))
+                    args['existed'][k] = v
+                else:
+                    if not re.search(r'[A-Z_]+', k):
+                        raise CommandArgParseError('Bad key: %s' % k)
+                    force_types = {
+                        'int': int,
+                        'str': str
+                    }
+                    if len(v) > 4 and v[-4] == '^':
+                        type_str = v[-3:]
+                        v = v[:-4]
+                        if type_str not in force_types:
+                            raise CommandArgParseError('Bad value type: %s' % v)
+                        try:
+                            v = force_types[type_str](v)
+                        except Exception, e:
+                            raise CommandArgParseError('Bad value: %s, %s' % (v, e))
+                    args['new'][k] = v
+        except CommandArgParseError, e:
+            print '\nError: %s' % e
+            print '       Failed to get settings from commandline,'
+            print '       continue running, settings not changed.'
+            return
+
+        # print 'args dict', args
+
+        print '\nSettings changed by commandline:'
+
+        for k, v in args['existed'].iteritems():
             settings[k] = v
-
-    return args
+            print ' - %s = %s    (existed)' % (k, v)
+        for k, v in args['new'].iteritems():
+            settings[k] = v
+            print ' - %s = %s    (new)' % (k, v)
 
 
 def configure_environ(settings_module):
@@ -95,18 +154,20 @@ def configure_environ(settings_module):
         if not path in [_abs(i) for i in sys.path]:
             sys.path.insert(0, path)
 
-    # check importings
-    try:
-        __import__(settings['PROJECT'])
-        logging.debug('try to import %s' % settings['PROJECT'])
-    except ImportError:
-        raise ImportError('PROJECT could not be imported, may be app.py is outside the project\
-            and you havn`t add project parent path to sys.path yet')
+    # if `PROJECT` was set in settings,
+    # means project should be able to imported as a python module
+    if settings['PROJECT']:
+        try:
+            __import__(settings['PROJECT'])
+            logging.debug('try to import %s' % settings['PROJECT'])
+        except ImportError:
+            raise ImportError('PROJECT could not be imported, may be app.py is outside the project\
+                and you havn`t add project parent path to sys.path yet')
 
 
 class Settings(dict, OneInstanceObject):
     """
-    Philosophy was borrow from django.conf.Settings
+    Philosophy was borrowed from django.conf.Settings
 
     As there are just few things involved by tornado.options.options,
     httpclient and testing, they are all uncommon modules and do little in project.

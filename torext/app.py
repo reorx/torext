@@ -6,11 +6,6 @@ from tornado.web import Application as TornadoApplication
 from torext import settings
 
 
-UNLOG_URIS = [
-    '/favicon.ico',
-]
-
-
 class TorextApp(TornadoApplication):
     """
     Simplify the way to setup and run an app instance
@@ -28,8 +23,8 @@ class TorextApp(TornadoApplication):
             options['template_path'] = settings['TEMPLATE_PATH']
         if 'STATIC_PATH' in settings:
             options['static_path'] = settings['STATIC_PATH']
-            options['static_url_prefix'] = settings['STATIC_URL_PREFIX']
-            UNLOG_URIS.append(settings['STATIC_URL_PREFIX'])
+            if 'STATIC_URL_PREFIX' in settings:
+                options['static_url_prefix'] = settings['STATIC_URL_PREFIX']
 
         super(TorextApp, self).__init__(handlers, **options)
 
@@ -40,7 +35,7 @@ class TorextApp(TornadoApplication):
             log_method = logging.warning
         else:
             log_method = logging.error
-        for i in UNLOG_URIS:
+        for i in settings['UNLOG_URLS']:
             if handler.request.uri.startswith(i):
                 log_method = logging.debug
                 break
