@@ -3,7 +3,7 @@
 #
 # variables in this module are essential basements of settings,
 # the priority sequence of base_settings.py, settings.py(in project), and cmd options is::
-#   1. cmd options
+#   1. commandline arguments
 #   2. settings.py
 #   3. base_settings.py
 #
@@ -17,27 +17,33 @@ PROJECT = None
 
 LOCALE = 'en_US'
 
-
-# variables below can be redefined by commend line options
-
 PROCESSES = 1
 
 PORT = 8000
 
-DEBUG = False
+DEBUG = True
 
 LOGGING = 'INFO'
 
 LOGGING_FORMAT = ' %(message)s'
 
+LOG_REQUEST = False
+
+LOG_RESPONSE = False
+
+STATIC_PATH = 'static'
+
+TEMPLATE_PATH = 'template'
+
+UNLOG_URLS = [
+    '/favicon.ico',
+]
 
 
 ###########
 # optional
 
 # THIRD_LIB = 'third'
-
-# TEMPLATE_PATH = 'web/template'
 
 # CONNS = {}
 

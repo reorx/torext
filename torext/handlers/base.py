@@ -206,9 +206,11 @@ class _BaseHandler(tornado.web.RequestHandler):
 
     # TODO get_user_locale
 
-    def decode_auth_token(self, name, token, max_age_days=settings['COOKIE_EXPIRE_DAY']):
+    def decode_auth_token(self, name, token, max_age_days=None):
         """Changed. user new function: tornado.web.RequestHandler.create_signed_value
         """
+        if max_age_days is None:
+            max_age_days = settings['COOKIE_EXPIRE_DAY']
         return tornado.web.decode_signed_value(settings['COOKIE_SECRET'],
                                                name, token, max_age_days=max_age_days)
 
@@ -229,10 +231,6 @@ class _BaseHandler(tornado.web.RequestHandler):
             getattr(self, '_prepare_' + i)()
             if self._finished:
                 return
-
-    def render(self, template_name, context={}):
-        """for web using"""
-        return super(_BaseHandler, self).render(template_name, **context)
 
 
 def api_authenticated(method):
