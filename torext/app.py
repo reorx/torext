@@ -25,6 +25,8 @@ class TorextApp(TornadoApplication):
             options['static_path'] = settings['STATIC_PATH']
             if 'STATIC_URL_PREFIX' in settings:
                 options['static_url_prefix'] = settings['STATIC_URL_PREFIX']
+        if 'COOKIE_SECRET' in settings:
+            options['cookie_secret'] = settings['COOKIE_SECRET']
 
         super(TorextApp, self).__init__(handlers, **options)
 

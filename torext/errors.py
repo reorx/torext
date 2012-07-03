@@ -83,3 +83,7 @@ class SettingUndefined(TorextException):
 
 class CommandArgParseError(TorextException):
     pass
+
+
+class DatabaseError(TorextException):
+    pass
