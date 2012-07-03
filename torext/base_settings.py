@@ -48,7 +48,7 @@ UNLOG_URLS = [
 # CONNS = {}
 
 # could generated a new one by 'torext.lib.hashs.generate_cookie_secret()'
-# COOKIE_SECRET = ''
+# COOKIE_SECRET = 'P0UTa5iuRaaVlV8QZF2uVR7hHwTOSkQhg2Fol18OKwc='
 
 # SECURE_COOKIE = ''
 # SECURE_HEADER = ''
