@@ -89,10 +89,24 @@ def configure_settings_from_commandline():
                     raise CommandArgParseError('Bad key-value: %s' % i)
                 k, v = kvs[0].upper(), kvs[1]
                 if k in settings:
-                    try:
-                        v = type(settings[k.upper()])(v)
-                    except Exception, e:
-                        raise CommandArgParseError('Bad value: %s, %s' % (v, e))
+                    v_type = type(settings[k.upper()])
+                    if v_type is bool:
+                        try:
+                            v = bool(int(v))
+                        except ValueError:
+                            _bool_strs = {
+                                'True': True,
+                                'False': False
+                            }
+                            if v in _bool_strs:
+                                v = _bool_strs[v]
+                            else:
+                                v = True
+                    else:
+                        try:
+                            v = v_type(v)
+                        except Exception, e:
+                            raise CommandArgParseError('Bad value: %s, %s' % (v, e))
                     args['existed'][k] = v
                 else:
                     if not re.search(r'[A-Z_]+', k):
