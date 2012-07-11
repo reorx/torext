@@ -183,7 +183,8 @@ class _BaseHandler(tornado.web.RequestHandler):
             'error': '',
         }
         if isinstance(error, Exception):
-            msg['error'] = error.__str__()
+            # NOTE if use __str__() it will cause UnicodeEncodeError when error contains Chinese unicode
+            msg['error'] = error.__unicode__()
 
             # not using this currently
             # if settings['DEBUG'] and not isinstance(error, HTTPError):
@@ -300,7 +301,7 @@ class define_api(object):
                     try:
                         value = validator(value)
                     except errors.ValidationError, e:
-                        error_list.append('param %s, %s' % (key, e))
+                        error_list.append(u'param %s, %s' % (key, e))
 
                 # if len(rule) == 3:
                 #     typ = rule[2]
