@@ -4,7 +4,6 @@
 __version__ = '1.3'
 # ENVIRONMENT_KEY = 'TOREXT_SETTINGS_MODULE'
 
-import logging
 from torext.lib.logger import configure_logger
 from torext.conns import configure_conns
 from torext.lib.utils import OneInstanceObject
@@ -15,14 +14,16 @@ INITIALIZED = False
 
 
 def initialize(settings_module=None):
+    import logging
+
     if settings_module:
         assert hasattr(settings_module, '__file__'), 'settings passed in initialize( must be a module'
 
         configure_settings_from_module(settings_module)
 
-        configure_environ(settings_module)
-
     configure_settings_from_commandline()
+
+    configure_environ(settings_module=settings_module)
 
     # logger config should be as early as possible
     configure_logger('',
@@ -143,37 +144,45 @@ def configure_settings_from_commandline():
             print ' - %s = %s    (new)' % (k, v)
 
 
-def configure_environ(settings_module):
+def configure_environ(settings_module=None):
     """
     make some environmental change with settings file
     """
     import os
     import sys
+    import time
 
     _abs = os.path.abspath
     _join = os.path.join
     to_adds = []
 
-    project_path = os.path.dirname(settings_module.__file__)
-    parent_path = _join(project_path, os.pardir)
-    to_adds.append(parent_path)
+    # add paths
+    if settings_module:
 
-    if 'THIRD_LIB' in settings:
-        lib_path = _join(project_path, settings['THIRD_LIB'])
-        assert os.path.exists(lib_path), 'the third_lib you indicated is not exist'
-        to_adds.append(lib_path)
+        project_path = os.path.dirname(settings_module.__file__)
+        parent_path = _join(project_path, os.pardir)
+        to_adds.append(parent_path)
 
-    for path in to_adds:
-        path = _abs(path)
-        if not path in [_abs(i) for i in sys.path]:
-            sys.path.insert(0, path)
+        if 'THIRD_LIB' in settings:
+            lib_path = _join(project_path, settings['THIRD_LIB'])
+            assert os.path.exists(lib_path), 'the third_lib you indicated is not exist'
+            to_adds.append(lib_path)
+
+        for path in to_adds:
+            path = _abs(path)
+            if not path in [_abs(i) for i in sys.path]:
+                sys.path.insert(0, path)
+
+    # reset timezone
+    os.environ['TZ'] = settings['TIME_ZONE']
+    time.tzset()
 
     # if `PROJECT` was set in settings,
     # means project should be able to imported as a python module
     if settings['PROJECT']:
         try:
             __import__(settings['PROJECT'])
-            logging.debug('try to import %s' % settings['PROJECT'])
+            print 'try to import %s' % settings['PROJECT']
         except ImportError:
             raise ImportError('PROJECT could not be imported, may be app.py is outside the project\
                 and you havn`t add project parent path to sys.path yet')
