@@ -2,7 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import datetime
-import simplejson as pyjson
+try:
+    import simplejson as pyjson
+except ImportError:
+    import json as pyjson
 from bson.objectid import ObjectId
 
 
@@ -44,12 +47,11 @@ def force_int(value, desire=0, limit=100):
     return value
 
 
-def timesince(time):
-    import datetime
-    if not isinstance(time, datetime.datetime):
-        return None
+def timesince(t):
+    if not isinstance(t, datetime.datetime):
+        raise TypeError('Time should be instance of datetime.datetime')
     now = datetime.datetime.utcnow()
-    delta = now - time
+    delta = now - t
     if not delta.days:
         if delta.seconds / 3600:
             return '{0} hours ago'.format(delta.seconds / 3600)
