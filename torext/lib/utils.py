@@ -8,7 +8,7 @@ def pprint(o):
     pprinter.pprint(o)
 
 
-class OneInstanceObject(object):
+class Singleton(object):
     """Globally hold one instance class
 
     Usage::
