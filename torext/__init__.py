@@ -6,7 +6,7 @@ __version__ = '1.3'
 
 from torext.lib.logger import configure_logger
 from torext.conns import configure_conns
-from torext.lib.utils import OneInstanceObject
+from torext.lib.utils import Singleton
 from torext import errors
 
 
@@ -53,7 +53,7 @@ def configure_settings_from_module(settings_module):
 def configure_settings_from_commandline():
     """
     settings.py is the basement
-    
+
     if wants to change them by command line arguments,
     the existing option will be transformed to the value type in settings.py
     the unexisting option will be treated as string by default,
@@ -188,7 +188,7 @@ def configure_environ(settings_module=None):
                 and you havn`t add project parent path to sys.path yet')
 
 
-class Settings(dict, OneInstanceObject):
+class Settings(dict, Singleton):
     """
     Philosophy was borrowed from django.conf.Settings
 

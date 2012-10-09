@@ -3,7 +3,7 @@
 #
 
 from torext import errors
-from torext.lib.utils import OneInstanceObject
+from torext.lib.utils import Singleton
 
 
 def configure_conns(options):
@@ -24,7 +24,7 @@ def configure_conns(options):
             conns.set(typ, label, conn)
 
 
-class Connections(OneInstanceObject):
+class Connections(Singleton):
     """What a connection is, doesn't mean linking with kinda facility,
     like MySQL, MongoDB, RabbitMQ...
     but a certain object that can be mainputated uniquely,
