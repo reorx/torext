@@ -28,7 +28,7 @@ from torext.mongodb.dstruct import (
     Struct,
     ObjectId)
 
-from torext.lib.testing import _TestCase
+from torext.testing import _TestCase
 
 
 class TestFunctions(_TestCase):

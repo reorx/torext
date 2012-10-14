@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+    #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # variables in this module are essential basements of settings,
@@ -41,6 +41,7 @@ UNLOG_URLS = [
     '/favicon.ico',
 ]
 
+# NO Databases !
 
 ###########
 # optional
@@ -49,7 +50,6 @@ UNLOG_URLS = [
 
 # CONNS = {}
 
-# could generated a new one by 'torext.lib.hashs.generate_cookie_secret()'
 # COOKIE_SECRET = 'P0UTa5iuRaaVlV8QZF2uVR7hHwTOSkQhg2Fol18OKwc='
 
 # SECURE_COOKIE = ''

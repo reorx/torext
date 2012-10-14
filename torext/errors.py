@@ -81,7 +81,7 @@ class SettingUndefined(TorextException):
     pass
 
 
-class CommandArgParseError(TorextException):
+class ArgsParseError(TorextException):
     pass
 
 
