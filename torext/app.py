@@ -11,6 +11,7 @@ from tornado.httpserver import HTTPServer
 from tornado.web import Application as TornadoApplication
 
 from torext import settings
+from torext.logger import set_logger
 
 
 class TorextApp(TornadoApplication):
@@ -59,7 +60,7 @@ class TorextApp(TornadoApplication):
         http_server = HTTPServer(self)
         if settings['DEBUG']:
             if settings['PROCESSES']:
-                print 'Multiprocess could not be used in debug mode'
+                logging.info('Multiprocess could not be used in debug mode')
             http_server.listen(settings['PORT'])
         else:
             http_server.bind(settings['PORT'])
@@ -80,14 +81,14 @@ def prepare():
     """
     preparations before run
     """
-    configure_logger('',
-        level=getattr(logging, settings['LOGGING']),
-        handler_options={
-            'type': 'stream',
-            'color': True,
-            'fmt': settings['LOGGING_FORMAT'],
-        }
-    )
+    # set loggers
+    if '' in settings['LOGGING']:
+        set_logger('', **settings['LOGGING'][''])
+        logging.info('RootLogger has been set')
+    for name, opts in settings['LOGGING'].iteritems():
+        if name == 'root':
+            continue
+        set_logger(name, **opts)
 
     # reset timezone
     os.environ['TZ'] = settings['TIME_ZONE']
@@ -104,7 +105,7 @@ def prepare():
     if settings['PROJECT']:
         try:
             __import__(settings['PROJECT'])
-            print 'import %s success' % settings['PROJECT']
+            logging.debug('import %s success' % settings['PROJECT'])
         except ImportError:
             raise ImportError('PROJECT could not be imported, may be app.py is outside the project\
                 or there is no __init__ in the package.')
@@ -112,13 +113,13 @@ def prepare():
 
 def print_service_info():
     tmpl = """\nMode [{0}], Service info::
-    Project:     {1}
-    Port:        {2}
-    Processes:   {3}
-    Logging:     {4}
-    Locale:      {5}
-    Debug:       {6}
-    url:         {7}
+    Project:         {1}
+    Port:            {2}
+    Processes:       {3}
+    Logging(root):   {4}
+    Locale:          {5}
+    Debug:           {6}
+    url:             {7}
     """
 
     info = tmpl.format(
@@ -126,7 +127,7 @@ def print_service_info():
         settings['PROJECT'] or 'None (better be assigned)',
         settings['PORT'],
         settings['DEBUG'] and 1 or settings['PROCESSES'],
-        settings['LOGGING'],
+        '' in settings['LOGGING'] and settings['LOGGING']['']['level'] or 'None',
         settings['LOCALE'],
         settings['DEBUG'],
         'http://127.0.0.1:%s' % settings['PORT'],

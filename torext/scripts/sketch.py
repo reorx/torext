@@ -47,7 +47,7 @@ def main():
     torext_path = os.path.dirname(torext.__file__)
 
     if not options.flask_style:
-        # Check that the project_name cannot be imported.
+        # Check that the project name cannot be imported.
         try:
             import_module(name)
         except ImportError:
@@ -58,8 +58,15 @@ def main():
 
         template_path = os.path.join(torext_path, 'templates/project')
         target_path = os.path.join(cwd, name)
-        assert not os.path.exists(target_path), 'You indicate an existing dir, could not be used for sketch'
+        assert not os.path.exists(target_path), 'You indicate an existing dir,\
+            could not be used for sketch'
+
         shutil.copytree(template_path, target_path)
+        with open(os.path.join(target_path, 'settings.py'), 'r') as f:
+            settings_str = f.read()
+            settings_str = settings_str.replace('{project_name}', name)
+        with open(os.path.join(target_path, 'settings.py'), 'w') as f:
+            f.write(settings_str)
 
     else:
         template_path = os.path.join(torext_path, 'templates/flask_style.py')

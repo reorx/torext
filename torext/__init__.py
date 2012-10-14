@@ -1,11 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__version__ = '1.5'
-# ENVIRONMENT_KEY = 'TOREXT_SETTINGS_MODULE'
+__version__ = '1.6'
 
-from torext.logger import configure_logger
-from torext.conns import configure_conns
 from torext.utils import SingletonMixin
 from torext import errors
 

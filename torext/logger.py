@@ -3,7 +3,7 @@
 
 import sys
 import logging
-from torext.utils import kwgs_filter
+from torext.utils import split_kwargs
 
 
 # borrow from tornado.options._LogFormatter.__init__
@@ -127,7 +127,7 @@ class BaseFormatter(logging.Formatter):
 
 class BaseStreamHandler(logging.StreamHandler):
     def __init__(self, *args, **kwgs):
-        _kwgs = kwgs_filter(('fmt', 'datefmt', 'color', 'newlinetab'), kwgs)
+        _kwgs = split_kwargs(('fmt', 'datefmt', 'color', 'newlinetab'), kwgs)
 
         super(BaseStreamHandler, self).__init__(*args, **kwgs)
 
@@ -139,13 +139,12 @@ HANDLER_TYPES = {
 }
 
 
-def configure_logger(name,
-        level=logging.DEBUG,
+def set_logger(name,
+        level='INFO',
         propagate=1,
-        handler_options={}):
-    """
-    :param handler_options::
-    """
+        type='stream',
+        color=True,
+        fmt=' %(message)s'):
 
     # NOTE before logging is set detaily(eg. add a handler), it will be added
     # a handler automatically if it was used (eg. logging.debug),
@@ -153,13 +152,12 @@ def configure_logger(name,
     logging.getLogger(name).handlers = []
 
     logger = logging.getLogger(name)
-    logger.setLevel(level)
+    logger.setLevel(getattr(logging, level))
     logger.propagate = propagate
 
-    handler_type = handler_options.pop('type')
-    handler_cls = HANDLER_TYPES[handler_type]
+    handler = HANDLER_TYPES[type](color=color, fmt=fmt)
 
-    logger.addHandler(handler_cls(**handler_options))
+    logger.addHandler(handler)
 
 
 #############
@@ -181,7 +179,7 @@ if __name__ == '__main__':
         # streamHandler = logging.StreamHandler()
         # streamHandler.setFormatter(BaseFormatter(color=True))
         # root_logger.addHandler(streamHandler)
-        configure_logger('', level=logging.DEBUG, color=True)
+        set_logger('', level=logging.DEBUG, color=True)
 
         root_logger.debug('bug..')
         root_logger.info('hello')

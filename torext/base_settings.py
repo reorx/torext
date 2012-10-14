@@ -1,4 +1,4 @@
-    #!/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # variables in this module are essential basements of settings,
@@ -23,9 +23,15 @@ PORT = 8000
 
 DEBUG = True
 
-LOGGING = 'INFO'
-
-LOGGING_FORMAT = ' %(message)s'
+LOGGING = {
+    'root': {
+        'level': 'INFO',
+        'propagate': 1,
+        'type': 'stream',
+        'color': True,
+        'fmt': ' %(message)s'
+    }
+}
 
 LOG_REQUEST = False
 
