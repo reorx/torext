@@ -9,7 +9,7 @@ import sys
 import shutil
 import optparse
 import torext
-from torext.lib.importlib import import_module
+from torext.utils import import_module
 
 
 parser = optparse.OptionParser(usage='Usage: %prog [options] arg1')

@@ -3,7 +3,7 @@
 
 import sys
 import logging
-from torext.lib.utils import kwgs_filter
+from torext.utils import kwgs_filter
 
 
 # borrow from tornado.options._LogFormatter.__init__

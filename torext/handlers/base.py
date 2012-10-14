@@ -33,8 +33,7 @@ from tornado.web import HTTPError
 from tornado import escape
 
 from torext import settings, errors
-from torext.lib.format import _json, _dict
-from torext.lib.utils import ObjectDict
+from torext.utils import ObjectDict, _json, _dict
 
 
 def log_response(text, width=80, limit=800):

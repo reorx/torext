@@ -230,7 +230,7 @@ class StructuredDict(dict):
         del last[_key_rule(last_key)]
 
     def _pprint(self):
-        from torext.lib.utils import pprint
+        from torext.utils import pprint
         pprint(dict(self))
 
 

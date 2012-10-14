@@ -15,7 +15,7 @@
 #   - .remove()
 
 import logging
-from torext.lib.testing import _TestCase
+from torext.testing import _TestCase
 
 
 def random_str(length):

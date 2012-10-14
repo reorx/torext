@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from torext.lib.testing import _TestCase
+from torext.testing import _TestCase
 
 import re
-from torext.lib.validator import RegexValidator, WordsValidator, EmailValidator, URLValidator, IntstringValidator
+from torext.validators import RegexValidator, WordsValidator, EmailValidator, URLValidator, IntstringValidator
 from torext.errors import ValidationError
 
 

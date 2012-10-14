@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # from tornado.testing import AsyncHTTPTestCase
-from torext.lib.testing import _TestCase
+from torext.testing import _TestCase
 from jsonrpclib import Server
 from tornado.web import Application
 from torext.handlers.rpc import JSONRPCHandler
