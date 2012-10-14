@@ -1,6 +1,11 @@
-2012-04-30 v1.5 -> v1.9
-    * lib.validator -> .validators
-    * .app, .router, .server -> .web
+2012-10-13
+    * .conns -> .connections
+    * __init__:
+        - remove initialize()
+        - configure_settings_from_module -> pyfile_config
+        - configure_settings_from _commandline -> command_line_config
+        - configure_environ -> app.prepare
+    * lib.* -> .*
 
 2012-04-   v1.4 -> 1.5
     * give up the strategy of initializing project in __init__.py, to prevent conflicts when projects involve each other

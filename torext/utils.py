@@ -173,7 +173,7 @@ class SingletonMixin(object):
         return cls._instance
 
 
-def kwgs_filter(kwgs_tuple, kwgs):
+def split_kwargs(kwgs_tuple, kwgs):
     _kwgs = {}
     for i in kwgs_tuple:
         if i in kwgs:
