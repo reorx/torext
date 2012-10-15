@@ -19,9 +19,6 @@ errors:
 
 
 # import inspect
-from tornado.web import HTTPError
-
-HTTPError = HTTPError
 
 
 class TorextException(Exception):

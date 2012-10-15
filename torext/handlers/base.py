@@ -20,11 +20,12 @@ core concepts:
         request send by a mobile called api request
 """
 
+import sys
 import logging
 import urllib
 import urlparse
 import functools
-# import traceback
+import traceback
 
 import tornado.web
 import tornado.locale
@@ -36,35 +37,47 @@ from torext import settings, errors
 from torext.utils import ObjectDict, _json, _dict
 
 
-def log_response(text, width=80, limit=800):
-    if isinstance(text, str):
-        text = text.decode('utf-8')
+def _format_headers_log(headers):
+    # length of '+-...-+' is 19
+    block = '+-----Headers-----+\n'
+    for k, v in headers.iteritems():
+        block += '| {0:<15} | {1:<15} \n'.format(k, v)
+    return block
 
-    if len(text) > limit:
-        text = text[:limit - 1]
-        end = ' ...'
-    else:
-        end = ''
 
-    block = '-> Response\n'
-    while text:
-        block += '| ' + text[:width] + '\n'
-        text = text[width:]
-    block += end
+def log_response(handler):
+    content_type = handler._headers.get('Content-Type', None)
+
+    headers_str = handler._generate_headers()
+    block = 'Response Infomations:\n' + headers_str.strip()
+
+    if content_type and ('text' in content_type or 'json' in content_type):
+        limit = 0
+        if 'LOG_RESPONSE_LINE_LIMIT' in settings:
+            limit = settings['LOG_RESPONSE_LINE_LIMIT']
+
+        def cut(s):
+            if limit and len(s) > limit:
+                return [s[:limit]] + cut(s[limit:])
+            else:
+                return [s]
+
+        body = ''.join(handler._write_buffer)
+        lines = []
+        for i in body.split('\n'):
+            lines += ['| ' + j for j in cut(i)]
+        block += '\n\nBody:\n' + '\n'.join(lines)
 
     logging.info(block)
 
 
-def log_request(handler, with_value=True):
+def log_request(handler):
     """
     """
-    block = 'Request Infomations ->\n-----Headers-----\n'
-
-    for k, v in handler.request.headers.iteritems():
-        block += '| {0:<15} | {1:<15} \n'.format(k, v)
+    block = 'Request Infomations:\n' + _format_headers_log(handler.request.headers)
 
     if handler.request.arguments:
-        block += '-----Arguments-----\n'
+        block += '+----Arguments----+\n'
         for k, v in handler.request.arguments.iteritems():
             block += '| {0:<15} | {1:<15} \n'.format(repr(k), repr(v))
 
@@ -91,27 +104,26 @@ class _BaseHandler(tornado.web.RequestHandler):
             logging.debug('%s initializing' % self.__class__.__name__)
 
     def _default_handle_exception(self, e):
+        ## Actually the first part of Request._handle_request_exception
         logging.error("Uncaught exception %s\n%r", self._request_summary(),
                       self.request, exc_info=True)
-        if 'BUG_REPORTER' in settings:
-            # TODO
-            # bug_report.delay(self.get_current_timestamp(), e, traceback.format_exc(),
-            #     settings.bug_reporter)
-            pass
-
-        return self.json_error(500, e)
+        self.send_error(500, exc_info=sys.exc_info())
 
     def _handle_request_exception(self, e):
+        import sys
+        import httplib
 
         ## Original handling, from tornado.web
-        if isinstance(e, errors.HTTPError):
+        if isinstance(e, HTTPError):
             if e.log_message:
                 format = "%d %s: " + e.log_message
                 args = [e.status_code, self._request_summary()] + list(e.args)
                 logging.warning(format, *args)
-
-            # Redefined HTTPError handling
-            self.json_error(e.status_code, e)
+            if e.status_code not in httplib.responses:
+                logging.error("Bad HTTP status code: %d", e.status_code)
+                self.send_error(500, exc_info=sys.exc_info())
+            else:
+                self.send_error(e.status_code, exc_info=sys.exc_info())
         ## End original handling
 
         else:
@@ -120,8 +132,11 @@ class _BaseHandler(tornado.web.RequestHandler):
                 for excs, func_name in self.HTTP_STATUS_EXCEPTIONS.iteritems():
                     if isinstance(e, excs):
                         handle_func = getattr(self, func_name)
+                        break
 
             handle_func(e)
+            if not self._finished:
+                self.finish()
 
     @property
     def mysql(self):
@@ -146,57 +161,55 @@ class _BaseHandler(tornado.web.RequestHandler):
     def parse_json(self):
         return _dict
 
-    def write(self, chunk, *args, **kwgs):
-        super(_BaseHandler, self).write(chunk, *args, **kwgs)
+    def flush(self, *args, **kwgs):
+        # Before RequestHandler.flush was called, we got the
+        # final _write_buffer.
+        if settings['LOG_RESPONSE'] and not self._status_code == 500:
+            log_response(self)
 
-        if settings['LOG_RESPONSE']:
-            log_response(chunk)
+        super(_BaseHandler, self).flush(*args, **kwgs)
 
-    def json_write(self, chunk, json=False, headers={}):
+    def json_write(self, chunk, headers={}):
         """
-        Used globally, not special in ApiHandler
         chunk could be any type of str, dict, list
         """
-        if json:
-            self.set_header("Content-Type", "application/json; charset=UTF-8")
         if headers:
             for k, v in headers.iteritems():
                 self.set_header(k, str(v))
         if isinstance(chunk, dict) or isinstance(chunk, list):
             chunk = self.dump_dict(chunk)
             self.set_header("Content-Type", "application/json; charset=UTF-8")
-        chunk = escape.utf8(chunk)
+
+        # pre-doing utf8 convert before RequestHandler.write()
+        # so that if any error occurs, we can find it
+        try:
+            chunk = escape.utf8(chunk)
+        except Exception, e:
+            logging.error('chunk encoding error in _BaseHandler.json_write, raise')
+            raise e
 
         self.write(chunk)
-        if not self._finished:
-            self.finish()
 
     def json_error(self, code, error=None):
-        """Used globally, not special in ApiHandler
-        """
-        # TODO show message on logging
-        self.set_status(code)
-
-        msg = {
-            'code': code,
-            'error': '',
-        }
+        msg = {'code': code}
         if isinstance(error, Exception):
-            # NOTE if use __str__() it will cause UnicodeEncodeError when error contains Chinese unicode
-            msg['error'] = error.__unicode__()
+            # NOTE(maybe) if use __str__() it will cause UnicodeEncodeError when error contains Chinese unicode
+            # msg['error'] = error.__unicode__()
+            msg['error'] = str(error)
 
-            # not using this currently
-            # if settings['DEBUG'] and not isinstance(error, HTTPError):
-            #     msg['traceback'] = '\n' + traceback.format_exc()
-            #     logging.error(msg['error'] + '\n' + msg['traceback'])
+            # no traceback
+            if sys.exc_info()[2] is None:
+                tb = 'None (not a caught error ?)'
+            else:
+                tb = traceback.format_exc()
+            logging.warning('User raised exception in json_error, %s' % tb)
         elif isinstance(error, str):
             msg['error'] = error
         else:
             raise ValueError('error object should be either Exception or str')
 
-        self.write(msg)
-        if not self._finished:
-            self.finish()
+        self.set_status(code)
+        self.json_write(msg)
 
     def file_write(self, byteStream, mime='text/plain'):
         self.set_header("Content-Type", mime)
