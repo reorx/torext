@@ -28,7 +28,7 @@ from torext import errors
 from bson.objectid import ObjectId
 from pymongo.collection import Collection
 from .dstruct import Struct, StructuredDict
-from .base import Cursor
+from .cursor import Cursor
 
 
 test = logging.getLogger('test')

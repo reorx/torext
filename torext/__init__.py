@@ -3,8 +3,56 @@
 
 __version__ = '1.6'
 
-from torext.utils import SingletonMixin
 from torext import errors
+from torext.utils import SingletonMixin
+
+
+SETUPED = False
+
+
+def setup():
+    """
+    setups before run
+    """
+    import os
+    import sys
+    import time
+    import logging
+    from torext.logger import set_logger
+
+    print 'Setup torext..'
+
+    # set loggers
+    if '' in settings['LOGGING']:
+        set_logger('', **settings['LOGGING'][''])
+        logging.info('RootLogger has been set')
+    for name, opts in settings['LOGGING'].iteritems():
+        if name == 'root':
+            continue
+        set_logger(name, **opts)
+
+    # reset timezone
+    os.environ['TZ'] = settings['TIME_ZONE']
+    time.tzset()
+
+    if settings['DEBUG'] and settings._module:
+
+        parent_path = os.path.join(
+            os.path.dirname(settings._module.__file__), os.pardir)
+        sys.path.insert(0, parent_path)
+
+    # if `PROJECT` was set in settings,
+    # means project should be able to imported as a python module
+    if settings['PROJECT']:
+        try:
+            __import__(settings['PROJECT'])
+            logging.debug('import %s success' % settings['PROJECT'])
+        except ImportError:
+            raise ImportError('PROJECT could not be imported, may be app.py is outside the project\
+                or there is no __init__ in the package.')
+
+    global SETUPED
+    SETUPED = True
 
 
 def pyfile_config(settings_module):

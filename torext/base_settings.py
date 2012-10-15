@@ -37,6 +37,8 @@ LOG_REQUEST = False
 
 LOG_RESPONSE = False
 
+LOG_RESPONSE_LINE_LIMIT = 0
+
 TIME_ZONE = 'Asia/Shanghai'
 
 STATIC_PATH = 'static'

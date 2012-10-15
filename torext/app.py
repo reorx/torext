@@ -1,17 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os
 import sys
-import time
 import logging
 
+import torext
 from tornado.ioloop import IOLoop
 from tornado.httpserver import HTTPServer
 from tornado.web import Application as TornadoApplication
 
 from torext import settings
-from torext.logger import set_logger
 
 
 class TorextApp(TornadoApplication):
@@ -55,7 +53,8 @@ class TorextApp(TornadoApplication):
                    handler._request_summary(), request_time)
 
     def run(self):
-        prepare()
+        if not torext.SETUPED:
+            torext.setup()
 
         http_server = HTTPServer(self)
         if settings['DEBUG']:
@@ -75,40 +74,6 @@ class TorextApp(TornadoApplication):
             IOLoop.instance().stop()
             print 'Exit'
             sys.exit()
-
-
-def prepare():
-    """
-    preparations before run
-    """
-    # set loggers
-    if '' in settings['LOGGING']:
-        set_logger('', **settings['LOGGING'][''])
-        logging.info('RootLogger has been set')
-    for name, opts in settings['LOGGING'].iteritems():
-        if name == 'root':
-            continue
-        set_logger(name, **opts)
-
-    # reset timezone
-    os.environ['TZ'] = settings['TIME_ZONE']
-    time.tzset()
-
-    if settings['DEBUG'] and settings._module:
-
-        parent_path = os.path.join(
-            os.path.dirname(settings._module.__file__), os.pardir)
-        sys.path.insert(0, parent_path)
-
-    # if `PROJECT` was set in settings,
-    # means project should be able to imported as a python module
-    if settings['PROJECT']:
-        try:
-            __import__(settings['PROJECT'])
-            logging.debug('import %s success' % settings['PROJECT'])
-        except ImportError:
-            raise ImportError('PROJECT could not be imported, may be app.py is outside the project\
-                or there is no __init__ in the package.')
 
 
 def print_service_info():
