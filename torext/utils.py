@@ -13,7 +13,6 @@ from bson.objectid import ObjectId
 
 _abspath = lambda x: os.path.abspath(x)
 _join = lambda x, y: os.path.join(x, y)
-_abs_join = lambda x, y: _abspath(_join(x, y))
 
 try:
     import simplejson as pyjson
@@ -189,7 +188,7 @@ class ObjectDict(dict):
         try:
             return self[key]
         except KeyError:
-            raise AttributeError('has no attribute %s' % key)
+            raise AttributeError('Has no attribute %s' % key)
 
     def __setattr__(self, key, value):
         self[key] = value
@@ -263,6 +262,16 @@ def import_module(name, package=None):
         name = _resolve_name(name[level:], package, level)
     __import__(name)
     return sys.modules[name]
+
+
+def add_to_syspath(pth, relative_to=None):
+    if relative_to:
+        pth = _join(relative_to, pth)
+    if _abspath(pth) in [_abspath(i) for i in sys.path]:
+        print 'path %s is in sys.path, pass' % pth
+    else:
+        print 'add path %s to sys.path' % pth
+        sys.path.insert(0, pth)
 
 
 def start_shell(local_vars={}):
