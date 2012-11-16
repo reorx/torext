@@ -113,9 +113,11 @@ class BaseFormatter(logging.Formatter):
         if self.has_color:
             prefix = _color(record.levelno, prefix)
 
-        # prefix is unicode, so the result of record format should be converted
+        # prefix is unicode, so the result of record format must also be unicode
         fmt_result = self._fmt % record.__dict__
-        log = prefix + fmt_result.decode('utf-8')
+        if not isinstance(fmt_result, unicode):
+            fmt_result = fmt_result.decode('utf-8')
+        log = prefix + fmt_result
 
         if record.exc_text:
             if log[-1:] != '\n':

@@ -23,13 +23,18 @@ def setup():
     print 'Setup torext..'
 
     # set loggers
+    def get_kwgs(_kwgs):
+        if 'LOGGING_LEVEL' in settings:
+            _kwgs['level'] = settings['LOGGING_LEVEL']
+        return _kwgs
+
     if '' in settings['LOGGING']:
-        set_logger('', **settings['LOGGING'][''])
+        set_logger('', **get_kwgs(settings['LOGGING']['']))
         logging.info('RootLogger has been set')
     for name, opts in settings['LOGGING'].iteritems():
         if name == 'root':
             continue
-        set_logger(name, **opts)
+        set_logger(name, **get_kwgs(opts))
 
     # reset timezone
     os.environ['TZ'] = settings['TIME_ZONE']
@@ -80,32 +85,24 @@ def command_line_config():
     and force to type if `!<type>` was added after
 
     format:
-        python app.py --PORT 1000
+        python app.py --PORT=1000
     """
     import sys
 
     args = sys.argv[1:]
-
-    if not len(args) % 2 == 0:
-        raise errors.ArgsParseError('Bad args: length of args is not multiple of 2')
-
-    def to_tuple_list(l):
-        tl = []
-        while l:
-            tl.append((l.pop(0), l.pop(0)))
-        return tl
-
-    args = to_tuple_list(args)
-
     args_dict = {}
     existed_keys = []
     new_keys = []
 
     for t in args:
-        if not t[0].startswith('--') or not t[0].upper() == t[0]:
-            raise errors.ArgsParseError('Bad arg: %s %s' % t)
-        key = t[0][2:]
-        args_dict[key] = t[1]
+        if not t.startswith('--'):
+            raise errors.ArgsParseError('Bad arg: %s' % t)
+        try:
+            key, value = tuple(t[2:].split('='))
+        except:
+            raise errors.ArgsParseError('Bad arg: %s' % t)
+
+        args_dict[key] = value
 
         if key in settings:
             existed_keys.append(key)
