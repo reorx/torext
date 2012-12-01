@@ -53,7 +53,6 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'torext.flake = torext.scripts.syntax:main',
             'torext.sketch = torext.scripts.sketch:main',
         ]
     },
