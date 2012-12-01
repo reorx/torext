@@ -4,6 +4,7 @@
 import sys
 import logging
 from torext.utils import split_kwargs
+from torext import settings
 
 
 # borrow from tornado.options._LogFormatter.__init__
@@ -49,9 +50,6 @@ def _color(lvl, s):
 
     return colors_map.get(lvl, _normal) + s + _normal
 
-################
-#  formatters  #
-################
 
 FIXED_LEVELNAMES = {
     'DEBUG': 'DEBG',
@@ -62,76 +60,70 @@ FIXED_LEVELNAMES = {
 
 class BaseFormatter(logging.Formatter):
     def __init__(self,
-        fmt='%(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S',
         prefixfmt='[%(fixed_levelname)s %(asctime)s %(module)s:%(lineno)s] ',
+        contentfmt='%(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
         color=False,
-        newlinetab='  ',
-        **kwgs):
+        tab='  '):
         """
-        ::params:kwarg fmt
-        ::params:kwarg datefmt
-        ::params:kwarg color
-        ::params:kwarg newlinetab
-        """
-        # as origin __init__ function is very
-        # simple (just store two attributes on self: _fmt & datafmt),
-        # execute it firstly
-        logging.Formatter.__init__(self)
+        a log is constituted by two part: prefix + content
 
-        self._fmt = fmt
-        self.datefmt = datefmt
+        prefix is determined by `prefixfmt`, whose color depends on logging level
+
+        content is what passed to the log method, %(message)s by default
+        """
+        # as origin __init__ function is very simple
+        # (just store two attributes on self: _fmt & datefmt), execute it firstly
+        logging.Formatter.__init__(self, datefmt=datefmt)
+
         self.prefixfmt = prefixfmt
-        self.has_color = color
-        self.newlinetab = newlinetab
+        self.contentfmt = contentfmt
+        self.color = color
+        self.tab = tab
 
     def _rich_record(self, record):
-        # handle record firstly
         record.message = record.getMessage()
-
-        if 'asctime' in self._fmt + self.prefixfmt:
-            record.asctime = self.formatTime(record, self.datefmt)
-
-        if 'secs' in self._fmt + self.prefixfmt:
-            record.secs = record.msecs / 1000
-
         record.fixed_levelname = FIXED_LEVELNAMES.get(record.levelname, record.levelname)
 
-        if record.exc_info:
-            if not record.exc_text:
-                record.exc_text = self.formatException(record.exc_info)
+        allfmt = self.contentfmt + self.prefixfmt
+        if 'asctime' in allfmt:
+            record.asctime = self.formatTime(record, self.datefmt)
+        if 'secs' in allfmt:
+            record.secs = record.msecs / 1000
+
+        # if record.exc_info:
+        #     if not record.exc_text:
+        #         record.exc_text = self.formatException(record.exc_info)
 
     def format(self, record):
         """
-        Discard using of old format way ( '%(asctime)' ) and turing into new way '{asctime}'
-
-        add a new format argument: module_with_lineno
         """
         self._rich_record(record)
 
         prefix = self.prefixfmt % record.__dict__
-        if self.has_color:
+        if self.color:
             prefix = _color(record.levelno, prefix)
 
         # prefix is unicode, so the result of record format must also be unicode
-        fmt_result = self._fmt % record.__dict__
-        if not isinstance(fmt_result, unicode):
-            fmt_result = fmt_result.decode('utf-8')
-        log = prefix + fmt_result
+        content = self.contentfmt % record.__dict__
+        if not isinstance(content, unicode):
+            content = content.decode('utf-8')
+        log = prefix + content
 
-        if record.exc_text:
-            if log[-1:] != '\n':
-                log += '\n'
-            log += record.exc_text
+        # if record.exc_text:
+        #     if log[-1:] != '\n':
+        #         log += '\n'
+        #     log += record.exc_text
 
-        log = log.replace('\n', '\n' + self.newlinetab)
+        log = log.replace('\n', '\n' + self.tab)
 
         return log
 
 
 class BaseStreamHandler(logging.StreamHandler):
     def __init__(self, *args, **kwgs):
-        _kwgs = split_kwargs(('fmt', 'datefmt', 'color', 'newlinetab'), kwgs)
+        _kwgs = split_kwargs(
+            ('prefixfmt', 'contentfmt', 'datefmt', 'color'), kwgs)
 
         super(BaseStreamHandler, self).__init__(*args, **kwgs)
 
@@ -146,20 +138,27 @@ HANDLER_TYPES = {
 def set_logger(name,
         level='INFO',
         propagate=1,
-        type='stream',
         color=True,
-        fmt=' %(message)s'):
-
-    # NOTE before logging is set detaily(eg. add a handler), it will be added
-    # a handler automatically if it was used (eg. logging.debug),
-    # pre-set handlers to [], to ensure no unexpected handler is on root logger
+        prefixfmt=None,
+        contentfmt=None,
+        datefmt=None):
+    """
+    This function will clear the previous handlers and set only one handler,
+    which will only be StreamHandler for the logger.
+    """
+    # NOTE if the logger has no handlers, it will be added a handler automatically when it is used.
     logging.getLogger(name).handlers = []
 
     logger = logging.getLogger(name)
     logger.setLevel(getattr(logging, level))
     logger.propagate = propagate
 
-    handler = HANDLER_TYPES[type](color=color, fmt=fmt)
+    handler = logging.StreamHandler()
+    formatter_kwgs = {}
+    for i in ('color', 'prefixfmt', 'contentfmt', 'datefmt'):
+        if locals()[i] is not None:
+            formatter_kwgs[i] = locals()[i]
+    handler.setFormatter(BaseFormatter(**formatter_kwgs))
 
     logger.addHandler(handler)
 

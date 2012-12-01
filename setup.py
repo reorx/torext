@@ -38,10 +38,10 @@ setup(
     description='torext is an instrumental package which aim at easy implementation of tornado based project',
     packages=[
         'torext',
-        'torext.lib',
-        'torext.mongodb',
         'torext.handlers',
+        'torext.mongodb',
         'torext.scripts',
+        'torext.test',
     ],
     package_data={
         'torext': [

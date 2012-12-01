@@ -8,11 +8,9 @@ from torext.app import TorextApp
 
 if __name__ == '__main__':
     import settings
-    torext.pyfile_config(settings)
+    torext.module_config(settings)
     torext.command_line_config()
-    torext.settings['LOG_REQUEST'] = True
     torext.settings['LOG_RESPONSE'] = True
-    torext.settings['LOG_RESPONSE_LINE_LIMIT'] = 120
 
     from torext.handlers import _BaseHandler
 

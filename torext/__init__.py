@@ -18,36 +18,28 @@ def setup():
     import sys
     import time
     import logging
-    from torext.logger import set_logger
+    from torext.log import set_logger
 
     print 'Setup torext..'
 
-    # set loggers
-    def get_kwgs(_kwgs):
-        if 'LOGGING_LEVEL' in settings:
-            _kwgs['level'] = settings['LOGGING_LEVEL']
-        return _kwgs
-
-    if '' in settings['LOGGING']:
-        set_logger('', **get_kwgs(settings['LOGGING']['']))
-        logging.info('RootLogger has been set')
-    for name, opts in settings['LOGGING'].iteritems():
-        if name == 'root':
-            continue
-        set_logger(name, **get_kwgs(opts))
+    # setup root logger (as early as possible)
+    set_logger('', **settings['LOGGING'])
 
     # reset timezone
     os.environ['TZ'] = settings['TIME_ZONE']
     time.tzset()
 
+    # add upper folder path to sys.path if not in
     if settings['DEBUG'] and settings._module:
-
         parent_path = os.path.join(
             os.path.dirname(settings._module.__file__), os.pardir)
-        sys.path.insert(0, parent_path)
+        if os.path.abspath(parent_path) in [os.path.abspath(i) for i in sys.path]:
+            logging.info('%s is in sys.path, skip adding')
+        else:
+            sys.path.insert(0, parent_path)
+            logging.info('Add %s to sys.path' % os.path.abspath(parent_path))
 
-    # if `PROJECT` was set in settings,
-    # means project should be able to imported as a python module
+    # if `PROJECT` is set in settings, project should be importable as a python module
     if settings['PROJECT']:
         try:
             __import__(settings['PROJECT'])
@@ -60,7 +52,7 @@ def setup():
     SETUPED = True
 
 
-def pyfile_config(settings_module):
+def module_config(settings_module):
     """
     Optional function
     """
@@ -77,15 +69,15 @@ def pyfile_config(settings_module):
 
 def command_line_config():
     """
-    settings.py is the basement
+    settings.py is the basis
 
     if wants to change them by command line arguments,
     the existing option will be transformed to the value type in settings.py
     the unexisting option will be treated as string by default,
-    and force to type if `!<type>` was added after
+    and transform to certain type if `!<type>` was added after the value.
 
-    format:
-        python app.py --PORT=1000
+    example:
+    $ python app.py --PORT=1000
     """
     import sys
 
@@ -112,27 +104,49 @@ def command_line_config():
     if existed_keys:
         print 'Changed settings:'
         for i in existed_keys:
-            print '  %s  %s (%s)' % (i, settings[i], args_dict[i])
+            before = settings[i]
             settings[i] = args_dict[i]
+            print '  %s  %s (%s)' % (i, args_dict[i], before)
 
     if new_keys:
         print 'New settings:'
         for i in new_keys:
-            print '  %s  %s' % (i, args_dict[i])
             settings[i] = args_dict[i]
+            print '  %s  %s' % (i, args_dict[i])
 
 
 class Settings(dict, SingletonMixin):
     """
     Philosophy was borrowed from django.conf.Settings
 
-    As there are just few things involved by tornado.options.options,
-    httpclient and testing, they are all uncommon modules and do little in project.
-    also, tornado options is not convenient to use. So I decide to create a new
-    object called Settings instead of options. Settings file writting will be
-    much eaiser and comfortable for pycoders.
+    As there are just few necessary values involved by tornado.options.options,
+    (in httpclient and testing), and options.define is complicate and not convenient to use,
+    Settings is created to replace tornado.options.options.
 
-    NOTE settings object is internally used in torext and the project
+    by import torext module, a Settings object will be instanced and stored globally,
+    then it can be involved in any place like this:
+    >>> import torext
+    >>> print torext.settings
+    or
+    >>> from torext import settings
+    >>> print settings
+
+    getting value from settings is like from a normal dict:
+    >>> settings['DEBUG']
+    True
+    >>> settings.get('PORT')
+    8000
+    >>> settings.get('WTF', None)
+    None
+
+    notice that you can use lower case word to get or set the value:
+    >>> settings['debug'] is settings.get('DEBUG')
+    True
+    >>> settings['port'] = 8765
+    >>> settings['PORT']
+    8765
+
+    TODO require_setting
     """
     def __init__(self):
         """
@@ -150,13 +164,16 @@ class Settings(dict, SingletonMixin):
         try:
             return super(Settings, self).__getitem__(key)
         except KeyError:
-            raise errors.SettingUndefined('Setting %s is not defined in settings' % key)
+            try:
+                return super(Settings, self).__getitem__(key.lower())
+            except KeyError:
+                raise errors.SettingUndefined('Setting %s is not defined in settings' % key)
 
     def __setitem__(self, key, value):
-        for i in key:
-            if i != i.upper():
-                raise errors.SettingDefineError('You should always define UPPER CASE VARIABLE as setting')
-        super(Settings, self).__setitem__(key, value)
+        # for i in key:
+        #     if i != i.upper():
+        #         raise errors.SettingDefineError('You should always define UPPER CASE VARIABLE as setting')
+        super(Settings, self).__setitem__(key.upper(), value)
 
     def __str__(self):
         return '<Settings. %s >' % dict(self)
