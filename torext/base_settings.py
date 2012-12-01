@@ -6,12 +6,11 @@
 #   1. commandline arguments
 #   2. settings.py
 #   3. base_settings.py
-#
-# only if no definition in 1 and 2 will setting in 3 become effective.
 
 
-################
-# indispensable
+#############
+# necessary #
+#############
 
 PROJECT = None
 
@@ -24,13 +23,9 @@ PORT = 8000
 DEBUG = True
 
 LOGGING = {
-    'root': {
-        'level': 'INFO',
-        'propagate': 1,
-        'type': 'stream',
-        'color': True,
-        'fmt': ' %(message)s'
-    }
+    'level': 'INFO',
+    'propagate': 1,
+    'color': True
 }
 
 LOG_REQUEST = False
@@ -45,18 +40,14 @@ STATIC_PATH = 'static'
 
 TEMPLATE_PATH = 'template'
 
-UNLOG_URLS = [
+LOGGING_IGNORE_URLS = [
     '/favicon.ico',
 ]
 
-# NO Databases !
 
-###########
-# optional
-
-# THIRD_LIB = 'third'
-
-# CONNS = {}
+############
+# optional #
+############
 
 # COOKIE_SECRET = 'P0UTa5iuRaaVlV8QZF2uVR7hHwTOSkQhg2Fol18OKwc='
 

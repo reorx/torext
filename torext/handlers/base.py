@@ -46,8 +46,14 @@ def _format_headers_log(headers):
 
 
 def log_response(handler):
-    content_type = handler._headers.get('Content-Type', None)
+    """
+    Acturally, logging response is not a server's responsibility,
+    you should use http tools like Chrome Developer Tools to analyse the response.
 
+    Although this function and its setting(LOG_RESPONSE) is not recommended to use,
+    if you are laze as I was and working in development, nothing could stop you.
+    """
+    content_type = handler._headers.get('Content-Type', None)
     headers_str = handler._generate_headers()
     block = 'Response Infomations:\n' + headers_str.strip()
 
@@ -66,13 +72,14 @@ def log_response(handler):
         lines = []
         for i in body.split('\n'):
             lines += ['| ' + j for j in cut(i)]
-        block += '\n\nBody:\n' + '\n'.join(lines)
-
+        block += '\nBody:\n' + '\n'.join(lines)
     logging.info(block)
 
 
 def log_request(handler):
     """
+    Logging request is opposite to response, sometime its necessary,
+    feel free to enable it.
     """
     block = 'Request Infomations:\n' + _format_headers_log(handler.request.headers)
 
@@ -196,13 +203,8 @@ class _BaseHandler(tornado.web.RequestHandler):
             # NOTE(maybe) if use __str__() it will cause UnicodeEncodeError when error contains Chinese unicode
             # msg['error'] = error.__unicode__()
             msg['error'] = str(error)
-
-            # no traceback
-            if sys.exc_info()[2] is None:
-                tb = 'None (not a caught error ?)'
-            else:
-                tb = traceback.format_exc()
-            logging.warning('User raised exception in json_error, %s' % tb)
+            logging.warning('Get exception in json_error: %s - %s' %
+                            (error.__class__.__name__, error))
         elif isinstance(error, str):
             msg['error'] = error
         else:
@@ -216,8 +218,6 @@ class _BaseHandler(tornado.web.RequestHandler):
         self.write(byteStream)
         if not self._finished:
             self.finish()
-
-    # TODO get_user_locale
 
     def decode_auth_token(self, name, token, max_age_days=None):
         """Changed. user new function: tornado.web.RequestHandler.create_signed_value
@@ -239,6 +239,8 @@ class _BaseHandler(tornado.web.RequestHandler):
         """
         if settings['LOG_REQUEST']:
             log_request(self)
+        if False:
+            print 'shit'
 
         for i in self.PREPARES:
             getattr(self, '_prepare_' + i)()
