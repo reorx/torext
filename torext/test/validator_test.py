@@ -1,60 +1,107 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from torext.testing import _TestCase
-
-import re
-from torext.validators import RegexValidator, WordsValidator, EmailValidator, URLValidator, IntstringValidator
+from nose.tools import *
+from torext.validators import Field, RegexField, WordField,\
+    EmailField, URLField, IntstringField, Params
 from torext.errors import ValidationError
 
 
-class ValidatorTest(_TestCase):
-    def test_regex_0(self):
-        v = RegexValidator(regex=re.compile(r'^\w+$'))
-        v('hello')
-        self.assertRaises(ValidationError, v, 'hi**io')
+def test_regex():
+    pairs = [
+        (r'^\w+', 'hell*', True),
+        (r'^\w+', '*ello', False),
 
-    def test_regex_1(self):
-        v = RegexValidator(regex=re.compile(r'^[\w]+$'))
-        v('hasslash')
-        self.assertRaises(ValidationError, v, 'hq)ie')
+        (r'\w+$', 'hell*', False),
+        (r'\w+$', '*ello', True),
 
-    def test_regex_2(self):
-        v = RegexValidator(regex=re.compile(r'\w+'))
-        v('wooo')
-        v('w*o^oo')
+        (r'^\w+$', 'hello', True),
+        (r'^\w+$', '*ello', False),
+        (r'^\w+$', 'hell*', False)
+    ]
 
-    def test_words(self):
-        v = WordsValidator()
-        v('yes')
-        self.assertRaises(ValidationError, v, 'n&&o')
+    for pattern, match, result in pairs:
+        yield check_regex, pattern, match, result
 
-    def test_words_with_length(self):
-        v = WordsValidator(2, 5)
-        self.log.quiet('%s, %s' % (v.min, v.max))
-        v('xx')
-        v('xxooo')
-        self.assertRaises(ValidationError, v, 'x')
-        self.assertRaises(ValidationError, v, 'xxxooo')
 
-    def test_email(self):
-        v = EmailValidator()
-        v('hello@wo.co')
-        self.assertRaises(ValidationError, v, '*x@cc.sssss')
+def check_regex(pattern, match, result):
+    field = RegexField(pattern=pattern)
+    if result:
+        field.validate(match)
+    else:
+        with assert_raises(ValidationError):
+            field.validate(match)
 
-    def test_url(self):
-        v = URLValidator()
-        v('http://healksjdf.ssd')
-        self.assertRaises(ValidationError, v, 'yuefm://wei.xx')
-        self.assertRaises(ValidationError, v, 'http://wei.xax..')
 
-    def test_intstring(self):
-        v = IntstringValidator()
-        v('123')
-        self.assertRaises(ValidationError, v, '1o')
+def test_words():
+    pass
 
-    def test_intstring_with_length(self):
-        v = IntstringValidator(10, 100)
-        v('23')
-        self.assertRaises(ValidationError, v, '1')
-        self.assertRaises(ValidationError, v, '101')
+
+def test_email():
+    pass
+
+
+def test_url():
+    pass
+
+
+def test_intstring():
+    pass
+
+
+class FakeParams(Params):
+    id = IntstringField('wat are you?', required=True, min=1)
+    name = WordField('name should be 8', required=True, max=8)
+    email = EmailField('email not valid in format', required=True)
+    content = Field('content should be < 20', max=20)
+
+
+def test_param():
+    data_pairs = [
+        ({
+            'id': '1',
+            'name': 'asuka',
+            'email': 'asuka@nerv.com'
+        }, 0),
+        ({
+            'id': '2',
+            'name': 'lilith',
+            'email': 'l@eva.com',
+            'content': 'with adon'
+        }, 0),
+        ({
+            'id': 'a3',
+            'name': 'ayanami',
+            'email': 'rei@nerv.com'
+        }, 1),
+        ({
+            'id': 'b3',
+            'name': 'shinjigivebackmyayanami',
+            'email': 'yikali@nerv.com'
+        }, 2),
+        ({
+            'id': 'c4',
+            'name': 'E V A',
+            'email': 'eva@god',
+            'content': 'Gainax launched a project to create a movie ending for the series in 1997. The company first released Death and Rebirth on March 15'
+        }, 4),
+        ({}, 3),
+        ({
+            'id': 'd5'
+        }, 3),
+        ({
+            'id': 999
+        }, 2),
+        ({
+            'content': 'The project to complete the final episodes (retelling episodes 25 and 26 of the series) was completed later in 1997 and released on July 19 as The End of Evangelion. '
+        }, 4)
+    ]
+
+    for data, error_num in data_pairs:
+        yield check_param, data, error_num
+
+
+def check_param(data, error_num):
+    params = FakeParams(**data)
+    print error_num, len(params._errors), params._errors
+    assert error_num == len(params._errors)
