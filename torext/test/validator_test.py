@@ -34,19 +34,94 @@ def check_regex(pattern, match, result):
 
 
 def test_words():
-    pass
+    f0 = WordField()
+    with assert_raises(ValidationError):
+        f0.validate('')
+    f0.validate('goodstr')
+    with assert_raises(ValidationError):
+        f0.validate('should not contain space')
+    with assert_raises(ValidationError):
+        f0.validate('andother*(*^&')
+    f1 = WordField(min=4, max=8)
+    f1.validate('asdf')
+    f1.validate('asdfasdf')
+    with assert_raises(ValidationError):
+        f1.validate('s')
+    with assert_raises(ValidationError):
+        f1.validate('longggggg')
 
 
 def test_email():
-    pass
+    pairs = [
+        ('i@t.cn', True),
+        ('longname@longdomain.cn', True),
+        ('nor@mal.thr', True),
+        ('nor@mal.four', True),
+        ('nor@mal.fivee', True),
+        ('nor@mal.sixxxx', True),
+        ('nor@mal.sevennnn', False),
+        ('nor@mal', False),
+        ('@mal.com', False),
+    ]
+    for email, result in pairs:
+        yield check_email, email, result
+
+
+def check_email(email, result):
+    f = EmailField()
+    if result:
+        f.validate(email)
+    else:
+        assert_raises(ValidationError, f.validate, email)
+        pass
 
 
 def test_url():
-    pass
+    pairs = [
+        ('http://hello.com', True),
+        ('https://askdjfasdf.asdfasdf.com/', True),
+        ('ftp://www.google.com', True),
+        ('ssh://www.google.com', False),
+        ('http://have.punc*tu*rat@ions.com', False),
+        ('http://a.b.c.d.e.f.g.com', True),
+        ('http://t.cn/@#$#$(*&', True),
+    ]
+    for url, result in pairs:
+        yield check_url, url, result
+
+
+def check_url(url, res):
+    f = URLField()
+    if res:
+        f.validate(url)
+    else:
+        assert_raises(ValidationError, f.validate, url)
 
 
 def test_intstring():
-    pass
+    pairs = [
+        ('a', False),
+        ('0b', False),
+        ('1', True),
+        ('2', False, {'min': 3}),
+        ('100', False, {'max': 99}),
+        ('1023', False, {'min': 1024, 'max': 1024}),
+        ('1024', True, {'min': 1024, 'max': 1024}),
+        ('1025', False, {'min': 1024, 'max': 1024}),
+    ]
+    for args in pairs:
+        yield check_intstring, args
+
+
+def check_intstring(args):
+    kwgs = {}
+    if len(args) > 2:
+        kwgs = args[2]
+    f = IntstringField(**kwgs)
+    if args[1]:
+        f.validate(args[0])
+    else:
+        assert_raises(ValidationError, f.validate, args[0])
 
 
 class FakeParams(Params):
