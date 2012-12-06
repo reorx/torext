@@ -1,0 +1,38 @@
+
+
+
+def create_method(self):
+    u = self.User(name='reorx')
+    self.db.session.add(u)
+    self.db.session.commit()
+
+    qu = self.User.query.filter_by(name='reorx').one()
+    assert qu.name == u.name
+    #raw_input()
+
+
+class SqliteTestCase(unittest.TestCase):
+    def setUp(self):
+        app = TorextApp()
+        app.settings['DEBUG'] = False
+        app.settings['SQLALCHEMY'] = {
+            'uri': 'sqlite:///torext.db'
+        }
+        app.setup()
+        db = SQLAlchemy(app=app)
+
+        self.User = make_user_model(db)
+
+        db.create_all()
+
+        self.app = app
+        self.db = db
+
+    def tearDown(self):
+        self.db.drop_all()
+        pass
+
+    def test_create(self):
+        create_method(self)
+
+

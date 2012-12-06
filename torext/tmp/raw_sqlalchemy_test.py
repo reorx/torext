@@ -29,7 +29,7 @@ class BasicAppTestCase(unittest.TestCase):
 
     def setUp(self):
         app = flask.Flask(__name__)
-        app.config['SQLALCHEMY_ENGINE'] = 'sqlite://'
+        app.config['SQLALCHEMY_ENGINE'] = 'mysql://reorx:mx320lf2@localhost/test_sa'
         app.config['TESTING'] = True
         db = sqlalchemy.SQLAlchemy(app)
         self.Todo = make_todo_model(db)
