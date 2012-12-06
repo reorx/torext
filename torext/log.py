@@ -91,9 +91,9 @@ class BaseFormatter(logging.Formatter):
         if 'secs' in allfmt:
             record.secs = record.msecs / 1000
 
-        # if record.exc_info:
-        #     if not record.exc_text:
-        #         record.exc_text = self.formatException(record.exc_info)
+        if record.exc_info:
+            if not record.exc_text:
+                record.exc_text = self.formatException(record.exc_info)
 
     def format(self, record):
         """
@@ -110,10 +110,10 @@ class BaseFormatter(logging.Formatter):
             content = content.decode('utf-8')
         log = prefix + content
 
-        # if record.exc_text:
-        #     if log[-1:] != '\n':
-        #         log += '\n'
-        #     log += record.exc_text
+        if record.exc_text:
+            if log[-1:] != '\n':
+                log += '\n'
+            log += record.exc_text
 
         log = log.replace('\n', '\n' + self.tab)
 
