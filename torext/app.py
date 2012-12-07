@@ -82,7 +82,7 @@ class TorextApp(object):
     """
     Simplify the way to setup and run an app instance
     """
-    def __init__(self, settings_module=None, application_options={}):
+    def __init__(self, settings_module=None, extra_settings={}, application_options={}):
         """
         Automatically involves torext's settings
 
@@ -101,12 +101,20 @@ class TorextApp(object):
         """
         if settings_module:
             self.module_config(settings_module)
+        self.update_settings(extra_settings)
         self._application_options = application_options
         self.is_setuped = False
         self.handlers = []
         self.application = None
         self.root_path = None
+
+        global settings
         self.settings = settings
+
+    def update_settings(self, incoming):
+        global settings
+        for i in incoming:
+            settings[i] = incoming[i]
 
     def get_application_options(self):
         # TODO full list options
@@ -123,23 +131,20 @@ class TorextApp(object):
             if k_upper in settings:
                 options[k] = settings[k_upper]
 
-        for k, v in self._application_options.iteritems():
-            if not k in options:
-                raise ValueError('%s in application_options is not a proper one' % k)
-            options[k] = v
+        if self._application_options:
+            for k, v in self._application_options.iteritems():
+                options[k] = v
 
         return options
 
     def add_handler(self, url, handler):
         self.handlers.insert(0, (url, handler))
 
-    def run(self):
-        if not self.is_setuped:
-            self.setup()
+    def _init_infrastructures(self):
+        self.application = Application(self.handlers, **self.get_application_options())
 
-        self.application = Application(self.handlers, **self.application_options)
         http_server = HTTPServer(self.application)
-        if settings['DEBUG']:
+        if not settings['TESTING'] and settings['DEBUG']:
             if settings['PROCESSES'] and settings['PROCESSES'] > 1:
                 logging.info('Multiprocess could not be used in debug mode')
             http_server.listen(settings['PORT'])
@@ -147,10 +152,27 @@ class TorextApp(object):
             http_server.bind(settings['PORT'])
             http_server.start(settings['PROCESSES'])
 
-        self.log_app_info()
+        self.http_server = http_server
+
+        self.io_loop = IOLoop.instance()
+
+    @property
+    def is_running(self):
+        if hasattr(self, 'io_loop'):
+            return self.io_loop._running
+        return False
+
+    def run(self):
+        if not self.is_setuped:
+            self.setup()
+
+        self._init_infrastructures()
+
+        if not settings.get('TESTING'):
+            self.log_app_info()
 
         try:
-            IOLoop.instance().start()
+            self.io_loop.start()
         except KeyboardInterrupt:
             print '\nStopping ioloop.. ',
             IOLoop.instance().stop()
@@ -166,10 +188,13 @@ class TorextApp(object):
         import logging
         from torext.log import set_logger
 
-        print 'Setup torext..'
+        if not settings.get('TESTING'):
+            print 'Setup torext..'
 
         # setup root logger (as early as possible)
-        set_logger('', **settings['LOGGING'])
+        # let nose (or other testing tools) to handle
+        if not settings.get('TESTING'):
+            set_logger('', **settings['LOGGING'])
 
         # reset timezone
         os.environ['TZ'] = settings['TIME_ZONE']
@@ -203,8 +228,6 @@ class TorextApp(object):
                 raise ImportError('PROJECT could not be imported, may be app.py is outside the project\
                     or there is no __init__ in the package.')
 
-        self.application_options = self.get_application_options()
-
         self.is_setuped = True
 
     def module_config(self, settings_module):
@@ -215,9 +238,9 @@ class TorextApp(object):
 
         global settings
 
-        for i in dir(settings_module):
-            if not i.startswith('_'):
-                settings[i] = getattr(settings_module, i)
+        self.update_settings(dict(
+            [(i, getattr(settings_module, i)) for i in dir(settings_module)
+             if not i.startswith('_')]))
 
         settings._module = settings_module
 
@@ -286,6 +309,10 @@ class TorextApp(object):
             info += '\n- %s: %s' % (k, info_dic[k])
 
         logging.info(info)
+
+    def test_client(self):
+        from torext.testing import TestClient
+        return TestClient(self)
 
 
 def _log_function(handler):

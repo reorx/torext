@@ -136,12 +136,12 @@ HANDLER_TYPES = {
 
 
 def set_logger(name,
-        level='INFO',
-        propagate=1,
-        color=True,
-        prefixfmt=None,
-        contentfmt=None,
-        datefmt=None):
+               level='INFO',
+               propagate=1,
+               color=True,
+               prefixfmt=None,
+               contentfmt=None,
+               datefmt=None):
     """
     This function will clear the previous handlers and set only one handler,
     which will only be StreamHandler for the logger.
