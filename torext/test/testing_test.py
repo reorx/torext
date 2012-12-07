@@ -26,18 +26,25 @@ def make_app():
     app.add_handler('/', TestHdr)
 
 
-class TestCase(unittest.TestCase):
+class BasicTestCase(unittest.TestCase):
     def setUp(self):
         app = make_app()
 
         self.c = app.test_client()
 
     def test_get(self):
+        # TODO with params
         rv = self.c.get('/')
         print repr(rv.body)
         assert rv.body == GET_RESULT
 
     def test_post(self):
+        # TODO with data
         rv = self.c.post('/')
         print repr(rv.body)
         assert rv.body == POST_RESULT
+
+    def test_header_change(self):
+        pass
+
+# TODO multiple TestCase
