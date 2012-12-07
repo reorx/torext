@@ -22,6 +22,8 @@ PORT = 8000
 
 DEBUG = True
 
+TESTING = False
+
 LOGGING = {
     'level': 'INFO',
     'propagate': 1,
