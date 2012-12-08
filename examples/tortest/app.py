@@ -3,21 +3,29 @@
 
 from torext.app import TorextApp
 from torext.handlers import _BaseHandler
+from torext.route import include
 
 import settings
 
 
+app = TorextApp(settings, {'LOG_RESPONSE': True})
+app.setup()
+
+
+@app.route('/')
 class TestHdr(_BaseHandler):
     def get(self):
-        return self.write('post ok')
+        return self.write('get ok')
 
     def post(self):
         return self.write('post ok')
 
 
-app = TorextApp(settings, {'LOG_RESPONSE': True})
+app.route_many([
+    ('/account', include('account.views'))
+])
 
-app.add_handler('/', TestHdr)
+print app.host_handlers
 
 
 if __name__ == '__main__':

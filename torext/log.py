@@ -4,7 +4,15 @@
 import sys
 import logging
 from torext.utils import split_kwargs
-from torext import settings
+
+
+try:
+    from nose.plugins.logcapture import MyMemoryHandler
+except ImportError:
+    MyMemoryHandler = None
+
+
+root_logger = logging.getLogger()
 
 
 # borrow from tornado.options._LogFormatter.__init__
@@ -60,11 +68,11 @@ FIXED_LEVELNAMES = {
 
 class BaseFormatter(logging.Formatter):
     def __init__(self,
-        prefixfmt='[%(fixed_levelname)s %(asctime)s %(module)s:%(lineno)s] ',
-        contentfmt='%(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S',
-        color=False,
-        tab='  '):
+                 prefixfmt='[%(fixed_levelname)s %(asctime)s %(module)s:%(lineno)s] ',
+                 contentfmt='%(message)s',
+                 datefmt='%Y-%m-%d %H:%M:%S',
+                 color=False,
+                 tab='  '):
         """
         a log is constituted by two part: prefix + content
 
@@ -147,13 +155,20 @@ def set_logger(name,
     which will only be StreamHandler for the logger.
     """
     # NOTE if the logger has no handlers, it will be added a handler automatically when it is used.
-    logging.getLogger(name).handlers = []
+    # logging.getLogger(name).handlers = []
 
     logger = logging.getLogger(name)
     logger.setLevel(getattr(logging, level))
     logger.propagate = propagate
 
-    handler = logging.StreamHandler()
+    handler = None
+    for h in logger.handlers:
+        if isinstance(h, logging.StreamHandler):
+            # use existing instead of clean and create
+            handler = h
+            break
+    handler = handler or logging.StreamHandler()
+
     formatter_kwgs = {}
     for i in ('color', 'prefixfmt', 'contentfmt', 'datefmt'):
         if locals()[i] is not None:
@@ -161,6 +176,25 @@ def set_logger(name,
     handler.setFormatter(BaseFormatter(**formatter_kwgs))
 
     logger.addHandler(handler)
+
+
+def set_nose_formatter(logging_options):
+    if not MyMemoryHandler:
+        return
+
+    kwgs = {}
+    for i in ('color', 'prefixfmt', 'contentfmt', 'datefmt'):
+        v = logging_options.get(i)
+        if v:
+            kwgs[i] = v
+    formatter = BaseFormatter(**kwgs)
+
+    for loop, h in enumerate(root_logger.handlers):
+        if not isinstance(h, MyMemoryHandler):
+            # only keey nose's handler
+            root_logger.handlers.pop(loop)
+        else:
+            h.setFormatter(formatter)
 
 
 #############

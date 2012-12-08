@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from torext.make_settings import settings
+
+
 __version__ = '1.6'
-
-
-from torext.app import settings
-from torext import errors

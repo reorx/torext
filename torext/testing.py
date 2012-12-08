@@ -25,10 +25,16 @@ class TestClient(object):
         if app.is_running:
             raise RuntimeError('You should not instance TestClient\
                                when applicaion is running')
-        if not app.is_setuped:
-            app.setup()
-
         self.app = app
+        self.suit_settings()
+
+        # redo setup disregard whether it has been setuped or not
+        app.setup()
+
+    def suit_settings(self):
+        self.app.update_settings({
+            'TESTING': True
+        })
 
     def get(self, path, **kwgs):
         return self.request('get', path, **kwgs)

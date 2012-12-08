@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import logging
-import traceback
 from torext import settings
 from torext.errors import URLRouteError
 
@@ -17,7 +16,7 @@ class ModuleSearcher(object):
         try:
             module = __import__(self.import_path, fromlist=[settings['PROJECT']])
         except ImportError, e:
-            raise URLRouteError('Caught ImportError when router was searching modules: %s\nTracebacks:\n%s' % (e, traceback.format_exc(e)))
+            raise URLRouteError('Caught ImportError when router was searching modules: %s' % e)
 
         try:
             self._handlers = getattr(module, 'handlers')
@@ -25,6 +24,10 @@ class ModuleSearcher(object):
             raise URLRouteError('Caught error when router was getting handlers from module: %s' % e)
 
         logging.debug('got handlers from module %s' % self.import_path)
+
+        for i in self._handlers:
+            if isinstance(i[1], ModuleSearcher):
+                raise URLRouteError('You should not use `include` in subapp handlers')
 
         return self._handlers
 
@@ -45,7 +48,7 @@ class Router(object):
         return self._handlers
 
     def add(self, url, hdr):
-        logging.debug('add url-hdr in router: %s -> %s' % (url, hdr))
+        logging.debug('add url-hdr in router: (%s, %s)' % (url, hdr))
         self._handlers.append(
             (url, hdr)
         )
