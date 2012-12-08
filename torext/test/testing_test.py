@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
+import logging
 import unittest
 from torext.app import TorextApp
 from torext.handlers import _BaseHandler
@@ -12,6 +13,9 @@ POST_RESULT = 'post ok'
 
 
 def make_app():
+    app = TorextApp()
+
+    @app.route('/')
     class TestHdr(_BaseHandler):
         def get(self):
             return self.write(GET_RESULT)
@@ -19,11 +23,10 @@ def make_app():
         def post(self):
             return self.write(POST_RESULT)
 
-    app = TorextApp()
     app.update_settings({
         'TESTING': True
     })
-    app.add_handler('/', TestHdr)
+    return app
 
 
 class BasicTestCase(unittest.TestCase):
@@ -35,6 +38,9 @@ class BasicTestCase(unittest.TestCase):
     def test_get(self):
         # TODO with params
         rv = self.c.get('/')
+        logging.info(' logging info ')
+        rl = logging.getLogger()
+        print rl.handlers
         print repr(rv.body)
         assert rv.body == GET_RESULT
 

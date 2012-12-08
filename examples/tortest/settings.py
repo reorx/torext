@@ -9,7 +9,7 @@ PORT = 8000
 DEBUG = True
 
 LOGGING = {
-    'level': 'INFO',
+    'level': 'DEBUG',
     'propagate': 1,
     'color': True,
     'contentfmt': '-> %(message)s'

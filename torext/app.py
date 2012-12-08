@@ -1,81 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import os
 import sys
+import time
 import logging
 
 from tornado.ioloop import IOLoop
 from tornado.httpserver import HTTPServer
 from tornado.web import Application
 
-from torext.utils import SingletonMixin
+from torext import settings
 from torext import errors
-
-
-class Settings(dict, SingletonMixin):
-    """
-    Philosophy was borrowed from django.conf.Settings
-
-    As there are just few necessary values involved by tornado.options.options,
-    (in httpclient and testing), and options.define is complicate and not convenient to use,
-    Settings is created to replace tornado.options.options.
-
-    by import torext module, a Settings object will be instanced and stored globally,
-    then it can be involved in any place like this:
-    >>> import torext
-    >>> print torext.settings
-    or
-    >>> from torext import settings
-    >>> print settings
-
-    getting value from settings is like from a normal dict:
-    >>> settings['DEBUG']
-    True
-    >>> settings.get('PORT')
-    8000
-    >>> settings.get('WTF', None)
-    None
-
-    notice that you can use lower case word to get or set the value:
-    >>> settings['debug'] is settings.get('DEBUG')
-    True
-    >>> settings['port'] = 8765
-    >>> settings['PORT']
-    8765
-
-    TODO require_setting
-    """
-    def __init__(self):
-        """
-        Setting definitions in base_settings are indispensable
-        """
-        from torext import base_settings
-
-        for i in dir(base_settings):
-            if not i.startswith('_'):
-                self[i] = getattr(base_settings, i)
-
-        self._module = None
-
-    def __getitem__(self, key):
-        try:
-            return super(Settings, self).__getitem__(key)
-        except KeyError:
-            try:
-                return super(Settings, self).__getitem__(key.lower())
-            except KeyError:
-                raise errors.SettingUndefined('Setting %s is not defined in settings' % key)
-
-    def __setitem__(self, key, value):
-        # for i in key:
-        #     if i != i.upper():
-        #         raise errors.SettingDefineError('You should always define UPPER CASE VARIABLE as setting')
-        super(Settings, self).__setitem__(key.upper(), value)
-
-    def __str__(self):
-        return '<Settings. %s >' % dict(self)
-
-settings = Settings.instance()
+from torext.log import set_logger, set_nose_formatter
+from torext.route import Router
 
 
 class TorextApp(object):
@@ -105,8 +43,13 @@ class TorextApp(object):
         self._application_options = application_options
         self.is_setuped = False
         self.handlers = []
+        self.default_host = ".*$"
+        self.host_handlers = {
+            self.default_host: []
+        }
         self.application = None
         self.root_path = None
+        self.project = None
 
         global settings
         self.settings = settings
@@ -137,98 +80,36 @@ class TorextApp(object):
 
         return options
 
-    def add_handler(self, url, handler):
-        self.handlers.insert(0, (url, handler))
-
-    def _init_infrastructures(self):
-        self.application = Application(self.handlers, **self.get_application_options())
-
-        http_server = HTTPServer(self.application)
-        if not settings['TESTING'] and settings['DEBUG']:
-            if settings['PROCESSES'] and settings['PROCESSES'] > 1:
-                logging.info('Multiprocess could not be used in debug mode')
-            http_server.listen(settings['PORT'])
+    def _get_handlers_on_host(self, host=None):
+        if not host:
+            handlers = self.host_handlers[self.default_host]
         else:
-            http_server.bind(settings['PORT'])
-            http_server.start(settings['PROCESSES'])
+            self.host_handlers.setdefault(host, [])
+            handlers = self.host_handlers[host]
+        return handlers
 
-        self.http_server = http_server
-
-        self.io_loop = IOLoop.instance()
-
-    @property
-    def is_running(self):
-        if hasattr(self, 'io_loop'):
-            return self.io_loop._running
-        return False
-
-    def run(self):
-        if not self.is_setuped:
-            self.setup()
-
-        self._init_infrastructures()
-
-        if not settings.get('TESTING'):
-            self.log_app_info()
-
-        try:
-            self.io_loop.start()
-        except KeyboardInterrupt:
-            print '\nStopping ioloop.. ',
-            IOLoop.instance().stop()
-            print 'Exit'
-            sys.exit(0)
-
-    def setup(self):
+    def route(self, url, host=None):
+        """This is a decorator
         """
-        setups before run
+        def fn(handler_cls):
+            handlers = self._get_handlers_on_host(host)
+            handlers.insert(0, (url, handler_cls))
+            return handler_cls
+        return fn
+
+    def route_many(self, rules, host=None):
         """
-        import os
-        import time
-        import logging
-        from torext.log import set_logger
+        >>> app.route_many([
+                ('/account', include('account.views')),
+                ('/account', include('account.views')),
+            ], '^account.example.com$')
+        """
+        router = Router(rules)
+        self.add_handlers(router.get_handlers(), host)
 
-        if not settings.get('TESTING'):
-            print 'Setup torext..'
-
-        # setup root logger (as early as possible)
-        # let nose (or other testing tools) to handle
-        if not settings.get('TESTING'):
-            set_logger('', **settings['LOGGING'])
-
-        # reset timezone
-        os.environ['TZ'] = settings['TIME_ZONE']
-        time.tzset()
-
-        if settings._module:
-            file_path = settings._module.__file__
-        else:
-            import inspect
-            caller = inspect.stack()[1]
-            caller_module = inspect.getmodule(caller[0])
-            file_path = caller_module.__file__
-        self.root_path = os.path.dirname(file_path)
-
-        # add upper folder path to sys.path if not in
-        if settings['DEBUG'] and settings._module:
-            parent_path = os.path.join(
-                os.path.dirname(settings._module.__file__), os.pardir)
-            if os.path.abspath(parent_path) in [os.path.abspath(i) for i in sys.path]:
-                logging.info('%s is in sys.path, skip adding')
-            else:
-                sys.path.insert(0, parent_path)
-                logging.info('Add %s to sys.path' % os.path.abspath(parent_path))
-
-        # if `PROJECT` is set in settings, project should be importable as a python module
-        if settings['PROJECT']:
-            try:
-                __import__(settings['PROJECT'])
-                logging.debug('import %s success' % settings['PROJECT'])
-            except ImportError:
-                raise ImportError('PROJECT could not be imported, may be app.py is outside the project\
-                    or there is no __init__ in the package.')
-
-        self.is_setuped = True
+    def add_handlers(self, handlers, host=None):
+        handlers_container = self._get_handlers_on_host(host)
+        handlers_container[0:0] = handlers
 
     def module_config(self, settings_module):
         """
@@ -243,6 +124,9 @@ class TorextApp(object):
              if not i.startswith('_')]))
 
         settings._module = settings_module
+
+        # keep a mapping to app on settings object
+        settings._app = self
 
     def command_line_config(self):
         """
@@ -290,6 +174,108 @@ class TorextApp(object):
                 settings[i] = args_dict[i]
                 print '  %s  %s' % (i, args_dict[i])
 
+    def setup(self):
+        """
+        setups before run, it recommended to call this method in the project's app.py
+
+        it will:
+        """
+        testing = settings.get('TESTING')
+
+        if not testing:
+            print 'Setup torext..'
+
+        # setup root logger (as early as possible)
+        if testing:
+            set_nose_formatter(settings['LOGGING'])
+        else:
+            set_logger('', **settings['LOGGING'])
+
+        # reset timezone
+        os.environ['TZ'] = settings['TIME_ZONE']
+        time.tzset()
+
+        # get root path
+        if settings._module:
+            self.root_path = os.path.dirname(os.path.abspath(settings._module.__file__))
+        else:
+            global _caller_path
+            self.root_path = os.path.dirname(_caller_path)
+
+        # determine project name
+        if settings._module:
+            project = os.path.split(self.root_path)[1]
+            if settings['PROJECT']:
+                assert settings['PROJECT'] == project, 'PROJECT specialized in settings (%s) '\
+                    'should be the same as project directory name (%s)' % (settings['PROJECT'], project)
+            else:
+                settings['PROJECT'] = project
+
+        # add upper directory path to sys.path if not in
+        if settings['DEBUG'] and settings._module:
+            _abs = os.path.abspath
+            parent_path = os.path.dirname(self.root_path)
+            if not _abs(parent_path) in [_abs(i) for i in sys.path]:
+                sys.path.insert(0, parent_path)
+                if not testing:
+                    logging.info('Add %s to sys.path' % _abs(parent_path))
+
+        #rl = logging.getLogger()
+        #logging.info('root logger handlers: %s' % rl.handlers)
+
+        # PROJECT should be importable as a python module
+        if settings['PROJECT']:
+            try:
+                __import__(settings['PROJECT'])
+                if not testing:
+                    logging.debug('import %s success' % settings['PROJECT'])
+            except ImportError:
+                raise ImportError('PROJECT could not be imported, may be app.py is outside the project'
+                                  'or there is no __init__ in the package.')
+
+        self.is_setuped = True
+
+    def _init_infrastructures(self):
+        self.application = Application(**self.get_application_options())
+        for host, handlers in self.host_handlers.iteritems():
+            self.application.add_handlers(host, handlers)
+
+        http_server = HTTPServer(self.application)
+        if not settings['TESTING'] and settings['DEBUG']:
+            if settings['PROCESSES'] and settings['PROCESSES'] > 1:
+                logging.info('Multiprocess could not be used in debug mode')
+            http_server.listen(settings['PORT'])
+        else:
+            http_server.bind(settings['PORT'])
+            http_server.start(settings['PROCESSES'])
+
+        self.http_server = http_server
+
+        self.io_loop = IOLoop.instance()
+
+    @property
+    def is_running(self):
+        if hasattr(self, 'io_loop'):
+            return self.io_loop._running
+        return False
+
+    def run(self):
+        if not self.is_setuped:
+            self.setup()
+
+        self._init_infrastructures()
+
+        if not settings.get('TESTING'):
+            self.log_app_info()
+
+        try:
+            self.io_loop.start()
+        except KeyboardInterrupt:
+            print '\nStopping ioloop.. ',
+            IOLoop.instance().stop()
+            print 'Exit'
+            sys.exit(0)
+
     def log_app_info(self):
         mode = settings['DEBUG'] and 'Debug' or 'Product'
         info = '\nMode %s, Service Info:' % mode
@@ -333,3 +319,21 @@ def _log_function(handler):
     request_time = 1000.0 * handler.request.request_time()
     log_method("%d %s %.2fms", handler.get_status(),
                handler._request_summary(), request_time)
+
+
+_caller_path = None
+
+
+def _guess_caller():
+    """
+    try to guess which module import app.py
+    """
+    import inspect
+    global _caller_path
+
+    caller = inspect.stack()[1]
+    caller_module = inspect.getmodule(caller[0])
+    if hasattr(caller_module, '__file__'):
+        _caller_path = os.path.abspath(caller_module.__file__)
+
+_guess_caller()
