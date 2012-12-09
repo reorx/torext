@@ -20,7 +20,8 @@ class TorextApp(object):
     """
     Simplify the way to setup and run an app instance
     """
-    def __init__(self, settings_module=None, extra_settings={}, application_options={}):
+    def __init__(self, settings_module=None, extra_settings={}, application_options={},
+                 io_loop=None):
         """
         Automatically involves torext's settings
 
@@ -41,6 +42,7 @@ class TorextApp(object):
             self.module_config(settings_module)
         self.update_settings(extra_settings)
         self._application_options = application_options
+        self.io_loop = io_loop
         self.is_setuped = False
         self.handlers = []
         self.default_host = ".*$"
@@ -236,11 +238,20 @@ class TorextApp(object):
         self.is_setuped = True
 
     def _init_infrastructures(self):
+        if self.io_loop:
+            if not self.io_loop.initialized():
+                # this means self.io_loop is a customized io_loop, so `install` should be called
+                # to make it the singleton instance
+                #print self.io_loop.__class__.__name__
+                self.io_loop.install()
+        else:
+            self.io_loop = IOLoop.instance()
+
         self.application = Application(**self.get_application_options())
         for host, handlers in self.host_handlers.iteritems():
             self.application.add_handlers(host, handlers)
 
-        http_server = HTTPServer(self.application)
+        http_server = HTTPServer(self.application, io_loop=self.io_loop)
         if not settings['TESTING'] and settings['DEBUG']:
             if settings['PROCESSES'] and settings['PROCESSES'] > 1:
                 logging.info('Multiprocess could not be used in debug mode')
@@ -251,11 +262,9 @@ class TorextApp(object):
 
         self.http_server = http_server
 
-        self.io_loop = IOLoop.instance()
-
     @property
     def is_running(self):
-        if hasattr(self, 'io_loop'):
+        if self.io_loop:
             return self.io_loop._running
         return False
 

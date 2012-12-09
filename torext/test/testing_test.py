@@ -43,6 +43,7 @@ class BasicTestCase(unittest.TestCase):
         print rl.handlers
         print repr(rv.body)
         assert rv.body == GET_RESULT
+        #assert False
 
     def test_post(self):
         # TODO with data
