@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import unittest
 from nose.tools import *
 from torext.validators import Field, RegexField, WordField,\
-    EmailField, URLField, IntstringField, Params
-from torext.errors import ValidationError
+    EmailField, URLField, IntstringField
+from torext.validators import Params
+from torext.errors import ValidationError, ParametersInvalid
 
 
 def test_regex():
@@ -180,3 +182,72 @@ def check_param(data, error_num):
     params = FakeParams(**data)
     print error_num, len(params._errors), params._errors
     assert error_num == len(params._errors)
+
+
+PARAMS_ID_MSG = 'id shoud be int larger than 1'
+PARAMS_TOKEN_MSG = 'token should be a 32 length string'
+PARAMS_TAG_MSG = 'tag should be word without punctuations, less than 8 characters'
+
+
+class WebTestCase(unittest.TestCase):
+    def setUp(self):
+        from torext.app import TorextApp
+        from torext.handlers import _BaseHandler
+
+        app = TorextApp()
+
+        class APIParams(Params):
+            id = IntstringField(PARAMS_ID_MSG, required=True, min=1)
+            token = Field(PARAMS_TOKEN_MSG, required=True, min=32, max=32)
+            tag = WordField(PARAMS_TAG_MSG, required=False, max=8)
+
+        @app.route('/api')
+        class APIHandler(_BaseHandler):
+            @APIParams.validation_required
+            def get(self):
+                print self.params
+                print self.request.arguments
+                pass
+
+            def post(self):
+                self.write('ok')
+                pass
+
+        self.c = app.test_client()
+
+    def test_good(self):
+        print 'test good'
+        resp = self.c.get('/api', {
+            'id': 1,
+            'token': '0cc175b9c0f1b6a831c399e269772661'
+        })
+        assert resp.code == 200
+
+    def test_bad_id(self):
+        resp = self.c.get('/api', {
+            'id': 'a2',
+            'token': '0cc175b9c0f1b6a831c399e269772661'
+        })
+        assert resp.code == 500
+        self.assertRaises(ParametersInvalid, self.c.handler_exc)
+
+    def test_bad_token(self):
+        resp = self.c.get('/api', {
+            'id': '1',
+            'token': '1c399e26977266'
+        })
+        assert resp.code == 500
+        self.assertRaises(ParametersInvalid, self.c.handler_exc)
+
+    def test_bad_tag(self):
+        resp = self.c.get('/api', {
+            'id': '1',
+            'token': '0cc175b9c0f1b6a831c399e269772661',
+            'tag': 'good man'
+        })
+        assert resp.code == 500
+        self.assertRaises(ParametersInvalid, self.c.handler_exc)
+
+
+if __name__ == '__main__':
+    unittest.main()

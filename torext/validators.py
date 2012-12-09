@@ -3,6 +3,7 @@
 
 
 import re
+import functools
 from torext.errors import ValidationError, ParametersInvalid
 
 
@@ -168,6 +169,12 @@ class Params(object):
         for key, field in self.__class__._fields.iteritems():
             if key in self._data:
                 value = self._data[key]
+                # tornado request.arguments hack, value may be a list,
+                # only use the first one
+                if isinstance(value, list):
+                    value = value[0]
+                    # request.arguments will not be changed
+                    self._data[key] = value
                 try:
                     field.validate(value)
                 except ValidationError, e:
@@ -198,6 +205,22 @@ class Params(object):
             if key in self.__class__._fields:
                 raise Exception('Params dont allow attribute change on fields')
         super(Params, self).__delattr__(key)
+
+    def __str__(self):
+        return '<%s: %s; errors=%s>' % (self.__class__.__name__,
+                                        ','.join(['%s=%s' % (k, v) for k, v in self._data.iteritems()]),
+                                        len(self._errors))
+
+    @classmethod
+    def validation_required(cls, method):
+        @functools.wraps(method)
+        def wrapper(hdr, *args, **kwgs):
+            params = cls(**hdr.request.arguments)
+            if params._errors:
+                raise ParametersInvalid(params._errors)
+            hdr.params = params
+            return method(hdr, *args, **kwgs)
+        return wrapper
 
 
 if __name__ == '__main__':

@@ -12,6 +12,7 @@ from tornado.httpclient import AsyncHTTPClient
 from tornado.ioloop import IOLoop
 from tornado.util import raise_exc_info
 from tornado.stack_context import NullContext
+from tornado import web
 
 
 class TestClient(object):
@@ -27,6 +28,8 @@ class TestClient(object):
         self.__stop_args = None
         self.__timeout = None
         # end::tornado.testing.AsyncTestCase
+
+        self._handler_exc_info = None
 
         app.update_settings({
             'TESTING': True
@@ -45,6 +48,8 @@ class TestClient(object):
         self.app.io_loop = self.io_loop
         # init app.application and app.http_server
         self.app._init_infrastructures()
+
+        self.patch_app_handlers()
 
         self.http_server = self.app.http_server
         self.http_client = AsyncHTTPClient(io_loop=self.io_loop)
@@ -72,10 +77,11 @@ class TestClient(object):
 
         kwgs['method'] = method.upper()
 
-        self.http_client.fetch(self.get_url(path), self.stop, **kwgs)
-        resp = self.wait()
-
-        self._teardown()
+        try:
+            self.http_client.fetch(self.get_url(path), self.stop, **kwgs)
+            resp = self.wait()
+        finally:
+            self._teardown()
 
         #resp, self.resp = self.resp, None
         return resp
@@ -107,8 +113,8 @@ class TestClient(object):
                 def timeout_func():
                     try:
                         raise self.failureException(
-                          'Async operation timed out after %s seconds' %
-                          timeout)
+                            'Async operation timed out after %s seconds' %
+                            timeout)
                     except Exception:
                         self.__failure = sys.exc_info()
                     self.stop()
@@ -123,7 +129,7 @@ class TestClient(object):
                     # IOLoop will re-run it.
                     self.io_loop.start()
                 if (self.__failure is not None or
-                    condition is None or condition()):
+                        condition is None or condition()):
                     break
         assert self.__stopped
         self.__stopped = False
@@ -170,3 +176,41 @@ class TestClient(object):
         """Returns an absolute url for the given path on the test server."""
         return '%s://localhost:%s%s' % (self.get_protocol(),
                                         self.get_http_port(), path)
+
+    def handler_exc(self):
+        if self._handler_exc_info:
+            raise_exc_info(self._handler_exc_info)
+
+    def patch_handler(self, hdr):
+        if not isinstance(hdr, web.StaticFileHandler):
+            hdr._testing_app_client = self
+            hdr._handle_request_exception = _handle_request_exception
+
+    def patch_app_handlers(self):
+        for host_pattern, rules in self.app.application.handlers:
+            for r in rules:
+                self.patch_handler(r.handler_class)
+
+
+def _handle_request_exception(self, e):
+    import sys
+    import httplib
+    import logging
+    from tornado.web import HTTPError
+
+    if isinstance(e, HTTPError):
+        if e.log_message:
+            format = "%d %s: " + e.log_message
+            args = [e.status_code, self._request_summary()] + list(e.args)
+            logging.warning(format, *args)
+        if e.status_code not in httplib.responses:
+            logging.error("Bad HTTP status code: %d", e.status_code)
+            self.send_error(500, exc_info=sys.exc_info())
+        else:
+            self.send_error(e.status_code, exc_info=sys.exc_info())
+    else:
+        self._testing_app_client._handler_exc_info = sys.exc_info()
+
+        logging.error("Uncaught exception %s\n%r", self._request_summary(),
+                      self.request, exc_info=True)
+        self.send_error(500, exc_info=sys.exc_info())
