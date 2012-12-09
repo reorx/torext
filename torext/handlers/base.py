@@ -25,7 +25,6 @@ import logging
 import urllib
 import urlparse
 import functools
-import traceback
 
 import tornado.web
 import tornado.locale
