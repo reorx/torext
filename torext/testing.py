@@ -8,6 +8,7 @@
 import sys
 import time
 import urllib
+import unittest
 from tornado.httpclient import AsyncHTTPClient
 from tornado.ioloop import IOLoop
 from tornado.util import raise_exc_info
@@ -34,27 +35,35 @@ class TestClient(object):
         app.update_settings({
             'TESTING': True
         })
-
-        self.app = app
-
-        # redo setup disregard whether it has been setuped or not
+        # redo setup to make settings changes effective
         app.setup()
 
-    def _setup(self):
-        # start::tornado.testing.AsyncTestCase
-        self.io_loop = self.get_new_ioloop()
-        # end::tornado.testing.AsyncTestCase
+        self.app = app
+        self.setup()
 
-        self.app.io_loop = self.io_loop
-        # init app.application and app.http_server
+    def setup(self):
+        """Setup facilities for running the server
+        """
+        # start::tornado.testing.AsyncTestCase
+        #self.io_loop = self.get_new_ioloop()
+        # end::tornado.testing.AsyncTestCase
+        #self.app.io_loop = self.io_loop
+
+        # init app.io_loop, app.application and app.http_server
         self.app._init_infrastructures()
+        self.io_loop = self.app.io_loop
 
         self.patch_app_handlers()
 
         self.http_server = self.app.http_server
         self.http_client = AsyncHTTPClient(io_loop=self.io_loop)
 
-    def _teardown(self):
+    def close(self):
+        """CLose http_server, io_loop by sequence, to ensure the environment
+        is cleaned up and invoking `setup` successfully within next test function
+
+        It is suggested to be called in `TestCase.tearDown`
+        """
         # start::tornado.testing.AsyncHTTPTestCase
         self.http_server.stop()
         if (not IOLoop.initialized() or
@@ -73,17 +82,12 @@ class TestClient(object):
         # end::tornado.testing.AsyncTestCase
 
     def request(self, method, path, **kwgs):
-        self._setup()
 
         kwgs['method'] = method.upper()
 
-        try:
-            self.http_client.fetch(self.get_url(path), self.stop, **kwgs)
-            resp = self.wait()
-        finally:
-            self._teardown()
+        self.http_client.fetch(self.get_url(path), self.stop, **kwgs)
+        resp = self.wait()
 
-        #resp, self.resp = self.resp, None
         return resp
 
     def stop(self, _arg=None, **kwargs):
@@ -214,3 +218,14 @@ def _handle_request_exception(self, e):
         logging.error("Uncaught exception %s\n%r", self._request_summary(),
                       self.request, exc_info=True)
         self.send_error(500, exc_info=sys.exc_info())
+
+
+class AppTestCase(unittest.TestCase):
+    def setUp(self):
+        self.c = self.get_client()
+
+    def tearDown(self):
+        self.c.close()
+
+    def get_client(self):
+        raise NotImplementedError

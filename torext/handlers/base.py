@@ -102,12 +102,8 @@ class _BaseHandler(tornado.web.RequestHandler):
         header:
         body:
     """
-    _first_running = True
-
     def initialize(self):
-        if self.__class__._first_running:
-            self.__class__._first_running = False
-            logging.debug('%s initializing' % self.__class__.__name__)
+        logging.debug('%s initializing' % self.__class__.__name__)
 
     def _default_handle_exception(self, e):
         ## Actually the first part of Request._handle_request_exception

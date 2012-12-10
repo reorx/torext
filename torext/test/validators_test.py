@@ -215,6 +215,9 @@ class WebTestCase(unittest.TestCase):
 
         self.c = app.test_client()
 
+    def tearDown(self):
+        self.c.close()
+
     def test_good(self):
         print 'test good'
         resp = self.c.get('/api', {

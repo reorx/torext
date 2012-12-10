@@ -12,6 +12,7 @@ from tornado.web import Application
 
 from torext import settings
 from torext import errors
+from torext import testing
 from torext.log import set_logger, set_nose_formatter
 from torext.route import Router
 
@@ -248,6 +249,7 @@ class TorextApp(object):
             self.io_loop = IOLoop.instance()
 
         self.application = Application(**self.get_application_options())
+
         for host, handlers in self.host_handlers.iteritems():
             self.application.add_handlers(host, handlers)
 
@@ -306,8 +308,14 @@ class TorextApp(object):
         logging.info(info)
 
     def test_client(self):
-        from torext.testing import TestClient
-        return TestClient(self)
+        return testing.TestClient(self)
+
+    @property
+    def TestCase(_self):
+        class CurrentTestCase(testing.AppTestCase):
+            def get_client(self):
+                return _self.test_client()
+        return CurrentTestCase
 
 
 def _log_function(handler):
