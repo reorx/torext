@@ -1,4 +1,4 @@
-PROJECT = 'tortest'
+PROJECT = 'torext_project'
 
 LOCALE = 'en_US'
 
