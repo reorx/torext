@@ -15,27 +15,35 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-============================
-Base RPC Handler for Tornado
-============================
 
-This is a basic server implementation, designed for use within the
-Tornado framework. The classes in this library should not be used
-directly, but rather though the XML or JSON RPC implementations.
-You can use the utility functions like 'private' and 'start_server'.
+Ecosystem:
 
-Notes:
-    * types may change after client receive the result, i.e. (1, 2) will become [1, 2]
+BaseRPCHandler              BaseRPCParser
+    |                           |
+JSONRPCHandler              JSONRPCParser
+    _RPC_   <-------------------+
+    |
+PracticingRPCHandler
 """
 
-import types
+try:
+    import jsonrpclib
+except ImportError:
+    raise ImportError('You should install `jsonrpclib` before using rpc feature of torext')
+from jsonrpclib.jsonrpc import isbatch, isnotification, Fault
+from jsonrpclib.jsonrpc import dumps, loads
+
 import inspect
 import logging
 import traceback
-import jsonrpclib
-from jsonrpclib.jsonrpc import isbatch, isnotification, Fault
-from jsonrpclib.jsonrpc import dumps, loads
-from tornado.web import RequestHandler, asynchronous
+
+import tornado.web
+import tornado.ioloop
+import tornado.httpserver
+from tornado.web import RequestHandler
+
+
+_string_types = (str, unicode)
 
 
 # Configuration element
@@ -43,8 +51,63 @@ class Config(object):
     verbose = True
     short_errors = True
 
-
 config = Config()
+
+
+def getcallargs(func, *positional, **named):
+    """
+    Simple implementation of inspect.getcallargs function in
+    the Python 2.7 standard library.
+
+    Takes a function and the position and keyword arguments and
+    returns a dictionary with the appropriate named arguments.
+    Raises an exception if invalid arguments are passed.
+    """
+    args, varargs, varkw, defaults = inspect.getargspec(func)
+    fname = func.__name__
+
+    final_kwargs = {}
+    extra_args = []
+    has_self = inspect.ismethod(func) and func.im_self is not None
+    if has_self:
+        self_key = args.pop(0)
+
+    # (Since our RPC supports only positional OR named.)
+    if named:
+        for key, value in named.iteritems():
+            arg_key = None
+            try:
+                arg_key = args[args.index(key)]
+            except ValueError:
+                if not varkw:
+                    raise TypeError("Keyword argument '%s' not valid" % key)
+            if key in final_kwargs.keys():
+                message = "Keyword argument '%s' used more than once" % key
+                raise TypeError(message)
+            final_kwargs[key] = value
+    else:
+        for i in range(len(positional)):
+            value = positional[i]
+            arg_key = None
+            try:
+                arg_key = args[i]
+            except IndexError:
+                if not varargs:
+                    raise TypeError("Too many positional arguments")
+            if arg_key:
+                final_kwargs[arg_key] = value
+            else:
+                extra_args.append(value)
+    if defaults:
+        reverse_args = args[:]
+        reverse_args.reverse()
+        for i in range(len(defaults)):
+            arg_key = reverse_args[i]
+            final_kwargs.setdefault(arg_key, defaults[i])
+    for arg in args:
+        if arg not in final_kwargs:
+            raise TypeError("Not all arguments supplied. (%s)", arg)
+    return final_kwargs, extra_args
 
 
 class BaseRPCParser(object):
@@ -90,10 +153,12 @@ class BaseRPCParser(object):
         except:
             self.traceback()
             return self.handler.result(self.faults.parse_error())
-        if type(requests) is not types.TupleType:
+        #if type(requests) is not types.TupleType:
+        if isinstance(requests, tuple):
             # SHOULD be the result of a fault call,
             # according tothe parse_request spec below.
-            if type(requests) in types.StringTypes:
+            #if type(requests) in types.StringTypes:
+            if isinstance(requests, _string_types):
                 # Should be the response text of a fault
                 return requests
             elif hasattr(requests, 'response'):
@@ -141,7 +206,8 @@ class BaseRPCParser(object):
             return self.handler.result(self.faults.method_not_found())
         args = []
         kwargs = {}
-        if type(params) is types.DictType:
+        #if type(params) is types.DictType:
+        if isinstance(params, dict):
             # The parameters are keyword-based
             kwargs = params
         elif type(params) in (list, tuple):
@@ -164,7 +230,7 @@ class BaseRPCParser(object):
         if 'async' in dir(method) and method.async:
             # Asynchronous response -- the method should have called
             # self.result(RESULT_VALUE)
-            if response != None:
+            if response is not None:
                 # This should be deprecated to use self.result
                 message = "Async results should use 'self.result()'"
                 message += " Return result will be ignored."
@@ -190,7 +256,8 @@ class BaseRPCParser(object):
         handler._RPC_finished = True
         responses = tuple(handler._results)
         response_text = self.parse_responses(responses)
-        if type(response_text) not in types.StringTypes:
+        #if type(response_text) not in types.StringTypes:
+        if isinstance(response_text, _string_types):
             # Likely a fault, or something messed up
             response_text = self.encode(response_text)
         # Calling the asynch callback
@@ -203,7 +270,7 @@ class BaseRPCParser(object):
             err_title = '%s - (PARAMS: %s)' % (err_title, repr(params))
         err_sep = ('-' * len(err_title))[:79]
         err_lines = [err_sep, err_title, err_sep] + err_lines
-        if config.verbose == True:
+        if config.verbose is True:
             if len(err_lines) >= 7 and config.short_errors:
                 # Minimum number of lines to see what happened
                 # Plus title and separators
@@ -246,7 +313,7 @@ class BaseRPCParser(object):
         if attr_name.startswith('_'):
             raise AttributeError('Private object or method.')
         attr = getattr(obj, attr_name)
-        if 'private' in dir(attr) and attr.private == True:
+        if 'private' in dir(attr) and attr.private is True:
             raise AttributeError('Private object or method.')
         return attr
 
@@ -261,7 +328,7 @@ class BaseRPCHandler(RequestHandler):
     _requests = 0
     _RPC_finished = False
 
-    @asynchronous
+    @tornado.web.asynchronous
     def post(self):
         # Very simple -- dispatches request body to the parser
         # and returns the output
@@ -342,88 +409,6 @@ class Faults(object):
         return fault
 
 
-# Utility Functions
-
-def private(func):
-    """
-    Use this to make a method private.
-    It is intended to be used as a decorator.
-    If you wish to make a method tree private, just
-    create and set the 'private' variable to True
-    on the tree object itself.
-    """
-    func.private = True
-    return func
-
-
-def async(func):
-    """
-    Use this to make a method asynchronous
-    It is intended to be used as a decorator.
-    Make sure you call "self.result" on any
-    async method. Also, trees do not currently
-    support async methods.
-    """
-    func.async = True
-    return func
-
-
-def getcallargs(func, *positional, **named):
-    """
-    Simple implementation of inspect.getcallargs function in
-    the Python 2.7 standard library.
-
-    Takes a function and the position and keyword arguments and
-    returns a dictionary with the appropriate named arguments.
-    Raises an exception if invalid arguments are passed.
-    """
-    args, varargs, varkw, defaults = inspect.getargspec(func)
-    fname = func.__name__
-
-    final_kwargs = {}
-    extra_args = []
-    has_self = inspect.ismethod(func) and func.im_self is not None
-    if has_self:
-        self_key = args.pop(0)
-
-    # (Since our RPC supports only positional OR named.)
-    if named:
-        for key, value in named.iteritems():
-            arg_key = None
-            try:
-                arg_key = args[args.index(key)]
-            except ValueError:
-                if not varkw:
-                    raise TypeError("Keyword argument '%s' not valid" % key)
-            if key in final_kwargs.keys():
-                message = "Keyword argument '%s' used more than once" % key
-                raise TypeError(message)
-            final_kwargs[key] = value
-    else:
-        for i in range(len(positional)):
-            value = positional[i]
-            arg_key = None
-            try:
-                arg_key = args[i]
-            except IndexError:
-                if not varargs:
-                    raise TypeError("Too many positional arguments")
-            if arg_key:
-                final_kwargs[arg_key] = value
-            else:
-                extra_args.append(value)
-    if defaults:
-        reverse_args = args[:]
-        reverse_args.reverse()
-        for i in range(len(defaults)):
-            arg_key = reverse_args[i]
-            final_kwargs.setdefault(arg_key, defaults[i])
-    for arg in args:
-        if arg not in final_kwargs:
-            raise TypeError("Not all arguments supplied. (%s)", arg)
-    return final_kwargs, extra_args
-
-
 class JSONRPCParser(BaseRPCParser):
 
     content_type = 'application/json-rpc'
@@ -500,28 +485,5 @@ class JSONRPCHandler(BaseRPCHandler):
     """
     Subclass this to add methods -- you can treat them
     just like normal methods, this handles the JSON formatting.
-
-    This is a JSON-RPC server implementation, designed for use within the
-    Tornado framework. Usage is pretty simple:
-
-    >>> from tornadorpc.json import JSONRPCHandler
-    >>> from tornadorpc import start_server
-    >>>
-    >>> class handler(JSONRPCHandler):
-    >>> ... def add(self, x, y):
-    >>> ....... return x+y
-    >>>
-    >>> start_server(handler, port=8484)
-
-    It requires the jsonrpclib, which you can get from:
-
-        http://github.com/joshmarshall/jsonrpclib
-
-    Also, you will need one of the following JSON modules:
-    * cjson
-    * simplejson
-
-    From Python 2.6 on, simplejson is included in the standard
-    distribution as the "json" module.
     """
     _RPC_ = JSONRPCParser(JSONRPCLibraryWrapper)
