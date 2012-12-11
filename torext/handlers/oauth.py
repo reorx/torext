@@ -23,7 +23,7 @@ from tornado.util import bytes_type
 from torext import settings
 
 #
-# TODO transmist the consumer_* arguments out of classes
+# TODO move the consumer_* arguments out of classes
 #
 
 ####################
@@ -44,7 +44,7 @@ class TwitterOAuthMixin(OAuthMixin):
             self._on_request_token, self._OAUTH_AUTHENTICATE_URL, None))
 
     def twitter_request(self, path, callback, access_token=None,
-                           post_args=None, **args):
+                        post_args=None, **args):
         # Add the OAuth resource request signature if we have credentials
         # NOTE varibles::
         # :url        used to send request, and bear encoded `args`.
@@ -82,8 +82,8 @@ class TwitterOAuthMixin(OAuthMixin):
 
     def _oauth_consumer_token(self):
         return dict(
-            key=settings.networks['twitter']['consumer_key'],
-            secret=settings.networks['twitter']['consumer_secret'])
+            key=settings['TWITTER']['consumer_key'],
+            secret=settings['TWITTER']['consumer_secret'])
 
     def _oauth_get_user(self, access_token, callback):
         callback = self.async_callback(self._parse_user_response, callback)
@@ -134,7 +134,7 @@ class WeiboOAuthMixin(OAuthMixin):
 
     def _oauth_consumer_token(self):
         return dict(key=settings.networks['weibo']['consumer_key'],
-                     secret=settings.networks['weibo']['consumer_secret'])
+                    secret=settings.networks['weibo']['consumer_secret'])
 
     def _oauth_get_user(self, access_token, callback):
         callback = self.async_callback(self._parse_user_response, callback)
@@ -185,9 +185,9 @@ class DoubanOAuthMixin(OAuthMixin):
             # NOTE that `url` here is different from `url` in below fetch function:
             # it is plain, doesn't contain encoded args.
             http.fetch(url, method="POST",
-                    headers=args,
-                    body=post_args,
-                    callback=callback)
+                       headers=args,
+                       body=post_args,
+                       callback=callback)
         else:
             if args:
                 url += "?" + urllib.urlencode(args)
@@ -203,7 +203,7 @@ class DoubanOAuthMixin(OAuthMixin):
 
     def _oauth_consumer_token(self):
         return dict(key=settings.networks['douban']['consumer_key'],
-                     secret=settings.networks['douban']['consumer_secret'])
+                    secret=settings.networks['douban']['consumer_secret'])
 
     def _oauth_get_user(self, access_token, callback):
         callback = self.async_callback(self._parse_user_response, callback)
@@ -268,7 +268,7 @@ class TencentOAuthMixin(OAuthMixin):
 
     def _oauth_consumer_token(self):
         return dict(key=settings.networks['tencent']['consumer_key'],
-                     secret=settings.networks['tencent']['consumer_secret'])
+                    secret=settings.networks['tencent']['consumer_secret'])
 
     def _oauth_get_user(self, access_token, callback):
         callback = self.async_callback(self._parse_user_response, callback)
@@ -295,7 +295,7 @@ class FacebookOAuth2Mixin(OAuth2Mixin):
     _OAUTH_AUTHORIZE_URL = "https://graph.facebook.com/oauth/authorize?"
 
     def get_authenticated_user(self, redirect_uri, client_id, client_secret,
-                              code, callback, extra_fields=None):
+                               code, callback, extra_fields=None):
         http = httpclient.AsyncHTTPClient()
         args = {
             "redirect_uri": redirect_uri,
@@ -305,16 +305,19 @@ class FacebookOAuth2Mixin(OAuth2Mixin):
         }
 
         fields = set(['id', 'name', 'first_name', 'last_name',
-                    'locale', 'picture', 'link'])
+                      'locale', 'picture', 'link'])
         if extra_fields:
             fields.update(extra_fields)
 
         http.fetch(self._oauth_request_token_url(**args),
-        self.async_callback(self._on_access_token, redirect_uri, client_id,
-                            client_secret, callback, fields))
+                   self.async_callback(self._on_access_token,
+                                       redirect_uri,
+                                       client_id,
+                                       client_secret,
+                                       callback, fields))
 
     def _on_access_token(self, redirect_uri, client_id, client_secret,
-                        callback, fields, response):
+                         callback, fields, response):
         if response.error:
             logging.warning('Facebook auth error: %s' % response)
             callback(None)
@@ -347,7 +350,7 @@ class FacebookOAuth2Mixin(OAuth2Mixin):
         callback(fieldmap)
 
     def facebook_request(self, path, callback, access_token=None,
-                           post_args=None, **args):
+                         post_args=None, **args):
         url = "https://graph.facebook.com" + path
         all_args = {}
         if access_token:
@@ -390,8 +393,8 @@ class WeiboOAuth2Mixin(object):
 
     @gen.engine
     def get_authenticated_user(self, code, callback):
-        self.get_access_token(code,
-            callback=(yield gen.Callback('WeiboGraphMixin.get_authenticated_user')))
+        self.get_access_token(
+            code, callback=(yield gen.Callback('WeiboGraphMixin.get_authenticated_user')))
 
         token_dict = yield gen.Wait('WeiboGraphMixin.get_authenticated_user')
         if not token_dict:
@@ -401,10 +404,10 @@ class WeiboOAuth2Mixin(object):
         callback('success')
 
     def authorize_redirect(self,
-            response_type='code',
-            extra_display=None,
-            state=None,
-            **kwgs):
+                           response_type='code',
+                           extra_display=None,
+                           state=None,
+                           **kwgs):
         consumer_token = self._oauth_consumer_token()
         assert (response_type in ('code', 'token')), 'argument:response_type incorrect'
         display_list = ['default', ]
@@ -422,8 +425,8 @@ class WeiboOAuth2Mixin(object):
 
     @gen.engine
     def get_access_token(self, code, callback,
-            grant_type='authorization_code',
-            **kwgs):
+                         grant_type='authorization_code',
+                         **kwgs):
         consumer_token = self._oauth_consumer_token()
         assert (grant_type in ('authorization_code', 'password', 'refresh_token')), 'argument:response_type incorrect'
         all_args = {
@@ -455,8 +458,8 @@ class WeiboOAuth2Mixin(object):
         response = requests.post(self._OAUTH_ACCESS_TOKEN_URL, all_args)
 
         if response.error:
-            logging.warning("Error response %s fetching %s", response.error,
-                    response.url)
+            logging.warning("Error response %s fetching %s",
+                            response.error, response.url)
             callback(None)
             return
 
@@ -492,8 +495,8 @@ class RenrenOAuth2Mixin(object):
             )
         response = yield gen.Wait('_RenrenGraphMixin.renren_request')
         if response.error and not response.body:
-            logging.warning("Error response %s fetching %s", response.error,
-                    response.request.url)
+            logging.warning("Error response %s fetching %s",
+                            response.error, response.request.url)
             callback(None)
             return
         callback(response)
@@ -531,13 +534,13 @@ class RenrenOAuth2Mixin(object):
         try:
             user = json_decode(response.body)
         except:
-            logging.warning("Error response %s fetching %s", response.body,
-                    response.request.url)
+            logging.warning("Error response %s fetching %s",
+                            response.body, response.request.url)
             callback(None)
             return
         if 'error' in user:
-            logging.warning("Error response %s fetching %s", user['error_description'],
-                    response.request.url)
+            logging.warning("Error response %s fetching %s",
+                            user['error_description'], response.request.url)
             callback(None)
             return
 
@@ -546,11 +549,11 @@ class RenrenOAuth2Mixin(object):
                             callback=(yield gen.Callback('_RenrenGraphMixin._session_key')))
         response = yield gen.Wait('_RenrenGraphMixin._session_key')
         if response.error and not response.body:
-            logging.warning("Error response %s fetching %s", response.error,
-                    response.request.url)
+            logging.warning("Error response %s fetching %s",
+                            response.error, response.request.url)
         elif response.error:
-            logging.warning("Error response %s fetching %s: %s", response.error,
-                    response.request.url, response.body)
+            logging.warning("Error response %s fetching %s: %s",
+                            response.error, response.request.url, response.body)
         else:
             try:
                 user['session'] = json_decode(response.body)
@@ -600,8 +603,8 @@ class RenrenOAuth2Mixin(object):
         response = yield gen.Wait('_RenrenGraphMixin.get_access_token')
 
         if response.error and not response.body:
-            logging.warning("Error response %s fetching %s", response.error,
-                    response.request.url)
+            logging.warning("Error response %s fetching %s",
+                            response.error, response.request.url)
             callback(None)
             return
 
@@ -610,7 +613,7 @@ class RenrenOAuth2Mixin(object):
 
     def _oauth_consumer_token(self):
         return dict(key=settings.networks['renren']['consumer_key'],
-                     secret=settings.networks['renren']['consumer_secret'])
+                    secret=settings.networks['renren']['consumer_secret'])
 
 
 ##########
@@ -656,7 +659,7 @@ class FacebookAuthMixin(object):
                 self._on_get_user_info, callback, session),
             session_key=session["session_key"],
             uids=session["uid"],
-            fields="uid,first_name,last_name,name,locale,pic_square," \
+            fields="uid,first_name,last_name,name,locale,pic_square,"
                    "profile_url,username")
 
     def facebook_request(self, method, callback, **args):
