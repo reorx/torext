@@ -59,6 +59,7 @@ class MultiObjectsReturned(TorextException):
 
 
 ##
+# TODO add `errors` to its attribute
 class ParametersInvalid(TorextException):
     pass
 

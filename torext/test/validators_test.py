@@ -213,7 +213,8 @@ class WebTestCase(unittest.TestCase):
                 self.write('ok')
                 pass
 
-        self.c = app.test_client()
+        # let exceptions raised in handler be rethrowed in test function
+        self.c = app.test_client(raise_handler_exc=True)
 
     def tearDown(self):
         self.c.close()

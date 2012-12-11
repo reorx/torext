@@ -307,8 +307,8 @@ class TorextApp(object):
 
         logging.info(info)
 
-    def test_client(self):
-        return testing.TestClient(self)
+    def test_client(self, **kwgs):
+        return testing.TestClient(self, **kwgs)
 
     @property
     def TestCase(_self):

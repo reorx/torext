@@ -9,6 +9,7 @@ import sys
 import time
 import urllib
 import unittest
+from Cookie import SimpleCookie
 from tornado.httpclient import AsyncHTTPClient
 from tornado.ioloop import IOLoop
 from tornado.util import raise_exc_info
@@ -16,11 +17,16 @@ from tornado.stack_context import NullContext
 from tornado import web
 
 
+COOKIE_HEADER_KEY = 'Set-Cookie'
+
+
 class TestClient(object):
-    def __init__(self, app):
+    def __init__(self, app, raise_handler_exc=False):
         if app.is_running:
             raise RuntimeError('You should not instance TestClient\
                                when applicaion is running')
+
+        self.raise_handler_exc = raise_handler_exc
 
         # start::tornado.testing.AsyncTestCase
         self.__stopped = False
@@ -53,7 +59,8 @@ class TestClient(object):
         self.app._init_infrastructures()
         self.io_loop = self.app.io_loop
 
-        self.patch_app_handlers()
+        if self.raise_handler_exc:
+            self.patch_app_handlers()
 
         self.http_server = self.app.http_server
         self.http_client = AsyncHTTPClient(io_loop=self.io_loop)
@@ -81,14 +88,47 @@ class TestClient(object):
             self.io_loop.close(all_fds=True)
         # end::tornado.testing.AsyncTestCase
 
-    def request(self, method, path, **kwgs):
+    def request(self, method, path, cookies=None, **kwgs):
 
         kwgs['method'] = method.upper()
+
+        if cookies:
+            self._add_cookies(cookies, kwgs)
 
         self.http_client.fetch(self.get_url(path), self.stop, **kwgs)
         resp = self.wait()
 
+        self._parse_cookies(resp)
+
         return resp
+
+    def _parse_cookies(self, resp):
+        if COOKIE_HEADER_KEY in resp.headers:
+            c = SimpleCookie(resp.headers.get(COOKIE_HEADER_KEY))
+        elif COOKIE_HEADER_KEY.lower() in resp.headers:
+            c = SimpleCookie(resp.headers.get(COOKIE_HEADER_KEY.lower()))
+        else:
+            c = None
+        resp.cookies = c
+
+    def _add_cookies(self, cookies, kwgs):
+        # SimpleCookie is inherited from dict, so judge it first
+        if isinstance(cookies, SimpleCookie):
+            c = cookies
+        elif isinstance(cookies, dict):
+            c = SimpleCookie()
+            for k, v in cookies.iteritems():
+                c[k] = v
+        else:
+            raise TypeError('cookies kwarg should be dict or SimpleCookie instance')
+
+        if 'headers' in kwgs:
+            headers = kwgs['headers']
+        else:
+            headers = kwgs['headers'] = {}
+
+        headers['Cookie'] = c.output().lstrip(COOKIE_HEADER_KEY + ': ')
+        #print 'headers', headers
 
     def stop(self, _arg=None, **kwargs):
         '''Stops the ioloop, causing one pending (or future) call to wait()

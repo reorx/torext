@@ -1,36 +1,23 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
-"""
-core concepts:
-    * client
-        name collection, could be mobile or browser
-
-    * browser
-        one in client
-
-    * mobile
-        one in client
-
-    * web
-        request send by a browser called web request
-
-    * api
-        request send by a mobile called api request
-"""
-
 import sys
 import logging
-import urllib
-import urlparse
+import httplib
 import functools
+import datetime
+import email.utils
+import hashlib
+import mimetypes
+import os.path
+import stat
+import time
 
 import tornado.web
 import tornado.locale
-
 from tornado.web import HTTPError
 from tornado import escape
+from tornado.util import raise_exc_info
 
 from torext import settings, errors
 from torext.utils import ObjectDict, _json, _dict
@@ -91,7 +78,6 @@ def log_request(handler):
 
 
 class _BaseHandler(tornado.web.RequestHandler):
-    PREPARES = []
     """
     Request
         header:
@@ -102,19 +88,37 @@ class _BaseHandler(tornado.web.RequestHandler):
         header:
         body:
     """
+    EXCEPTION_HANDLERS = None
+
+    PREPARES = []
+
     def initialize(self):
         logging.debug('%s initializing' % self.__class__.__name__)
 
-    def _default_handle_exception(self, e):
+    def _exception_default_handler(self, e):
         ## Actually the first part of Request._handle_request_exception
         logging.error("Uncaught exception %s\n%r", self._request_summary(),
                       self.request, exc_info=True)
         self.send_error(500, exc_info=sys.exc_info())
 
     def _handle_request_exception(self, e):
-        import sys
-        import httplib
+        """This method handle HTTPError exceptions the same as how tornado does,
+        leave other exceptions to be handled by user defined handler function
+        maped in class attribute `EXCEPTION_HANDLERS`
 
+        Common HTTP status codes:
+            200 OK
+            301 Moved Permanently
+            302 Found
+            400 Bad Request
+            401 Unauthorized
+            403 Forbidden
+            404 Not Found
+            405 Method Not Allowed
+            500 Internal Server Error
+
+        It is suggested only to use above HTTP status codes
+        """
         ## Original handling, from tornado.web
         if isinstance(e, HTTPError):
             if e.log_message:
@@ -129,9 +133,9 @@ class _BaseHandler(tornado.web.RequestHandler):
         ## End original handling
 
         else:
-            handle_func = self._default_handle_exception
-            if hasattr(self, 'HTTP_STATUS_EXCEPTIONS'):
-                for excs, func_name in self.HTTP_STATUS_EXCEPTIONS.iteritems():
+            handle_func = self._exception_default_handler
+            if self.EXCEPTION_HANDLERS:
+                for excs, func_name in self.EXCEPTION_HANDLERS.iteritems():
                     if isinstance(e, excs):
                         handle_func = getattr(self, func_name)
                         break
@@ -141,18 +145,13 @@ class _BaseHandler(tornado.web.RequestHandler):
                 self.finish()
 
     @property
-    def mysql(self):
-        """Return the default master MySQL session"""
+    def db(self):
+        """Return the default sqlalchemy session"""
         raise NotImplementedError
 
     @property
     def mongodb(self):
         """Return the default MongoDB databse"""
-        raise NotImplementedError
-
-    @property
-    def mq(self):
-        """Return the default Message Queue connection"""
         raise NotImplementedError
 
     @property
@@ -164,78 +163,95 @@ class _BaseHandler(tornado.web.RequestHandler):
         return _dict
 
     def flush(self, *args, **kwgs):
-        # Before RequestHandler.flush was called, we got the
-        # final _write_buffer.
+        # Before `RequestHandler.flush` was called, we got the final _write_buffer.
         if settings['LOG_RESPONSE'] and not self._status_code == 500:
             log_response(self)
 
         super(_BaseHandler, self).flush(*args, **kwgs)
 
-    def json_write(self, chunk, headers={}):
+    def json_write(self, chunk, code=None, headers={}):
+        """A convenient method to bind `chunk`, `code`, `headers` together
+
+        chunk could be any type of (str, dict, list)
         """
-        chunk could be any type of str, dict, list
-        """
-        if headers:
-            for k, v in headers.iteritems():
-                self.set_header(k, str(v))
         if isinstance(chunk, dict) or isinstance(chunk, list):
             chunk = self.dump_dict(chunk)
             self.set_header("Content-Type", "application/json; charset=UTF-8")
 
-        # pre-doing utf8 convert before RequestHandler.write()
-        # so that if any error occurs, we can find it
+        # convert chunk to utf8 before `RequestHandler.write()`
+        # so that if any error occurs, we can catch and log it
         try:
             chunk = escape.utf8(chunk)
-        except Exception, e:
-            logging.error('chunk encoding error in _BaseHandler.json_write, raise')
-            raise e
+        except Exception:
+            logging.error('chunk encoding error, repr: %s' % repr(chunk))
+            raise_exc_info(sys.exc_info())
 
         self.write(chunk)
 
-    def json_error(self, code, error=None):
-        msg = {'code': code}
-        if isinstance(error, Exception):
-            # NOTE(maybe) if use __str__() it will cause UnicodeEncodeError when error contains Chinese unicode
-            # msg['error'] = error.__unicode__()
-            msg['error'] = str(error)
-            logging.warning('Get exception in json_error: %s - %s' %
-                            (error.__class__.__name__, error))
-        elif isinstance(error, str):
-            msg['error'] = error
-        else:
-            raise ValueError('error object should be either Exception or str')
+        if code:
+            self.set_status(code)
 
-        self.set_status(code)
-        self.json_write(msg)
+        if headers:
+            for k, v in headers.iteritems():
+                self.set_header(k, v)
 
-    def file_write(self, byteStream, mime='text/plain'):
-        self.set_header("Content-Type", mime)
-        self.write(byteStream)
-        if not self._finished:
-            self.finish()
-
-    def decode_auth_token(self, name, token, max_age_days=None):
-        """Changed. user new function: tornado.web.RequestHandler.create_signed_value
+    def file_write(self, file_path, mime_type=None):
+        """Copy from tornado.web.StaticFileHandler
         """
-        if max_age_days is None:
-            max_age_days = settings['COOKIE_EXPIRE_DAY']
-        return tornado.web.decode_signed_value(settings['COOKIE_SECRET'],
-                                               name, token, max_age_days=max_age_days)
+        if not os.path.exists(file_path):
+            raise HTTPError(404)
+        if not os.path.isfile(file_path):
+            raise HTTPError(403, "%s is not a file", file_path)
 
-    def encode_auth_value(self, name, value):
-        """Written as set_secure_cookie works
+        stat_result = os.stat(file_path)
+        modified = datetime.datetime.fromtimestamp(stat_result[stat.ST_MTIME])
+
+        self.set_header("Last-Modified", modified)
+
+        if not mime_type:
+            mime_type, _encoding = mimetypes.guess_type(file_path)
+        if mime_type:
+            self.set_header("Content-Type", mime_type)
+
+        # Check the If-Modified-Since, and don't send the result if the
+        # content has not been modified
+        ims_value = self.request.headers.get("If-Modified-Since")
+        if ims_value is not None:
+            date_tuple = email.utils.parsedate(ims_value)
+            if_since = datetime.datetime.fromtimestamp(time.mktime(date_tuple))
+            if if_since >= modified:
+                self.set_status(304)
+                return
+
+        with open(file_path, "rb") as file:
+            data = file.read()
+            hasher = hashlib.sha1()
+            hasher.update(data)
+            self.set_header("Etag", '"%s"' % hasher.hexdigest())
+            self.write(data)
+
+    def decode_signed_value(self, name, value, max_age_days=None):
+        """Do what `RequestHandler.get_secure_cookie` does(when `value` is not None),
+        but with a more friendly name
+
+        What opposite to it is `RequestHandler.create_signed_value`
         """
-        return tornado.web.create_signed_value(settings['COOKIE_SECRET'],
-                                               name, value)
+        kwgs = {}
+        if max_age_days is not None:
+            kwgs['max_age_days'] = max_age_days
+        return tornado.web.decode_signed_value(settings['COOKIE_SECRET'], name, value, **kwgs)
 
     def prepare(self):
-        """
-        like a middleware between raw request and handling process,
+        """Behaves like a middleware between raw request and handling process,
+
+        If `PREPARES` is defined on handler class, which should be
+        a list, for example, ['auth', 'context'], method whose name
+        is constitute by prefix '_prepare_' and string in this list
+        will be executed by sequence. In this example, those methods are
+        `_prepare_auth` and `_prepare_context`
         """
         if settings['LOG_REQUEST']:
             log_request(self)
-        if False:
-            print 'shit'
 
         for i in self.PREPARES:
             getattr(self, '_prepare_' + i)()
@@ -243,39 +259,34 @@ class _BaseHandler(tornado.web.RequestHandler):
                 return
 
 
-def api_authenticated(method):
-    """Copy from tornado.web.authenticated.
-
-    no need to use in ApiAuthedHandler
-    """
-    @functools.wraps(method)
-    def wrapper(self, *args, **kwargs):
-        if not self.current_user:
-            if self.request.method in ("GET", "HEAD"):
-                url = self.get_login_url()
-                if "?" not in url:
-                    if urlparse.urlsplit(url).scheme:
-                        # if login url is absolute, make next absolute too
-                        next_url = self.request.full_url()
-                    else:
-                        next_url = self.request.uri
-                    url += "?" + urllib.urlencode(dict(next=next_url))
-                self.redirect(url)
-                return
-            raise HTTPError(403)
-        return method(self, *args, **kwargs)
-    return wrapper
-
-
 class define_api(object):
+    """Decorator for validating request arguments and raising relevant exception
+
+    Example:
+    >>> _user_data_api = define_api(
+            [
+                ('username', True,
+                    WordsValidator(4, 16, 'must be words in 4~16 range')),
+                ('password', True,
+                    RegexValidator(6, 32, 'must be words&symbols in 6~32 range',
+                                    regex=re.compile(r'^[A-Za-z0-9@#$%^&+=]+$'))),
+            ]
+        )
+    >>> class UserHandler(BaseHandler):
+            @ _user_data_api
+            def get(self):
+                ...
+
+    NOTE. This class is deprecated since `torext.validators.Params` can replace it and do better,
+    """
     def __init__(self, rules, extra_validator=None):
         """
-        :defs::
-        [
-            ('arg_name0', ),
-            ('arg_name1', True, WordsValidator())
-            ('arg_name2', False, IntstringValidator())
-        ], Validator()
+        rules:
+            [
+                ('arg_name0', ),
+                ('arg_name1', True, WordsValidator())
+                ('arg_name2', False, IntstringValidator())
+            ]
         """
         self.rules = rules
         self.extra_validator = extra_validator
