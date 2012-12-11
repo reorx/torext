@@ -182,13 +182,6 @@ class TestClient(object):
         self.__stop_args = None
         return result
 
-    def get_new_ioloop(self):
-        '''Creates a new IOLoop for this test.  May be overridden in
-        subclasses for tests that require a specific IOLoop (usually
-        the singleton).
-        '''
-        return IOLoop()
-
     def __rethrow(self):
         if self.__failure is not None:
             failure = self.__failure
