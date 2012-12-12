@@ -4,9 +4,6 @@
 from pymongo.cursor import Cursor as PymongoCursor
 from collections import deque
 
-# import logging
-# test = logging.getLogger('test')
-
 
 class Cursor(PymongoCursor):
     def __init__(self, *args, **kwargs):
@@ -41,8 +38,6 @@ class Cursor(PymongoCursor):
             return self.__wrap(obj)
         return obj
 
-# class Cursor(PymongoCursor):
-
 #     def next(self):
 #         db = self.__collection.database
 #         if len(self.__data) or self._refresh():
@@ -64,9 +59,3 @@ class Cursor(PymongoCursor):
 #                 return raw
 #         else:
 #             raise StopIteration
-
-#     def __getitem__(self, index):
-#         obj = super(Cursor, self).__getitem__(index)
-#         if isinstance(obj, dict):
-#             return self.__wrap(obj)
-#         return obj

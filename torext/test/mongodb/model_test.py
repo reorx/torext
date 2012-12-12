@@ -1,170 +1,109 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-#
-# To test:
-#   - Document define
-#   - .new()  # include consistency and inner operations
-#   - .find()
-#   - .exist()
-#   - .one()
-#   - .by__id()
-#   - .by__id_str()
-#
-#   - .save()
-#   - .copy()
-#   - .remove()
 
-import logging
-from torext.testing import _TestCase
+import unittest
+from nose.tools import *
+from torext.mongodb import Document, Struct, ObjectId
+from pymongo import Connection
 
 
-def random_str(length):
-    import string
-    from random import choice
-    s = ''.join([choice(string.letters) for i in range(length)])
-    return s
+def include_dict(d1, d2):
+    """d1 include d2
+    """
+    s1 = set(d1.keys())
+    s2 = set(d2.keys())
+    return (s1 & s2) == s2 and not [i for i in d2 if d2[i] != d1[i]]
 
 
-class TestModel(_TestCase):
+_FAKE_DATA = {
+    'name': 'reorx',
+    'age': 20
+}
+
+fake_data = lambda: _FAKE_DATA.copy()
+
+
+class ModelTest(unittest.TestCase):
 
     def setUp(self):
-        from torext.conns import conns, configure_conns
-        from torext.mongodb.model import Document, Struct, ObjectId
+        db = Connection('mongodb://localhost')['torext']
 
-        # configure test logger
-        test_logger = logging.getLogger('test')
-        test_logger.propagate = 1
-
-        SETTINGS = {
-            'mongodb': {
-                'core': {
-                    'enable': True,
-                    'username': 'None',
-                    'password': 'None',
-                    'host': '127.0.0.1',
-                    'database': 'test',
-                    'port': 27017
-                }
-            }
-        }
-        configure_conns(SETTINGS)
-        mdb = conns.get('mongodb', 'core')
-        self.assertTrue(mdb)
-
-        class TestDoc(Document):
-            col = mdb['test']['col0']
+        class User(Document):
+            col = db['user']
             struct = Struct({
-                'id': ObjectId,
+                'another_id': ObjectId,
                 'name': str,
-                'age': int,
-                'friends': [
-                    {
-                        'nick': str
-                    }
-                ]
+                'age': int
             })
 
-        self.Model = TestDoc
+        self.Model = User
+        self.db = db
+
+    def tearDown(self):
+        self.db.connection.drop_database(self.db.name)
 
     def test_new(self):
-        default = {
-            # 'name': 'zorro',
-            'age': 20,
-            'friends': [
-                self.Model.gen.friends({'nick': 'zorro'}),
-                self.Model.gen.friends({'nick': 'webber'})
-            ]
-        }
-        doc = self.Model.new(default=default)
+        u = self.Model.new(fake_data())
+        print dict(u)
+        assert include_dict(dict(u), fake_data())
 
-        self.log.quiet(doc)
-        self.log.quiet(default)
+    def test_save(self):
+        u = self.Model.new(fake_data())
+        rv = u.save()
+        print rv
+        assert rv
 
-        for i in self.Model.struct:
-            self.assertTrue(i in doc)
+    def test_remove(self):
+        pass
 
-        # consistency
-        self.assertEqual(doc['name'], '')
-        self.assertEqual(doc['age'], default['age'])
-        self.assertEqual(doc['friends'][0]['nick'], default['friends'][0]['nick'])
+    def test_find(self):
+        self.Model.col.insert(fake_data())
+        cur = self.Model.find({'name': 'reorx'})
+        assert cur.count() == 1
+        u = cur.next()
+        assert isinstance(u, Document)
+        assert include_dict(dict(u), fake_data())
 
-        # inner operations
-        got_name = doc.inner_get('age')
-        self.assertEqual(got_name, default['age'])
-        got_friend_nick = doc.inner_get('friends.[1].nick')
-        self.assertEqual(got_friend_nick,
-                            default['friends'][1]['nick'])
-
-        doc.inner_set('friends.[1].nick', 'tk')
-        self.assertEqual(doc.inner_get('friends.[1].nick'), 'tk')
-
-        doc.inner_del('friends.[0].nick')
-        self.assertTrue('nick' not in doc.inner_get('friends.[0]'))
-
-        doc.inner_del('friends.[0]')
-        self.assertTrue(len(doc.inner_get('friends')) is 1)
-
-    def test_save_and_find(self):
-        name = random_str(10)
-
-        doc_0 = self.Model.new(default={
-            'name': name,
-            'age': 0
-        })
-        doc_0.save()
-        self.assertTrue(self.Model.find(doc_0.identifier).count() is 1)
-
-        doc_1 = self.Model.new(default={
-            'name': name,
-            'age': 1
-        })
-        doc_1.save()
-        self.assertTrue(self.Model.find(doc_1.identifier).count() is 1)
-
-        cur = self.Model.find({'name': name})
-        self.assertTrue(cur.count() >= 2)
-
-        for i in cur:
-            self.log.quiet('i age %s' % i['age'])
-            self.assertTrue(i['age'] in (0, 1))
+    def test_find_many(self):
+        user_names = ['shinji', 'asuka', 'ayanami']
+        for name in user_names:
+            d = fake_data().copy()
+            d['name'] = name
+            d['age'] = 14
+            print d
+            self.Model.col.insert(d)
+        cur = self.Model.find({'age': 14})
+        print [i for i in cur]
+        assert cur.count() == 3
+        for u in cur:
+            assert isinstance(u, Document)
+            assert u['name'] in user_names
 
     def test_exist(self):
-        from bson.objectid import ObjectId
-        _id = ObjectId()
-
-        self.assertFalse(self.Model.exist({'_id': _id}))
-
-        doc = self.Model.new()
-        doc.save()
-        self.assertTrue(self.Model.exist({'_id': doc['_id']}))
+        pass
 
     def test_one(self):
-        from torext.errors import ObjectNotFound, MultiObjectsReturned
-        nick = random_str(10)
-        friends = [
-            {
-                'nick': nick
-            }
-        ]
+        pass
 
-        doc = self.Model.new({
-            'friends': friends
-        })
-        self.assertRaises(ObjectNotFound, self.Model.one, doc.identifier)
+    def test_by__id(self):
+        pass
 
-        doc.save()
-        self.assertEqual(doc, self.Model.one(doc.identifier))
+    def test_by__id_str(self):
+        pass
 
-        doc_dup = self.Model.new({
-            'friends': friends
-        })
-        doc_dup.save()
+    def test_identifier(self):
+        pass
 
-        self.assertRaises(MultiObjectsReturned, self.Model.one, {'friends': friends})
-
-    def test_by__id_and_by__id_str(self):
-        doc = self.Model.new()
-        doc.save()
-
-        self.assertEqual(doc, self.Model.by__id(doc['_id']))
-        self.assertEqual(doc, self.Model.by__id_str(str(doc['_id'])))
+    def test_copy(self):
+        d = fake_data()
+        d['inner'] = {
+            'pers': 1
+        }
+        _id_str = self.Model.col.insert(d)
+        u = self.Model.one({'_id': ObjectId(_id_str)})
+        print u
+        ud = dict(u)
+        ud['inner']['ins'] = 1
+        print ud
+        assert 0
+        pass
