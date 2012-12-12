@@ -18,22 +18,13 @@
 #           |
 # * bottom data storage (database)
 
-__all__ = (
-    'Document', 'Struct', 'ObjectId', 'oid',
-)
-
 import copy
 import logging
 from torext import errors
 from bson.objectid import ObjectId
 from pymongo.collection import Collection
-from .dstruct import Struct, StructuredDict
+from .dstruct import StructuredDict
 from .cursor import Cursor
-
-
-test = logging.getLogger('test')
-test.propagate = 0
-test.setLevel(logging.INFO)
 
 
 def oid(id):
@@ -56,7 +47,7 @@ class DocumentMetaclass(type):
         if not (len(bases) == 1 and bases[0] is StructuredDict):
             if not ('col' in attrs and isinstance(attrs['col'], Collection)):
                 raise errors.ConnectionError(
-                    'col of a Document is not set properly, passing: %s %s' %\
+                    'col of a Document is not set properly, passing: %s %s' %
                     (attrs['col'], type(attrs['col'])))
 
         return type.__new__(cls, name, bases, attrs)
@@ -79,18 +70,21 @@ class Document(StructuredDict):
     """
     __metaclass__ = DocumentMetaclass
 
-    __write_safe__ = True
+    __safe_operation__ = True
 
-    def __init__(self, raw={}, from_db=False):
+    def __init__(self, raw=None, from_db=False):
         """ wrapper of raw data from cursor
 
-        NOTE *without validation*
+        NOTE *initialize without validation*
         """
         self._in_db = False
         if from_db:
             self._in_db = True
 
-        super(Document, self).__init__(raw)
+        if raw is None:
+            super(Document, self).__init__()
+        else:
+            super(Document, self).__init__(raw)
 
     def __str__(self):
         return '<Document: %s >' % dict(self)
@@ -106,28 +100,33 @@ class Document(StructuredDict):
     # db operations #
     #################
 
+    def _get_operate_options(self, **kwgs):
+        options = {
+            'w': self.__class__.__safe_operation__ and 1 or 0
+        }
+        options.update(kwgs)
+        return options
+
     def save(self):
         self.validate()
-        ro = self.col.save(self,
-                           manipulate=True,
-                           safe=self.__write_safe__)
-        logging.debug('mongodb: ObjectId(%s) saved' % ro)
+        rv = self.col.save(self, **self._get_operate_options(manipulate=True))
+        logging.debug('mongodb: ObjectId(%s) saved' % rv)
         self._in_db = True
-        return ro
+        return rv
 
     def remove(self):
         assert self._in_db, 'could not remove document which is not in database'
         self._history = self.copy()
         _id = self['_id']
-        self.col.remove(_id)
-        logging.debug('mongodb: ObjectId(%s) removed' % _id)
+        self.col.remove(_id, **self._get_operate_options())
+        logging.debug('MongoDB: %s removed' % self)
         self = Document()
 
     # def update(self, to_update):
-    #     ro = self.col.update(self.identifier,
+    #     rv = self.col.update(self.identifier,
     #             to_update,
-    #             safe=self.__write_safe__)
-    #     return ro
+    #             safe=self.__safe_operation__)
+    #     return rv
 
     # def col_set(self, index, value):
     #     return self.update({
@@ -149,7 +148,7 @@ class Document(StructuredDict):
     #################
 
     @classmethod
-    def new(cls, default={}):
+    def new(cls, default=None):
         """
         init by structure of self.struct
         """
@@ -165,7 +164,7 @@ class Document(StructuredDict):
         instance = cls.build_instance(default=default)
         # '_id' will not see by .validate()
         instance['_id'] = ObjectId()
-        test.debug('generate _id by model: %s' % instance['_id'])
+        logging.debug('generate _id by model: %s' % instance['_id'])
         return instance
 
     @classmethod
