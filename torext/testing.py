@@ -188,12 +188,12 @@ class TestClient(object):
             self.__failure = None
             raise_exc_info(failure)
 
-    def get(self, path, data={}, **kwgs):
+    def get(self, path, data=None, **kwgs):
         if data:
             path = '%s?%s' % (path, urllib.urlencode(data))
         return self.request('get', path, **kwgs)
 
-    def post(self, path, data={}, **kwgs):
+    def post(self, path, data=None, **kwgs):
         body = urllib.urlencode(data)
         return self.request('post', path, body=body, **kwgs)
 

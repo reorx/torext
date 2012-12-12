@@ -21,7 +21,7 @@ class TorextApp(object):
     """
     Simplify the way to setup and run an app instance
     """
-    def __init__(self, settings_module=None, extra_settings={}, application_options={},
+    def __init__(self, settings_module=None, extra_settings=None, application_options=None,
                  io_loop=None):
         """
         Automatically involves torext's settings
@@ -41,7 +41,8 @@ class TorextApp(object):
         """
         if settings_module:
             self.module_config(settings_module)
-        self.update_settings(extra_settings)
+        if extra_settings:
+            self.update_settings(extra_settings)
         self._application_options = application_options
         self.io_loop = io_loop
         self.is_setuped = False

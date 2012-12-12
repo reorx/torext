@@ -274,7 +274,7 @@ def add_to_syspath(pth, relative_to=None):
         sys.path.insert(0, pth)
 
 
-def start_shell(local_vars={}):
+def start_shell(local_vars=None):
     import os
     import code
     import readline

@@ -163,13 +163,17 @@ class _BaseHandler(tornado.web.RequestHandler):
         return _dict
 
     def flush(self, *args, **kwgs):
-        # Before `RequestHandler.flush` was called, we got the final _write_buffer.
+        """
+        Before `RequestHandler.flush` was called, we got the final _write_buffer.
+
+        This method will not be called in wsgi mode
+        """
         if settings['LOG_RESPONSE'] and not self._status_code == 500:
             log_response(self)
 
         super(_BaseHandler, self).flush(*args, **kwgs)
 
-    def json_write(self, chunk, code=None, headers={}):
+    def json_write(self, chunk, code=None, headers=None):
         """A convenient method to bind `chunk`, `code`, `headers` together
 
         chunk could be any type of (str, dict, list)

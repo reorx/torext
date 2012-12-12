@@ -360,7 +360,7 @@ def validate_dict(doc, struct, allow_None_types=[], brother_types=[]):
     test.debug('------validation all passed !')
 
 
-def build_dict(struct, default={}):
+def build_dict(struct, default=None):
     """
     DICT !!
     WILL NEVER HANDLE ANY THING IN LIST !!
@@ -374,7 +374,10 @@ def build_dict(struct, default={}):
     """
     assert isinstance(struct, dict), 'struct must be dict'
     # to prevent changing on default
-    _default = copy.deepcopy(default)
+    if default:
+        _default = copy.deepcopy(default)
+    else:
+        _default = {}
 
     def recurse_struct(st, pk):
         cd = {}
