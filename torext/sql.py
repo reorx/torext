@@ -68,7 +68,7 @@ class SQLAlchemy(object):
         model: User(db.Model)
     """
 
-    def __init__(self, app=None, uri=None, config={}):
+    def __init__(self, app=None, uri=None, config=None):
         # config
         if app:
             self.config = self.init_config(app.settings['SQLALCHEMY'])
@@ -89,7 +89,7 @@ class SQLAlchemy(object):
 
         self._include_sqlalchemy()
 
-    def create_scoped_session(self, options={}):
+    def create_scoped_session(self, options=None):
         # TODO add options here
         #return orm.scoped_session(orm.sessionmaker(self.engine, query_cls=BaseQuery))
         return orm.scoped_session(orm.sessionmaker(self.engine))
@@ -111,7 +111,7 @@ class SQLAlchemy(object):
         self.relation = _wrap_with_default_query_class(self.relation)
         self.dynamic_loader = _wrap_with_default_query_class(self.dynamic_loader)
 
-    def init_config(self, incoming={}):
+    def init_config(self, incoming=None):
         config = {
             'uri': 'sqlite://',
             'binds': None,
