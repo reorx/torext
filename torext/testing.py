@@ -88,20 +88,6 @@ class TestClient(object):
             self.io_loop.close(all_fds=True)
         # end::tornado.testing.AsyncTestCase
 
-    def request(self, method, path, cookies=None, **kwgs):
-
-        kwgs['method'] = method.upper()
-
-        if cookies:
-            self._add_cookies(cookies, kwgs)
-
-        self.http_client.fetch(self.get_url(path), self.stop, **kwgs)
-        resp = self.wait()
-
-        self._parse_cookies(resp)
-
-        return resp
-
     def _parse_cookies(self, resp):
         if COOKIE_HEADER_KEY in resp.headers:
             c = SimpleCookie(resp.headers.get(COOKIE_HEADER_KEY))
@@ -188,13 +174,31 @@ class TestClient(object):
             self.__failure = None
             raise_exc_info(failure)
 
+    def request(self, method, path, cookies=None, **kwgs):
+
+        kwgs['method'] = method.upper()
+
+        if cookies:
+            self._add_cookies(cookies, kwgs)
+
+        self.http_client.fetch(self.get_url(path), self.stop, **kwgs)
+        resp = self.wait()
+
+        self._parse_cookies(resp)
+
+        return resp
+
     def get(self, path, data=None, **kwgs):
         if data:
             path = '%s?%s' % (path, urllib.urlencode(data))
         return self.request('get', path, **kwgs)
 
     def post(self, path, data=None, **kwgs):
-        body = urllib.urlencode(data)
+        # if method is 'POST', kwarg `body` must be passed, so body should be '' if no data
+        if data:
+            body = urllib.urlencode(data)
+        else:
+            body = ''
         return self.request('post', path, body=body, **kwgs)
 
     def delete(self, path, **kwgs):
