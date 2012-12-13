@@ -54,7 +54,7 @@ class ObjectNotFound(TorextException):
     pass
 
 
-class MultiObjectsReturned(TorextException):
+class MultipleObjectsReturned(TorextException):
     pass
 
 
