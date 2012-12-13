@@ -232,8 +232,9 @@ def build_dict(struct, **default):
 
     built = recurse_struct(struct, None)
 
-    if len(_default.keys()) > 0:
-        raise KeyError('Assignments of default value `%s` failed' % _default)
+    #if len(_default.keys()) > 0:
+        #raise KeyError('Assignment of default value `%s` failed' % _default)
+    built.update(_default)
 
     return built
 

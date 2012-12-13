@@ -6,5 +6,5 @@ __all__ = (
 )
 
 from bson.objectid import ObjectId
-from .dstruct import Struct, StructuredDict
+from .dstruct import Struct, StructuredDict, StructDefineError
 from .models import Document, oid
