@@ -125,7 +125,7 @@ class JsonHandler(_BaseHandler):
     def post(self):
         data = self.get_argument('data')
         d = self.parse_json(data)
-        if same_dict(d, JSON_DICT):
+        if d == JSON_DICT:
             self.set_status(200)
         else:
             self.set_status(400)
@@ -160,19 +160,19 @@ class BaseHandlerRequestTest(app.TestCase):
 
     def test_prepare(self):
         resp = self.c.get('/prepare')
-        assert same_dict(json.loads(resp.body), BUF_DICT)
+        assert json.loads(resp.body) == BUF_DICT
 
     def test_json_write(self):
         resp = self.c.get('/json?json_write=1')
         assert resp.code == 201
         assert resp.headers.get('EVA-01') == 'Shinji Ikari'
 
-        assert same_dict(json.loads(resp.body), JSON_DICT)
+        assert json.loads(resp.body) == JSON_DICT
 
     def test_dump_dict(self):
         resp = self.c.get('/json')
         print resp.body
-        assert same_dict(json.loads(resp.body), JSON_DICT)
+        assert json.loads(resp.body) == JSON_DICT
 
     def test_parse_json(self):
         resp = self.c.post('/json', data={'data': json.dumps(JSON_DICT)})
