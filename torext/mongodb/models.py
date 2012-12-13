@@ -1,22 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# simple wrapper of MongoDB using pymongo
-
-# NOTE pymongo.collection only apply dict object to save
-# TODO django manager like attribute binding with Document,
-# use for attaching logical-data-operation packed functions.
-# Philosophe:
-#
-# * application level invokings
-#           ^
-#           |
-#   [middleware attach to models]
-#           |
-# * functional data operation (packed functions)
-#           ^
-#           |
-# * bottom data storage (database)
+# simple orm wrapper of MongoDB using pymongo
 
 import copy
 import logging
@@ -77,28 +62,22 @@ class Document(StructuredDict):
 
         NOTE *initialize without validation*
         """
-        self._in_db = False
-        if from_db:
-            self._in_db = True
-
         if raw is None:
             super(Document, self).__init__()
         else:
             super(Document, self).__init__(raw)
 
+        self._in_db = from_db
+
     def __str__(self):
         return '<Document: %s >' % dict(self)
 
-    def copy(self, exclude=[]):
-        return copy.deepcopy(dict(self))
+    def deepcopy(self):
+        return copy.deepcopy(self)
 
     @property
     def identifier(self):
         return {'_id': self['_id']}
-
-    #################
-    # db operations #
-    #################
 
     def _get_operate_options(self, **kwgs):
         options = {
@@ -110,7 +89,7 @@ class Document(StructuredDict):
     def save(self):
         self.validate()
         rv = self.col.save(self, **self._get_operate_options(manipulate=True))
-        logging.debug('mongodb: ObjectId(%s) saved' % rv)
+        logging.debug('MongoDB: ObjectId(%s) saved' % rv)
         self._in_db = True
         return rv
 
@@ -122,49 +101,18 @@ class Document(StructuredDict):
         logging.debug('MongoDB: %s removed' % self)
         self = Document()
 
-    # def update(self, to_update):
-    #     rv = self.col.update(self.identifier,
-    #             to_update,
-    #             safe=self.__safe_operation__)
-    #     return rv
-
-    # def col_set(self, index, value):
-    #     return self.update({
-    #         '$set': {index: value}
-    #     })
-
-    # def col_inc(self, index, value):
-    #     return self.update({
-    #         '$inc': {index: value}
-    #     })
-
-    # def col_push(self, index, value):
-    #     return self.update({
-    #         '$push': {index: value}
-    #     })
-
-    #################
-    # class methods #
-    #################
+    def update_doc(self, doc, **kwgs):
+        rv = self.col.update(self.identifier, doc, self._get_operate_options(**kwgs))
+        return rv
 
     @classmethod
-    def new(cls, default=None):
+    def new(cls, **kwgs):
         """
-        init by structure of self.struct
+        initialize by structure of self.struct
         """
-        # ins = cls()
-        # ins.update(cls.build_instance(default=default))
-        # if ins.__id_map__:
-        #     ins['_id'] = ins['id']
-        # else:
-        #     ins['_id'] = ObjectId()
-        # test.debug('mongodb:: generated id: %s' % ins['_id'])
-        # return ins
-
-        instance = cls.build_instance(default=default)
-        # '_id' will not see by .validate()
+        instance = cls.build_instance(**kwgs)
         instance['_id'] = ObjectId()
-        logging.debug('generate _id by model: %s' % instance['_id'])
+        logging.debug('MongoDB: _id generated %s' % instance['_id'])
         return instance
 
     @classmethod
@@ -190,7 +138,7 @@ class Document(StructuredDict):
         if count == 0:
             raise errors.ObjectNotFound('query dict: ' + repr(args[0]))
         if count > 1:
-            raise errors.MultiObjectsReturned('multi results found in Document.one,\
+            raise errors.MultipleObjectsReturned('multi results found in Document.one,\
                     query dict: ' + repr(args[0]))
         return cursor.next()
 
