@@ -178,6 +178,7 @@ class _BaseHandler(tornado.web.RequestHandler):
 
         chunk could be any type of (str, dict, list)
         """
+        assert chunk is not None, 'None cound not be written in json_write'
         if isinstance(chunk, dict) or isinstance(chunk, list):
             chunk = self.dump_dict(chunk)
             self.set_header("Content-Type", "application/json; charset=UTF-8")

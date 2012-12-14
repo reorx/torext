@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from torext.utils import SingletonMixin
-from torext.errors import SettingUndefined
+from torext.errors import SettingsError
 
 
 class Settings(dict, SingletonMixin):
@@ -57,12 +57,13 @@ class Settings(dict, SingletonMixin):
             try:
                 return super(Settings, self).__getitem__(key.lower())
             except KeyError:
-                raise SettingUndefined('Setting %s is not defined in settings' % key)
+                raise SettingsError('Key "%s" is not defined in settings' % key)
 
     def __setitem__(self, key, value):
-        # for i in key:
-        #     if i != i.upper():
-        #         raise errors.SettingDefineError('You should always define UPPER CASE VARIABLE as setting')
+        for i in key:
+            if i != i.upper():
+                raise SettingsError('Key "%s" is not allowed, you should always define'
+                                    ' UPPER CASE VARIABLE as setting' % key)
         super(Settings, self).__setitem__(key.upper(), value)
 
     def __str__(self):
