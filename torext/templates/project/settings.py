@@ -9,16 +9,12 @@ PORT = 8000
 DEBUG = True
 
 LOGGING = {
-    '': {
-        'level': 'INFO',
-        'propagate': 1,
-        'type': 'stream',
-        'color': True,
-        'fmt': ' %(message)s'
-    }
+    'level': 'INFO',
+    'propagate': 1,
+    'color': True,
 }
 
-LOG_REQUEST = False
+LOG_REQUEST = True
 
 LOG_RESPONSE = False
 
@@ -28,6 +24,6 @@ STATIC_PATH = 'static'
 
 TEMPLATE_PATH = 'template'
 
-UNLOG_URLS = [
+LOGGING_IGNORE_URLS = [
     '/favicon.ico',
 ]
