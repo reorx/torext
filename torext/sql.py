@@ -3,7 +3,6 @@
 
 """
 Features:
-    * multiple databases (on different Model)
     * scope control for session in tornado environment
     * signal in commit process (use new api: orm.events)
     * signal in connection process
@@ -15,28 +14,56 @@ Finished:
 """
 
 import os
+import logging
 import functools
 import sqlalchemy
+import sqlalchemy.orm
 from sqlalchemy.engine.url import make_url
-from sqlalchemy import orm
+from sqlalchemy.orm import sessionmaker, scoped_session, Query
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 
+from torext.app import TorextApp
 
-#################
-# Model & Query #
-#################
 
-class BaseQuery(orm.Query):
+logger = logging.getLogger('sqlalchemy')
+logger.propagate = 0
+
+
+def _make_table(db):
+    def _Table(*args, **kwargs):
+        """
+        if passing (name, column, ..), existing metadata will be added to args,
+        return Table(name, metadata, column, ..)
+        """
+        if len(args) > 1 and isinstance(args[1], db.Column):
+            args = (args[0], db.metadata) + args[1:]
+        return sqlalchemy.Table(*args, **kwargs)
+    return _Table
+
+
+def _set_default_query_class(d):
+    if 'query_class' not in d:
+        d['query_class'] = BaseQuery
+
+
+def _wrap_with_default_query_class(fn):
+    @functools.wraps(fn)
+    def newfn(*args, **kwargs):
+        _set_default_query_class(kwargs)
+        if "backref" in kwargs:
+            backref = kwargs['backref']
+            if isinstance(backref, basestring):
+                backref = (backref, {})
+            _set_default_query_class(backref[1])
+        return fn(*args, **kwargs)
+    return newfn
+
+
+class BaseQuery(Query):
+    """
+    Add any function on this class, so that it can be called on SomeModel.query
+    """
     pass
-
-
-class _QueryProperty(object):
-
-    def __init__(self, sa):
-        self.sa = sa
-
-    def __get__(self, obj, owner):
-        return self.sa.session.query(owner)
 
 
 class _Model(object):
@@ -69,34 +96,37 @@ class SQLAlchemy(object):
     """
 
     def __init__(self, app=None, uri=None, config=None):
-        # config
-        if app:
-            self.config = self.init_config(app.settings['SQLALCHEMY'])
-        else:
-            self.config = self.init_config(config)
-        self.app = app
-        if uri:
-            self.config['uri'] = uri
-
         # engine
-        self.engine = self.get_engine()
-
+        self._engine = None
         # session
         self.session = self.create_scoped_session()
-
         # Model
         self.Model = self.make_declarative_base()
 
+        # config
+        if app:
+            assert isinstance(app, TorextApp)
+            self.config = self.init_config(app.settings['SQLALCHEMY'])
+        else:
+            self.config = self.init_config(config)
+        self.config['uri'] = uri
+
+        if self.config['uri']:
+            self.session.configure(bind=self.engine)
+
+        self.app = app
         self._include_sqlalchemy()
 
+    def init_app(self, app):
+        self.app = app
+        self.config = self.init_config(app.settings['SQLALCHEMY'])
+        self.session.configure(bind=self.engine)
+
     def create_scoped_session(self, options=None):
-        # TODO add options here
-        #return orm.scoped_session(orm.sessionmaker(self.engine, query_cls=BaseQuery))
-        return orm.scoped_session(orm.sessionmaker(self.engine))
+        return scoped_session(sessionmaker(query_cls=BaseQuery))
 
     def make_declarative_base(self):
         base = declarative_base(cls=_Model, name='Model')
-        #base.query = _QueryProperty(self)
         base.query = self.session.query_property()
         return base
 
@@ -113,18 +143,26 @@ class SQLAlchemy(object):
 
     def init_config(self, incoming=None):
         config = {
-            'uri': 'sqlite://',
-            'binds': None,
+            'uri': None,
             'pool_size': None,
             'pool_timeout': None,
-            'pool_recycle': None
+            'pool_recycle': None,
+            'echo': False,
         }
-        for k in config:
-            if k in incoming:
-                config[k] = incoming[k]
+        if incoming:
+            for k in config:
+                if k in incoming:
+                    config[k] = incoming[k]
         return config
 
-    def get_engine(self, bind=None):
+    @property
+    def engine(self):
+        if not self._engine:
+            self._engine = self.get_engine()
+        return self._engine
+
+    def get_engine(self):
+        assert self.config['uri'], 'uri should not be empty, maybe you still not call init_app?'
         uri_obj = make_url(self.config['uri'])
         options = {
             'convert_unicode': True,
@@ -135,8 +173,8 @@ class SQLAlchemy(object):
             if v is not None:
                 options[k] = v
         self._apply_driver_hacks(uri_obj, options)
-        #engine = sqlalchemy.create_engine(uri_obj, **options)
-        engine = sqlalchemy.create_engine(uri_obj)
+        logging.info('SQLAlchemy engine config: %s, %s', uri_obj, options)
+        engine = sqlalchemy.create_engine(uri_obj, **options)
         return engine
 
     def _apply_driver_hacks(self, uri_obj, options):
@@ -182,43 +220,5 @@ class SQLAlchemy(object):
     def __repr__(self):
         return '<%s engine=%r>' % (
             self.__class__.__name__,
-            self.config['SQLALCHEMY_DATABASE_URI']
+            self.config.get('uri')
         )
-
-
-###############
-# integration #
-###############
-
-def _make_table(db):
-    def _Table(*args, **kwargs):
-        """
-        1. if passing (name, column, ..), existing metadata will be added to args,
-           return Table(name, metadata, column, ..)
-        2. add info={'bind_key': None} if not exists
-        """
-        if len(args) > 1 and isinstance(args[1], db.Column):
-            args = (args[0], db.metadata) + args[1:]
-        info = kwargs.pop('info', None) or {}
-        info.setdefault('bind_key', None)
-        kwargs['info'] = info
-        return sqlalchemy.Table(*args, **kwargs)
-    return _Table
-
-
-def _set_default_query_class(d):
-    if 'query_class' not in d:
-        d['query_class'] = BaseQuery
-
-
-def _wrap_with_default_query_class(fn):
-    @functools.wraps(fn)
-    def newfn(*args, **kwargs):
-        _set_default_query_class(kwargs)
-        if "backref" in kwargs:
-            backref = kwargs['backref']
-            if isinstance(backref, basestring):
-                backref = (backref, {})
-            _set_default_query_class(backref[1])
-        return fn(*args, **kwargs)
-    return newfn
