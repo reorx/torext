@@ -294,14 +294,24 @@ class FacebookOAuth2Mixin(OAuth2Mixin):
     _OAUTH_ACCESS_TOKEN_URL = "https://graph.facebook.com/oauth/access_token?"
     _OAUTH_AUTHORIZE_URL = "https://graph.facebook.com/oauth/authorize?"
 
-    def get_authenticated_user(self, redirect_uri, client_id, client_secret,
-                               code, callback, extra_fields=None):
+    def authorize_redirect(self):
+        options = settings['FACEBOOK']
+        extra_params = None
+        if options.get('scope', None):
+            extra_params = {'scope': options['scope']}
+        super(FacebookOAuth2Mixin, self).authorize_redirect(
+            redirect_uri=options['redirect_uri'],
+            client_id=options['consumer_key'],
+            extra_params=extra_params)
+
+    def get_authenticated_user(self, code, callback, extra_fields=None):
         http = httpclient.AsyncHTTPClient()
+        options = settings['FACEBOOK']
         args = {
-            "redirect_uri": redirect_uri,
             "code": code,
-            "client_id": client_id,
-            "client_secret": client_secret,
+            "client_id": options['consumer_key'],
+            "client_secret": options['consumer_secret'],
+            "redirect_uri": options['redirect_uri'],
         }
 
         fields = set(['id', 'name', 'first_name', 'last_name',
@@ -310,14 +320,9 @@ class FacebookOAuth2Mixin(OAuth2Mixin):
             fields.update(extra_fields)
 
         http.fetch(self._oauth_request_token_url(**args),
-                   self.async_callback(self._on_access_token,
-                                       redirect_uri,
-                                       client_id,
-                                       client_secret,
-                                       callback, fields))
+                   self.async_callback(self._on_access_token, callback, fields))
 
-    def _on_access_token(self, redirect_uri, client_id, client_secret,
-                         callback, fields, response):
+    def _on_access_token(self, callback, fields, response):
         if response.error:
             logging.warning('Facebook auth error: %s' % response)
             callback(None)

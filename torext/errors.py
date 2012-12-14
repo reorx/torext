@@ -69,7 +69,7 @@ class OperationNotAllowed(TorextException):
 ##
 
 
-class SettingUndefined(TorextException):
+class SettingsError(TorextException):
     pass
 
 
