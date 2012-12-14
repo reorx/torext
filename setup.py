@@ -57,8 +57,6 @@ setup(
         ]
     },
     install_requires=[
-        'tornado>=2.1.1',
-        'pymongo>=2.1',
-        'requests>=0.9'
+        'tornado>=2.1.1'
     ],
 )

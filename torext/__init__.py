@@ -4,4 +4,4 @@
 from torext.make_settings import settings
 
 
-__version__ = '1.6'
+__version__ = '1.0'
