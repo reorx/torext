@@ -21,6 +21,8 @@ class TorextApp(object):
     """
     Simplify the way to setup and run an app instance
     """
+    current_app = None
+
     def __init__(self, settings_module=None, extra_settings=None, application_options=None,
                  io_loop=None):
         """
@@ -47,7 +49,7 @@ class TorextApp(object):
         self.io_loop = io_loop
         self.is_setuped = False
         self.handlers = []
-        self.default_host = ".*$"
+        self.default_host = '.*$'
         self.host_handlers = {
             self.default_host: []
         }
@@ -57,6 +59,8 @@ class TorextApp(object):
 
         global settings
         self.settings = settings
+
+        TorextApp.current_app = self
 
     def update_settings(self, incoming):
         global settings
@@ -223,9 +227,6 @@ class TorextApp(object):
                 sys.path.insert(0, parent_path)
                 if not testing:
                     logging.info('Add %s to sys.path' % _abs(parent_path))
-
-        #rl = logging.getLogger()
-        #logging.info('root logger handlers: %s' % rl.handlers)
 
         # PROJECT should be importable as a python module
         if settings['PROJECT']:

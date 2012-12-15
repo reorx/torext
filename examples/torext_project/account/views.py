@@ -1,14 +1,20 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from torext.handlers import _BaseHandler
+from torext_project.base import BaseHandler
 
 
-class AHdr(_BaseHandler):
+class AccountHdr(BaseHandler):
     def get(self):
-        self.write('/account/a')
+        self.write(self.request.uri)
+
+
+class AHdr(BaseHandler):
+    def get(self):
+        self.write(self.request.uri)
 
 
 handlers = [
+    ('/?', AccountHdr),
     ('/a', AHdr)
 ]
