@@ -12,7 +12,8 @@ class MysqlTestCase(unittest.TestCase):
         app = TorextApp()
         app.settings['DEBUG'] = False
         app.settings['SQLALCHEMY'] = {
-            'uri': 'mysql://reorx:mx320lf2@localhost/test_sa'
+            'uri': 'mysql://reorx:mx320lf2@localhost/test_sa',
+            'echo': True
         }
         app.setup()
         db = SQLAlchemy(app=app)
@@ -29,16 +30,23 @@ class MysqlTestCase(unittest.TestCase):
         self.db = db
 
     def tearDown(self):
-        self.db.drop_all()
-        pass
+        # clean possible opened transactions
+        self.db.session.commit()
 
-    def test_create(self):
+        self.db.drop_all()
+
+    def test_create_delete(self):
         u = self.User(name='reorx')
         self.db.session.add(u)
         self.db.session.commit()
 
         us = self.User.query.all()
         assert len(us) == 1
+
+        self.db.session.delete(u)
+
+        us = self.User.query.all()
+        assert len(us) == 0
 
 
 if __name__ == '__main__':

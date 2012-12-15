@@ -80,36 +80,40 @@ class _Model(object):
 
 class SQLAlchemy(object):
     """
-    Proper active sequence in app mode:
+    Usage:
 
-        app: app = TorextApp()
-        |
-        engine: db = SQLAlchemy
-        |
-        model: User(db.Model)
+    1. with app
+    # database.py
+    >>> from torext.sql import SQLAlchemy
+    >>> db = SQLAlchemy()
 
-    non-app mode:
+    # app.py
+    >>> from myproject.database import db
+    >>> db.init_app(app)
 
-        engine: db = SQLAlchemy(uri, config={...})
-        |
-        model: User(db.Model)
+    2. without app
+    >>> from torext.sql import SQLAlchemy
+    >>> db = SQLAlchemy('sqlite://')
     """
 
     def __init__(self, app=None, uri=None, config=None):
-        # engine
         self._engine = None
-        # session
+
+        # session is created without an engine,
+        # it will be binded with engine later by uri argument
+        # or through app settings comes from `init_app` invoking
         self.session = self.create_scoped_session()
-        # Model
+
         self.Model = self.make_declarative_base()
 
         # config
         if app:
-            assert isinstance(app, TorextApp)
+            assert isinstance(app, TorextApp), 'app should be an instance of TorextApp'
             self.config = self.init_config(app.settings['SQLALCHEMY'])
         else:
             self.config = self.init_config(config)
-        self.config['uri'] = uri
+        if uri:
+            self.config['uri'] = uri
 
         if self.config['uri']:
             self.session.configure(bind=self.engine)
@@ -162,7 +166,8 @@ class SQLAlchemy(object):
         return self._engine
 
     def get_engine(self):
-        assert self.config['uri'], 'uri should not be empty, maybe you still not call init_app?'
+        assert self.config['uri'], 'uri should not be empty,'\
+            ' assign by call init_app or explicitly passing'
         uri_obj = make_url(self.config['uri'])
         options = {
             'convert_unicode': True,
