@@ -39,11 +39,12 @@ class Router(object):
 
     def get_handlers(self):
         for path, rule_or_hdr in self.rules:
-            if isinstance(rule_or_hdr, ModuleSearcher):
-                for sub_path, hdr in rule_or_hdr.get_handlers():
-                    self.add(r'%s%s' % (path, sub_path), hdr)
+            if isinstance(rule_or_hdr, str):
+                searcher = ModuleSearcher(rule_or_hdr)
+                for sub_path, hdr in searcher.get_handlers():
+                    self.add('%s%s' % (path, sub_path), hdr)
             else:
-                self.add(r'%s' % path, rule_or_hdr)
+                self.add('%s' % path, rule_or_hdr)
 
         return self._handlers
 

@@ -21,10 +21,6 @@ LOG_RESPONSE = False
 
 TIME_ZONE = 'Asia/Shanghai'
 
-STATIC_PATH = 'static'
-
-TEMPLATE_PATH = 'template'
-
 LOGGING_IGNORE_URLS = [
     '/favicon.ico',
 ]

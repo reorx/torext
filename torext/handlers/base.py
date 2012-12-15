@@ -21,6 +21,7 @@ from tornado.util import raise_exc_info
 
 from torext import settings, errors
 from torext.utils import ObjectDict, _json, _dict
+from torext.app import TorextApp
 
 
 def _format_headers_log(headers):
@@ -96,10 +97,22 @@ class _BaseHandler(tornado.web.RequestHandler):
         logging.debug('%s initializing' % self.__class__.__name__)
 
     def _exception_default_handler(self, e):
-        ## Actually the first part of Request._handle_request_exception
-        logging.error("Uncaught exception %s\n%r", self._request_summary(),
-                      self.request, exc_info=True)
-        self.send_error(500, exc_info=sys.exc_info())
+        """This method is a copy of tornado.web.RequestHandler._handle_request_exception
+        """
+        if isinstance(e, HTTPError):
+            if e.log_message:
+                format = "%d %s: " + e.log_message
+                args = [e.status_code, self._request_summary()] + list(e.args)
+                logging.warning(format, *args)
+            if e.status_code not in httplib.responses:
+                logging.error("Bad HTTP status code: %d", e.status_code)
+                self.send_error(500, exc_info=sys.exc_info())
+            else:
+                self.send_error(e.status_code, exc_info=sys.exc_info())
+        else:
+            logging.error("Uncaught exception %s\n%r", self._request_summary(),
+                          self.request, exc_info=True)
+            self.send_error(500, exc_info=sys.exc_info())
 
     def _handle_request_exception(self, e):
         """This method handle HTTPError exceptions the same as how tornado does,
@@ -119,30 +132,20 @@ class _BaseHandler(tornado.web.RequestHandler):
 
         It is suggested only to use above HTTP status codes
         """
-        ## Original handling, from tornado.web
-        if isinstance(e, HTTPError):
-            if e.log_message:
-                format = "%d %s: " + e.log_message
-                args = [e.status_code, self._request_summary()] + list(e.args)
-                logging.warning(format, *args)
-            if e.status_code not in httplib.responses:
-                logging.error("Bad HTTP status code: %d", e.status_code)
-                self.send_error(500, exc_info=sys.exc_info())
-            else:
-                self.send_error(e.status_code, exc_info=sys.exc_info())
-        ## End original handling
+        handle_func = self._exception_default_handler
+        if self.EXCEPTION_HANDLERS:
+            for excs, func_name in self.EXCEPTION_HANDLERS.iteritems():
+                if isinstance(e, excs):
+                    handle_func = getattr(self, func_name)
+                    break
 
-        else:
-            handle_func = self._exception_default_handler
-            if self.EXCEPTION_HANDLERS:
-                for excs, func_name in self.EXCEPTION_HANDLERS.iteritems():
-                    if isinstance(e, excs):
-                        handle_func = getattr(self, func_name)
-                        break
+        handle_func(e)
+        if not self._finished:
+            self.finish()
 
-            handle_func(e)
-            if not self._finished:
-                self.finish()
+    @property
+    def app(self):
+        return TorextApp.current_app
 
     @property
     def db(self):
