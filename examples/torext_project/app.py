@@ -7,15 +7,14 @@ import settings
 
 
 app = TorextApp(settings, {
-    'TEMPLATE_PATH': 'template',
-    'STATIC_PATH': 'static',
+    'LOG_RESPONSE': True
 })
 app.setup()
 
 
 app.route_many([
     ('', 'views'),
-    ('/account', 'account.views')
+    ('/api', 'api.views')
 ])
 
 print app.host_handlers
