@@ -3,7 +3,7 @@
 
 import os
 import unittest
-from torext.utils import _json
+from torext.utils import _json, _dict
 
 
 class AllTestCase(unittest.TestCase):
@@ -19,28 +19,21 @@ class AllTestCase(unittest.TestCase):
 
     def test_home_get(self):
         resp = self.c.get('/')
-        settings_json = _json(self.app.settings)
-        print resp.body
-        print settings_json
-        assert resp.body == settings_json
+        assert resp.code == 200
 
     def test_home_post(self):
         resp = self.c.post('/')
+        assert resp.code == 405
+
+    def test_api_settings(self):
+        resp = self.c.get('/api/settings.json')
+        settings_json = _json(self.app.settings)
+        print resp.body, settings_json
+        assert resp.body == settings_json
+
+    def test_api_source(self):
+        resp = self.c.get('/api/source/app.py')
         content = open(os.path.join(self.app.root_path, 'app.py'), 'r').read()
-        print resp.body
-        print content
-        assert resp.body == content
-
-    def test_account(self):
-        resp = self.c.get('/account')
-        print resp.body
-        assert resp.code == 200
-
-        resp = self.c.get('/account/')
-        print resp.body
-        assert resp.code == 200
-
-    def test_account_a(self):
-        resp = self.c.get('/account/a')
-        print resp.body
-        assert resp.code == 200
+        d = _dict(resp.body)
+        print d
+        assert d['source'] == content

@@ -34,7 +34,10 @@ def main():
     tornado.options.parse_command_line()
     application = tornado.web.Application([
         (r"/", MainHandler),
-    ])
+    ], static_path='static')
+    for host, rules in application.handlers:
+        for i in rules:
+            print i.regex.pattern
     http_server = tornado.httpserver.HTTPServer(application)
     http_server.listen(options.port)
     tornado.ioloop.IOLoop.instance().start()

@@ -4,6 +4,7 @@
 import os
 import sys
 import time
+import copy
 import logging
 
 from tornado.ioloop import IOLoop
@@ -82,11 +83,26 @@ class TorextApp(object):
             if k_upper in settings:
                 options[k] = settings[k_upper]
 
+        self._fix_paths(options)
+
         if self._application_options:
             for k, v in self._application_options.iteritems():
                 options[k] = v
 
         return options
+
+    def _fix_paths(self, options):
+        """
+        fix `static_path` and `template_path` to be absolute
+        path according to self.root_path so that PWD can be ignoreed.
+        """
+        for k in ('template_path', 'static_path'):
+            if k in options:
+                v = options.pop(k)
+                if not os.path.isabs(v):
+                    v = os.path.abspath(
+                        os.path.join(self.root_path, v))
+                options[k] = v
 
     def _get_handlers_on_host(self, host=None):
         if not host:
@@ -250,12 +266,20 @@ class TorextApp(object):
         else:
             self.io_loop = IOLoop.instance()
 
-        self.application = Application(**self.get_application_options())
+        options = self.get_application_options()
+        logging.debug('Application settings: %s' % options)
 
-        for host, handlers in self.host_handlers.iteritems():
-            self.application.add_handlers(host, handlers)
+        # this method intended to be able to called for multiple times,
+        # so attributes should not be changed, just make a copy
+        host_handlers = copy.copy(self.host_handlers)
+        top_host_handlers = host_handlers.pop('.*$')
+        application = Application(top_host_handlers, **options)
 
-        http_server = HTTPServer(self.application, io_loop=self.io_loop)
+        if host_handlers:
+            for host, handlers in host_handlers.iteritems():
+                application.add_handlers(host, handlers)
+
+        http_server = HTTPServer(application, io_loop=self.io_loop)
         if not settings['TESTING'] and settings['DEBUG']:
             if settings['PROCESSES'] and settings['PROCESSES'] > 1:
                 logging.info('Multiprocess could not be used in debug mode')
@@ -265,6 +289,7 @@ class TorextApp(object):
             http_server.start(settings['PROCESSES'])
 
         self.http_server = http_server
+        self.application = application
 
     @property
     def is_running(self):
@@ -291,9 +316,9 @@ class TorextApp(object):
 
     def log_app_info(self):
         mode = settings['DEBUG'] and 'Debug' or 'Product'
-        info = '\nMode %s, Service Info:' % mode
+        content = '\nMode %s, Service Info:' % mode
 
-        info_dic = {
+        info = {
             'Project': settings['PROJECT'] or 'None (better be assigned)',
             'Port': settings['PORT'],
             'Processes': settings['DEBUG'] and 1 or settings['PROCESSES'],
@@ -303,11 +328,18 @@ class TorextApp(object):
             'Home': 'http://127.0.0.1:%s' % settings['PORT'],
         }
 
-        for k in ['Project', 'Port', 'Processes',
-                  'Logging(root) Level', 'Locale', 'Debug', 'Home']:
-            info += '\n- %s: %s' % (k, info_dic[k])
+        if settings['DEBUG']:
+            patterns = []
+            for host, rules in self.application.handlers:
+                for i in rules:
+                    patterns.append(i.regex.pattern)
+            info['URL Patterns(by sequence)'] = '\n    ' + '\n    '.join(patterns)
 
-        logging.info(info)
+        for k in ['Project', 'Port', 'Processes',
+                  'Logging(root) Level', 'Locale', 'Debug', 'Home', 'URL Patterns(by sequence)']:
+            content += '\n- %s: %s' % (k, info[k])
+
+        logging.info(content)
 
     def test_client(self, **kwgs):
         return testing.TestClient(self, **kwgs)
