@@ -57,6 +57,8 @@ class Document(StructuredDict):
 
     __safe_operation__ = True
 
+    __validate__ = True
+
     def __init__(self, raw=None, from_db=False):
         """ wrapper of raw data from cursor
 
@@ -87,7 +89,8 @@ class Document(StructuredDict):
         return options
 
     def save(self):
-        self.validate()
+        if self.__class__.__validate__:
+            self.validate()
         rv = self.col.save(self, **self._get_operate_options(manipulate=True))
         logging.debug('MongoDB: ObjectId(%s) saved' % rv)
         self._in_db = True
