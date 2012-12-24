@@ -27,7 +27,7 @@ class ApiHandler(MyBaseHandler):
             raise ValueError('error object should be either Exception or str')
 
         self.set_status(code)
-        self.json_write(msg, code=code)
+        self.write_json(msg, code=code)
 
 
 class SourceHandler(ApiHandler):
@@ -48,12 +48,12 @@ class SourceHandler(ApiHandler):
             'name': name,
             'source': source
         }
-        self.json_write(d)
+        self.write_json(d)
 
 
 class SettingsHandler(ApiHandler):
     def get(self):
-        self.json_write(self.app.settings)
+        self.write_json(self.app.settings)
 
 
 handlers = [

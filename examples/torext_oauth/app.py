@@ -19,14 +19,14 @@ class MyBaseHandler(BaseHandler):
         if not user:
             self.write('failed, retry')
             return self.finish()
-        self.json_write(user)
+        self.write_json(user)
         self.finish()
 
 
 @app.route('/')
 class HomeHandler(MyBaseHandler):
     def get(self):
-        self.json_write(app.settings)
+        self.write_json(app.settings)
 
 
 @app.route('/tw')

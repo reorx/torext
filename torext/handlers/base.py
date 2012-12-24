@@ -16,12 +16,12 @@ import time
 import tornado.web
 import tornado.locale
 from tornado.web import HTTPError
-from tornado import escape
+from tornado.escape import utf8, json_encode, json_decode
 from tornado.util import raise_exc_info
 
 from torext import settings, errors
-from torext.utils import ObjectDict, _json, _dict
 from torext.app import TorextApp
+from torext.utils import ObjectDict
 
 
 def _format_headers_log(headers):
@@ -158,12 +158,12 @@ class BaseHandler(tornado.web.RequestHandler):
         raise NotImplementedError
 
     @property
-    def dump_dict(self):
-        return _json
+    def json_decode(self):
+        return json_decode
 
     @property
-    def parse_json(self):
-        return _dict
+    def json_encode(self):
+        return json_encode
 
     def flush(self, *args, **kwgs):
         """
@@ -176,20 +176,20 @@ class BaseHandler(tornado.web.RequestHandler):
 
         super(BaseHandler, self).flush(*args, **kwgs)
 
-    def json_write(self, chunk, code=None, headers=None):
+    def write_json(self, chunk, code=None, headers=None):
         """A convenient method to bind `chunk`, `code`, `headers` together
 
         chunk could be any type of (str, dict, list)
         """
-        assert chunk is not None, 'None cound not be written in json_write'
+        assert chunk is not None, 'None cound not be written in write_json'
         if isinstance(chunk, dict) or isinstance(chunk, list):
-            chunk = self.dump_dict(chunk)
+            chunk = self.json_encode(chunk)
             self.set_header("Content-Type", "application/json; charset=UTF-8")
 
         # convert chunk to utf8 before `RequestHandler.write()`
         # so that if any error occurs, we can catch and log it
         try:
-            chunk = escape.utf8(chunk)
+            chunk = utf8(chunk)
         except Exception:
             logging.error('chunk encoding error, repr: %s' % repr(chunk))
             raise_exc_info(sys.exc_info())
@@ -203,7 +203,7 @@ class BaseHandler(tornado.web.RequestHandler):
             for k, v in headers.iteritems():
                 self.set_header(k, v)
 
-    def file_write(self, file_path, mime_type=None):
+    def write_file(self, file_path, mime_type=None):
         """Copy from tornado.web.StaticFileHandler
         """
         if not os.path.exists(file_path):
