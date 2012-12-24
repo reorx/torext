@@ -3,11 +3,11 @@
 
 import os
 import logging
-from torext_project.base import BaseHandler
+from torext_project.base import MyBaseHandler
 from tornado.web import HTTPError
 
 
-class ApiHandler(BaseHandler):
+class ApiHandler(MyBaseHandler):
     EXCEPTION_HANDLERS = {
         HTTPError: '_handle_http_error'
     }

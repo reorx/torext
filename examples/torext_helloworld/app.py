@@ -2,14 +2,14 @@
 # -*- coding: utf-8 -*-
 
 from torext.app import TorextApp
-from torext.handlers import _BaseHandler
+from torext.handlers import BaseHandler
 
 
 app = TorextApp()
 
 
 @app.route('/')
-class HomeHandler(_BaseHandler):
+class HomeHandler(BaseHandler):
     def get(self):
         self.write('Hello World!')
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from torext.handlers import _BaseHandler
+from torext.handlers import BaseHandler
 
 
-class BaseHandler(_BaseHandler):
+class MyBaseHandler(BaseHandler):
     visit_count = 0

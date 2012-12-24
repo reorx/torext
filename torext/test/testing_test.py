@@ -4,7 +4,7 @@
 
 import unittest
 from torext.app import TorextApp
-from torext.handlers import _BaseHandler
+from torext.handlers import BaseHandler
 from torext.testing import AppTestCase
 
 
@@ -16,7 +16,7 @@ def make_app():
     app = TorextApp()
 
     @app.route('/')
-    class HomeHdr(_BaseHandler):
+    class HomeHdr(BaseHandler):
         def get(self):
             self.write(GET_RESULT)
 
@@ -24,7 +24,7 @@ def make_app():
             self.write(POST_RESULT)
 
     @app.route('/withdata')
-    class WithdataHdr(_BaseHandler):
+    class WithdataHdr(BaseHandler):
         def get(self):
             self.write(self.get_argument('p'))
 
@@ -32,7 +32,7 @@ def make_app():
             self.write(self.get_argument('d'))
 
     @app.route('/header')
-    class HeaderHdr(_BaseHandler):
+    class HeaderHdr(BaseHandler):
         def get(self):
             header_name = self.get_argument('h')
             header_value = self.request.headers.get(header_name)

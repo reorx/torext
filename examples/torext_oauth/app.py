@@ -3,7 +3,7 @@
 
 from torext.handlers import oauth
 from torext.app import TorextApp
-from torext.handlers import _BaseHandler
+from torext.handlers import BaseHandler
 from tornado.web import asynchronous
 
 import settings
@@ -13,7 +13,7 @@ app = TorextApp(settings)
 _url_prefix = 'http://127.0.0.1:8000'
 
 
-class BaseHandler(_BaseHandler):
+class MyBaseHandler(BaseHandler):
     def _on_auth(self, user):
         print 'user', user
         if not user:
@@ -24,13 +24,13 @@ class BaseHandler(_BaseHandler):
 
 
 @app.route('/')
-class HomeHandler(BaseHandler):
+class HomeHandler(MyBaseHandler):
     def get(self):
         self.json_write(app.settings)
 
 
 @app.route('/tw')
-class TwitterHandler(BaseHandler, oauth.TwitterOAuthMixin):
+class TwitterHandler(MyBaseHandler, oauth.TwitterOAuthMixin):
     @asynchronous
     def get(self):
         if self.get_argument('oauth_token', None):
@@ -40,7 +40,7 @@ class TwitterHandler(BaseHandler, oauth.TwitterOAuthMixin):
 
 
 @app.route('/fb')
-class FacebookHandler(BaseHandler, oauth.FacebookOAuth2Mixin):
+class FacebookHandler(MyBaseHandler, oauth.FacebookOAuth2Mixin):
     @asynchronous
     def get(self):
         if self.get_argument("code", False):
@@ -52,7 +52,7 @@ class FacebookHandler(BaseHandler, oauth.FacebookOAuth2Mixin):
 
 
 @app.route('/douban')
-class DoubanHandler(BaseHandler, oauth.DoubanOAuthMixin):
+class DoubanHandler(MyBaseHandler, oauth.DoubanOAuthMixin):
     @asynchronous
     def get(self):
         if self.get_argument('oauth_token', None):

@@ -10,7 +10,7 @@ except ImportError:
     import json
 
 from torext.app import TorextApp
-from torext.handlers.base import _BaseHandler
+from torext.handlers.base import BaseHandler
 from torext import errors
 from torext.utils import generate_cookie_secret
 
@@ -46,7 +46,7 @@ app.settings['COOKIE_SECRET'] = generate_cookie_secret()
 
 
 @app.route('/')
-class HomeHandler(_BaseHandler):
+class HomeHandler(BaseHandler):
     EXCEPTION_HANDLERS = {
         errors.AuthenticationNotPass: '_handle_401',
         (errors.ValidationError, IndexError): '_handle_400'
@@ -73,7 +73,7 @@ class HomeHandler(_BaseHandler):
 
 
 @app.route('/file')
-class FileHandler(_BaseHandler):
+class FileHandler(BaseHandler):
     def get(self):
         _, fname = tempfile.mkstemp()
         with open(fname, 'w') as f:
@@ -84,7 +84,7 @@ class FileHandler(_BaseHandler):
 
 
 @app.route('/cookie')
-class CookieHandler(_BaseHandler):
+class CookieHandler(BaseHandler):
     def get(self):
         signed_value = self.create_signed_value(SIGNED_NAME, SIGNED_RAW_VALUE)
         self.set_cookie(SIGNED_NAME, signed_value)
@@ -97,7 +97,7 @@ class CookieHandler(_BaseHandler):
 
 
 @app.route('/prepare')
-class PrepareHandler(_BaseHandler):
+class PrepareHandler(BaseHandler):
     PREPARES = ['01', '02', '03']
 
     def get(self):
@@ -115,7 +115,7 @@ class PrepareHandler(_BaseHandler):
 
 
 @app.route('/json')
-class JsonHandler(_BaseHandler):
+class JsonHandler(BaseHandler):
     def get(self):
         if self.get_argument('json_write', None):
             self.json_write(JSON_DICT, code=201, headers={'EVA-01': 'Shinji Ikari'})

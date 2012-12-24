@@ -78,7 +78,7 @@ def log_request(handler):
     logging.info(block)
 
 
-class _BaseHandler(tornado.web.RequestHandler):
+class BaseHandler(tornado.web.RequestHandler):
     """
     Request
         header:
@@ -174,7 +174,7 @@ class _BaseHandler(tornado.web.RequestHandler):
         if settings['LOG_RESPONSE'] and not self._status_code == 500:
             log_response(self)
 
-        super(_BaseHandler, self).flush(*args, **kwgs)
+        super(BaseHandler, self).flush(*args, **kwgs)
 
     def json_write(self, chunk, code=None, headers=None):
         """A convenient method to bind `chunk`, `code`, `headers` together
@@ -280,7 +280,7 @@ class define_api(object):
                                     regex=re.compile(r'^[A-Za-z0-9@#$%^&+=]+$'))),
             ]
         )
-    >>> class UserHandler(BaseHandler):
+    >>> class UserHandler(MyBaseHandler):
             @ _user_data_api
             def get(self):
                 ...

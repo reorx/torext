@@ -191,7 +191,7 @@ PARAMS_TAG_MSG = 'tag should be word without punctuations, less than 8 character
 class WebTestCase(unittest.TestCase):
     def setUp(self):
         from torext.app import TorextApp
-        from torext.handlers import _BaseHandler
+        from torext.handlers import BaseHandler
 
         app = TorextApp()
 
@@ -201,7 +201,7 @@ class WebTestCase(unittest.TestCase):
             tag = params.WordField(PARAMS_TAG_MSG, required=False, length=8)
 
         @app.route('/api')
-        class APIHandler(_BaseHandler):
+        class APIHandler(BaseHandler):
             @APIParams.validation_required
             def get(self):
                 print self.params
