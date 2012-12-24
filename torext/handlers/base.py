@@ -285,7 +285,7 @@ class define_api(object):
             def get(self):
                 ...
 
-    NOTE. This class is deprecated since `torext.validators.Params` can replace it and do better,
+    NOTE. This class is deprecated since `torext.params.ParamSet` can replace it and do better,
     """
     def __init__(self, rules, extra_validator=None):
         """
@@ -320,7 +320,7 @@ class define_api(object):
                 # judge existence
                 if not value:
                     if is_required:
-                        error_list.append('missing param: %s' % key)
+                        error_list.append('missing params: %s' % key)
                     continue
 
                 # judge validator
@@ -329,19 +329,19 @@ class define_api(object):
                     try:
                         value = validator(value)
                     except errors.ValidationError, e:
-                        error_list.append(u'param %s, %s' % (key, e))
+                        error_list.append(u'params %s, %s' % (key, e))
 
                 # if len(rule) == 3:
                 #     typ = rule[2]
                 #     try:
                 #         value = typ(value)
                 #     except ValueError:
-                #         error_list.append('error type of param %s, should be %s' % (key, typ))
+                #         error_list.append('error type of params %s, should be %s' % (key, typ))
 
                 params[key] = value
 
             if error_list:
-                raise errors.ParametersInvalid(
+                raise errors.ParamsInvalidError(
                     '; '.join(['%s.%s' % (i + 1, v) for i, v in enumerate(error_list)]))
 
             logging.debug('params: %s' % params)
@@ -350,7 +350,7 @@ class define_api(object):
                 try:
                     extra_validator(params)
                 except errors.ValidationError, e:
-                    raise errors.ParametersInvalid(e)
+                    raise errors.ParamsInvalidError(e)
                 # message = 'failed in extra validator checking'
 
             hdr.params = params

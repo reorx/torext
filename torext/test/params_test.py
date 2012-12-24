@@ -3,10 +3,8 @@
 
 import unittest
 from nose.tools import *
-from torext.validators import Field, RegexField, WordField,\
-    EmailField, URLField, IntstringField
-from torext.validators import Params
-from torext.errors import ValidationError, ParametersInvalid
+from torext import params
+from torext.errors import ValidationError, ParamsInvalidError
 
 
 def test_regex():
@@ -27,7 +25,7 @@ def test_regex():
 
 
 def check_regex(pattern, match, result):
-    field = RegexField(pattern=pattern)
+    field = params.RegexField(pattern=pattern)
     if result:
         field.validate(match)
     else:
@@ -36,7 +34,7 @@ def check_regex(pattern, match, result):
 
 
 def test_words():
-    f0 = WordField()
+    f0 = params.WordField()
     with assert_raises(ValidationError):
         f0.validate('')
     f0.validate('goodstr')
@@ -44,7 +42,8 @@ def test_words():
         f0.validate('should not contain space')
     with assert_raises(ValidationError):
         f0.validate('andother*(*^&')
-    f1 = WordField(min=4, max=8)
+
+    f1 = params.WordField(length=(4, 8))
     f1.validate('asdf')
     f1.validate('asdfasdf')
     with assert_raises(ValidationError):
@@ -70,7 +69,7 @@ def test_email():
 
 
 def check_email(email, result):
-    f = EmailField()
+    f = params.EmailField()
     if result:
         f.validate(email)
     else:
@@ -93,7 +92,7 @@ def test_url():
 
 
 def check_url(url, res):
-    f = URLField()
+    f = params.URLField()
     if res:
         f.validate(url)
     else:
@@ -119,18 +118,18 @@ def check_intstring(args):
     kwgs = {}
     if len(args) > 2:
         kwgs = args[2]
-    f = IntstringField(**kwgs)
+    f = params.IntegerField(**kwgs)
     if args[1]:
         f.validate(args[0])
     else:
         assert_raises(ValidationError, f.validate, args[0])
 
 
-class FakeParams(Params):
-    id = IntstringField('wat are you?', required=True, min=1)
-    name = WordField('name should be 8', required=True, max=8)
-    email = EmailField('email not valid in format', required=True)
-    content = Field('content should be < 20', max=20)
+class FakeParams(params.ParamSet):
+    id = params.IntegerField('wat are you?', required=True, min=1)
+    name = params.WordField('name should be 8', required=True, length=(1, 8))
+    email = params.EmailField('email not valid in format', required=True)
+    content = params.Field('content should be < 20', length=(1, 20))
 
 
 def test_param():
@@ -180,8 +179,8 @@ def test_param():
 
 def check_param(data, error_num):
     params = FakeParams(**data)
-    print error_num, len(params._errors), params._errors
-    assert error_num == len(params._errors)
+    print error_num, len(params.errors), params.errors
+    assert error_num == len(params.errors)
 
 
 PARAMS_ID_MSG = 'id shoud be int larger than 1'
@@ -196,10 +195,10 @@ class WebTestCase(unittest.TestCase):
 
         app = TorextApp()
 
-        class APIParams(Params):
-            id = IntstringField(PARAMS_ID_MSG, required=True, min=1)
-            token = Field(PARAMS_TOKEN_MSG, required=True, min=32, max=32)
-            tag = WordField(PARAMS_TAG_MSG, required=False, max=8)
+        class APIParams(params.ParamSet):
+            id = params.IntegerField(PARAMS_ID_MSG, required=True, min=1)
+            token = params.Field(PARAMS_TOKEN_MSG, required=True, length=32)
+            tag = params.WordField(PARAMS_TAG_MSG, required=False, length=8)
 
         @app.route('/api')
         class APIHandler(_BaseHandler):
@@ -233,7 +232,7 @@ class WebTestCase(unittest.TestCase):
             'token': '0cc175b9c0f1b6a831c399e269772661'
         })
         assert resp.code == 500
-        self.assertRaises(ParametersInvalid, self.c.handler_exc)
+        self.assertRaises(ParamsInvalidError, self.c.handler_exc)
 
     def test_bad_token(self):
         resp = self.c.get('/api', {
@@ -241,7 +240,7 @@ class WebTestCase(unittest.TestCase):
             'token': '1c399e26977266'
         })
         assert resp.code == 500
-        self.assertRaises(ParametersInvalid, self.c.handler_exc)
+        self.assertRaises(ParamsInvalidError, self.c.handler_exc)
 
     def test_bad_tag(self):
         resp = self.c.get('/api', {
@@ -250,7 +249,7 @@ class WebTestCase(unittest.TestCase):
             'tag': 'good man'
         })
         assert resp.code == 500
-        self.assertRaises(ParametersInvalid, self.c.handler_exc)
+        self.assertRaises(ParamsInvalidError, self.c.handler_exc)
 
 
 if __name__ == '__main__':

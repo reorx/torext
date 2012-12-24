@@ -11,14 +11,13 @@ Each time I encounter those problems, my developing process is desturbed, I have
 I wrote in old project, or type many repetitive code. Tornado is elegant, so I think developing with tornado
 should also be elegant.
 
-That's what torext is created for, it contains features that most web framework commonly have,
-some are redefines some are additional:
+That's what torext is created for, it contains features that most web framework commonly have:
 
 * database integration and models
 
 * url routing
 
-* validator for everything and request
+* validator for request arguments and everything
 
 * error handling dispatch
 

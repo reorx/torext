@@ -14,7 +14,7 @@ errors:
 
     MultiObjectsReturned
 
-    ParametersInvalid
+    ParamsInvalidError
 """
 
 
@@ -43,7 +43,15 @@ class ValidationError(TorextException):
     """
     error occur when validating values
     """
-    pass
+    def __init__(self, description=None, error_message=None):
+        self.description = description
+        self.error_message = error_message
+
+    def __str__(self):
+        return self.description or self.error_message
+
+    def __repr__(self):
+        return self.__str__()
 
 
 class AuthenticationNotPass(TorextException):
@@ -60,8 +68,12 @@ class MultipleObjectsReturned(TorextException):
 
 ##
 # TODO add `errors` to its attribute
-class ParametersInvalid(TorextException):
-    pass
+class ParamsInvalidError(TorextException):
+    def __init__(self, params):
+        self.params = params
+
+    def __str__(self):
+        return 'Invalid params: %s' % self.params
 
 
 class OperationNotAllowed(TorextException):
