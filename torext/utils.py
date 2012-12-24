@@ -8,8 +8,6 @@ import logging
 import datetime
 from bson.objectid import ObjectId
 
-_abspath = lambda x: os.path.abspath(x)
-_join = lambda x, y: os.path.join(x, y)
 
 try:
     import simplejson as pyjson
@@ -75,21 +73,6 @@ def timesince(t):
     if delta.days / 30:
         return '{0} months ago'.format(delta.days / 30)
     return '{0} days ago'.format(delta.days)
-
-
-_UTF8_TYPES = (bytes, type(None))
-
-
-def utf8(value):
-    """Converts a string argument to a byte string.
-
-    If the argument is already a byte string or None, it is returned unchanged.
-    Otherwise it must be a unicode string and is encoded as utf8.
-    """
-    if isinstance(value, _UTF8_TYPES):
-        return value
-    assert isinstance(value, unicode)
-    return value.encode("utf-8")
 
 
 def uni(s):
@@ -212,6 +195,10 @@ def import_module(name, package=None):
         name = _resolve_name(name[level:], package, level)
     __import__(name)
     return sys.modules[name]
+
+
+_abspath = lambda x: os.path.abspath(x)
+_join = lambda x, y: os.path.join(x, y)
 
 
 def add_to_syspath(pth, relative_to=None):

@@ -79,7 +79,7 @@ class FileHandler(BaseHandler):
         with open(fname, 'w') as f:
             f.write(FILE_CONTENT)
 
-        self.file_write(fname, mime_type='text/plain')
+        self.write_file(fname, mime_type='text/plain')
         os.remove(fname)
 
 
@@ -101,7 +101,7 @@ class PrepareHandler(BaseHandler):
     PREPARES = ['01', '02', '03']
 
     def get(self):
-        self.json_write(self.prepare_buf)
+        self.write_json(self.prepare_buf)
 
     def _prepare_01(self):
         self.prepare_buf = {}
@@ -117,14 +117,14 @@ class PrepareHandler(BaseHandler):
 @app.route('/json')
 class JsonHandler(BaseHandler):
     def get(self):
-        if self.get_argument('json_write', None):
-            self.json_write(JSON_DICT, code=201, headers={'EVA-01': 'Shinji Ikari'})
+        if self.get_argument('write_json', None):
+            self.write_json(JSON_DICT, code=201, headers={'EVA-01': 'Shinji Ikari'})
         else:
-            self.write(self.dump_dict(JSON_DICT))
+            self.write(self.json_encode(JSON_DICT))
 
     def post(self):
         data = self.get_argument('data')
-        d = self.parse_json(data)
+        d = self.json_decode(data)
         if d == JSON_DICT:
             self.set_status(200)
         else:
@@ -163,7 +163,7 @@ class BaseHandlerRequestTest(app.TestCase):
         assert json.loads(resp.body) == BUF_DICT
 
     def test_json_write(self):
-        resp = self.c.get('/json?json_write=1')
+        resp = self.c.get('/json?write_json=1')
         assert resp.code == 201
         assert resp.headers.get('EVA-01') == 'Shinji Ikari'
 

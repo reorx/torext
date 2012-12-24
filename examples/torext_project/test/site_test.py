@@ -3,7 +3,7 @@
 
 import os
 import unittest
-from torext.utils import _json, _dict
+from tornado.escape import json_encode, json_decode
 
 
 class AllTestCase(unittest.TestCase):
@@ -27,13 +27,13 @@ class AllTestCase(unittest.TestCase):
 
     def test_api_settings(self):
         resp = self.c.get('/api/settings.json')
-        settings_json = _json(self.app.settings)
+        settings_json = json_encode(self.app.settings)
         print resp.body, settings_json
         assert resp.body == settings_json
 
     def test_api_source(self):
         resp = self.c.get('/api/source/app.py')
         content = open(os.path.join(self.app.root_path, 'app.py'), 'r').read()
-        d = _dict(resp.body)
+        d = json_decode(resp.body)
         print d
         assert d['source'] == content
