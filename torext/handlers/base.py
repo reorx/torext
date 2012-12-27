@@ -262,7 +262,7 @@ class BaseHandler(tornado.web.RequestHandler):
             log_request(self)
 
         for i in self.PREPARES:
-            getattr(self, '_prepare_' + i)()
+            getattr(self, 'prepare_' + i)()
             if self._finished:
                 return
 

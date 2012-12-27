@@ -329,11 +329,12 @@ class TorextApp(object):
         }
 
         if settings['DEBUG']:
-            patterns = []
+            buf = []
             for host, rules in self.application.handlers:
+                buf.append(host.pattern)
                 for i in rules:
-                    patterns.append(i.regex.pattern)
-            info['URL Patterns(by sequence)'] = '\n    ' + '\n    '.join(patterns)
+                    buf.append('  ' + i.regex.pattern)
+            info['URL Patterns(by sequence)'] = '\n    ' + '\n    '.join(buf)
 
         for k in ['Project', 'Port', 'Processes',
                   'Logging(root) Level', 'Locale', 'Debug', 'Home', 'URL Patterns(by sequence)']:

@@ -33,26 +33,26 @@ class ModuleSearcher(object):
 
 
 class Router(object):
-    def __init__(self, rules):
-        self.rules = rules
+    def __init__(self, specs):
+        self.specs = specs
         self._handlers = []
 
     def get_handlers(self):
-        for path, rule_or_hdr in self.rules:
-            if isinstance(rule_or_hdr, str):
-                searcher = ModuleSearcher(rule_or_hdr)
-                for sub_path, hdr in searcher.get_handlers():
-                    self.add('%s%s' % (path, sub_path), hdr)
+        for spec in self.specs:
+            if isinstance(spec[1], str):
+                searcher = ModuleSearcher(spec[1])
+                for searcher_spec in searcher.get_handlers():
+                    _searcher_spec = list(searcher_spec)
+                    _searcher_spec[0] = spec[0] + _searcher_spec[0]
+                    self.add(tuple(_searcher_spec))
             else:
-                self.add('%s' % path, rule_or_hdr)
+                self.add(spec)
 
         return self._handlers
 
-    def add(self, url, hdr):
-        logging.debug('add url-hdr in router: (%s, %s)' % (url, hdr))
-        self._handlers.append(
-            (url, hdr)
-        )
+    def add(self, spec):
+        logging.debug('add url spec in router: %s' % str(spec))
+        self._handlers.append(spec)
 
 
 def include(label):
