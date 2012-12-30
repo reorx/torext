@@ -114,14 +114,19 @@ class BaseFormatter(logging.Formatter):
 
         # prefix is unicode, so the result of record format must also be unicode
         content = self.contentfmt % record.__dict__
-        if not isinstance(content, unicode):
-            content = content.decode('utf-8')
+        # log = '%s%s' % (prefix, content)
         log = prefix + content
+        log = log.encode('utf8')
+        # if not isinstance(content, unicode):
+        #     content = content.decode('utf-8')
 
         if record.exc_text:
             if log[-1:] != '\n':
                 log += '\n'
+            print type(record.exc_text), type(log)
+            # log = '%s%s' % (log, record.exc_text)
             log += record.exc_text
+            # log = record.exc_text
 
         log = log.replace('\n', '\n' + self.tab)
 
