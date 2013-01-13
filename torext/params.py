@@ -23,6 +23,8 @@ class Field(object):
     >>> v.validate(s)
     ValidationError: should not contain int
     """
+    _attribute_name = None
+
     def __init__(self, description=None, required=False, length=None, choices=None):
         self.description = description  # default message
         self.required = required  # used with ParamSet
@@ -60,6 +62,9 @@ class Field(object):
 
         return value
 
+    def __get__(self, owner, cls):
+        return owner.data.get(self._attribute_name, None)
+
 
 class RegexField(Field):
     def __init__(self, *args, **kwgs):
@@ -77,10 +82,10 @@ class RegexField(Field):
     def validate(self, value):
         value = super(RegexField, self).validate(value)
 
-        print 'value', value
+        #print 'value', value
         if not self.regex.search(value):
-            self.raise_exc('regex pattern (%s, %s) is not match with value "%s"' %\
-                            (self.regex.pattern, self.regex.flags, value))
+            self.raise_exc('regex pattern (%s, %s) is not match with value "%s"' %
+                           (self.regex.pattern, self.regex.flags, value))
         return value
 
 
@@ -163,6 +168,7 @@ class ParamSetMeta(type):
             if isinstance(v, Field):
                 if k.startswith('_'):
                     raise Exception("ParamSet dont support field name starts with '_'")
+                v._attribute_name = k
                 fields[k] = v
         attrs['_fields'] = fields
         return type.__new__(cls, name, bases, attrs)
@@ -214,11 +220,14 @@ class ParamSet(object):
 
         for attr_name in dir(self):
             if attr_name.startswith('validate_') and\
-                    attr_name.lstrip('validate_') not in self._field:
+                    attr_name[len('validate_'):] not in self._fields:
                 try:
                     getattr(self, attr_name)()
                 except ValidationError, e:
                     self.errors.append(e)
+
+    def has(self, name):
+        return name in self.data
 
     def __str__(self):
         return '<%s: %s; errors=%s>' % (self.__class__.__name__,
