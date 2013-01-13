@@ -172,15 +172,15 @@ def set_logger(name,
             # use existing instead of clean and create
             handler = h
             break
-    handler = handler or logging.StreamHandler()
+    if not handler:
+        handler = logging.StreamHandler()
+        logger.addHandler(handler)
 
     formatter_kwgs = {}
     for i in ('color', 'prefixfmt', 'contentfmt', 'datefmt'):
         if locals()[i] is not None:
             formatter_kwgs[i] = locals()[i]
     handler.setFormatter(BaseFormatter(**formatter_kwgs))
-
-    logger.addHandler(handler)
 
 
 def set_nose_formatter(logging_options):
@@ -195,11 +195,11 @@ def set_nose_formatter(logging_options):
     formatter = BaseFormatter(**kwgs)
 
     for loop, h in enumerate(root_logger.handlers):
-        if not isinstance(h, MyMemoryHandler):
+        if isinstance(h, MyMemoryHandler):
+            h.setFormatter(formatter)
+        else:
             # only keey nose's handler
             root_logger.handlers.pop(loop)
-        else:
-            h.setFormatter(formatter)
 
 
 #############

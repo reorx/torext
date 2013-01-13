@@ -103,14 +103,14 @@ class PrepareHandler(BaseHandler):
     def get(self):
         self.write_json(self.prepare_buf)
 
-    def _prepare_01(self):
+    def prepare_01(self):
         self.prepare_buf = {}
         self.prepare_buf['01'] = BUF_DICT['01']
 
-    def _prepare_02(self):
+    def prepare_02(self):
         self.prepare_buf['02'] = BUF_DICT['02']
 
-    def _prepare_03(self):
+    def prepare_03(self):
         self.prepare_buf['03'] = BUF_DICT['03']
 
 

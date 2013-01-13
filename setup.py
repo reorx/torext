@@ -34,7 +34,7 @@ setup(
     version=__version__,
     author='reorx',
     author_email='novoreorx@gmail.com',
-    url='http://github.com/nodemix/torext',
+    url='http://github.com/reorx/torext',
     description='torext is an instrumental package which aim at easy implementation of tornado based project',
     packages=[
         'torext',

@@ -22,6 +22,7 @@ COOKIE_HEADER_KEY = 'Set-Cookie'
 
 class TestClient(object):
     def __init__(self, app, raise_handler_exc=False):
+        # TODO add `host` kwarg
         if app.is_running:
             raise RuntimeError('You should not instance TestClient\
                                when applicaion is running')

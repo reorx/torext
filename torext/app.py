@@ -342,6 +342,10 @@ class TorextApp(object):
 
         logging.info(content)
 
+    def test_patch(self):
+        self.settings['TESTING'] = True
+        set_nose_formatter(settings['LOGGING'])
+
     def test_client(self, **kwgs):
         return testing.TestClient(self, **kwgs)
 
