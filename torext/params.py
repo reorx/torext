@@ -3,8 +3,10 @@
 
 
 import re
+import copy
 import functools
-from torext.errors import ValidationError, ParamsInvalidError
+import tornado.escape
+from torext.errors import ValidationError, ParamsInvalidError, JSONDecodeError
 
 
 # don't know where to find the <type '_sre.SRE_Pattern'>
@@ -64,6 +66,13 @@ class Field(object):
 
     def __get__(self, owner, cls):
         return owner.data.get(self._attribute_name, None)
+
+    def spawn(self, **kwargs):
+        new = copy.copy(self)
+        new.__dict__.update(kwargs)
+        #for k, v in kwargs.iteritems():
+            #setattr(new, k, v)
+        return new
 
 
 class RegexField(Field):
@@ -182,6 +191,7 @@ class ParamSet(object):
         exception: ValidationError
     """
     __metaclass__ = ParamSetMeta
+    __datatype__ = 'form'  # or 'json'
 
     def __init__(self, **kwargs):
         self.raw_data = kwargs
@@ -232,13 +242,20 @@ class ParamSet(object):
     def __str__(self):
         return '<%s: %s; errors=%s>' % (self.__class__.__name__,
                                         ','.join(['%s=%s' % (k, v) for k, v in self.data.iteritems()]),
-                                        len(self.errors))
+                                        self.errors)
 
     @classmethod
     def validation_required(cls, method):
         @functools.wraps(method)
         def wrapper(hdr, *args, **kwgs):
-            params = cls(**hdr.request.arguments)
+            if 'json' == cls.__datatype__:
+                try:
+                    arguments = tornado.escape.json_decode(hdr.request.body)
+                except Exception, e:
+                    raise JSONDecodeError(str(e))
+            else:
+                arguments = hdr.request.arguments
+            params = cls(**arguments)
             if params.errors:
                 raise ParamsInvalidError(params)
             hdr.params = params

@@ -78,7 +78,10 @@ class ParamsInvalidError(TorextException):
 
 class OperationNotAllowed(TorextException):
     pass
-##
+
+
+class OperationFailed(TorextException):
+    pass
 
 
 class SettingsError(TorextException):
@@ -90,4 +93,8 @@ class ArgsParseError(TorextException):
 
 
 class DatabaseError(TorextException):
+    pass
+
+
+class JSONDecodeError(TorextException):
     pass
