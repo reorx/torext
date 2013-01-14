@@ -9,11 +9,13 @@ import sys
 import time
 import urllib
 import unittest
+import mimetypes
 from Cookie import SimpleCookie
 from tornado.httpclient import AsyncHTTPClient
 from tornado.ioloop import IOLoop
 from tornado.util import raise_exc_info
 from tornado.stack_context import NullContext
+from tornado.escape import json_encode
 from tornado import web
 
 
@@ -175,9 +177,49 @@ class TestClient(object):
             self.__failure = None
             raise_exc_info(failure)
 
-    def request(self, method, path, cookies=None, **kwgs):
+    def request(self, method, path,
+                query=None,
+                data=None, json=False,
+                files=None,
+                cookies=None, **kwgs):
 
         kwgs['method'] = method.upper()
+
+        # `body` must be passed if method is one of those three
+        if method in ['post', 'put', 'patch']:
+            headers = kwgs.setdefault('headers', {})
+            body = ''
+            if files:
+                boundary = '1234567890'
+                headers['Content-Type'] = 'multipart/form-data; boundary=%s' % boundary
+                L = []
+                if data:
+                    for k, v in data.iteritems():
+                        L.append('--' + boundary)
+                        L.append('Content-Disposition: form-data; name="%s"' % k)
+                        L.append('')
+                        L.append(v)
+                for k, f in files.iteritems():
+                    L.append('--' + boundary)
+                    L.append('Content-Disposition: form-data; name="%s"; filename="%s"' % (k, f[0]))
+                    L.append('Content-Type: %s' % mimetypes.guess_type(f[0])[0] or 'application/octet-stream')
+                    L.append('')
+                    L.append(f[1])
+                L.append('--%s--' % boundary)
+                L.append('')
+                body = '\r\n'.join(L)
+            else:
+                if data:
+                    if json:
+                        body = json_encode(data)
+                        headers['Content-Type'] = 'application/json'
+                    else:
+                        headers['Content-Type'] = '"application/x-www-form-urlencoded'
+                        body = urllib.urlencode(data)
+            kwgs['body'] = body
+        else:
+            if query:
+                path = '%s?%s' % (path, urllib.urlencode(query))
 
         if cookies:
             self._add_cookies(cookies, kwgs)
@@ -189,24 +231,20 @@ class TestClient(object):
 
         return resp
 
-    def get(self, path, data=None, **kwgs):
-        if data:
-            path = '%s?%s' % (path, urllib.urlencode(data))
-        return self.request('get', path, **kwgs)
+    def get(self, *args, **kwgs):
+        return self.request('get', *args, **kwgs)
 
-    def post(self, path, data=None, **kwgs):
-        # if method is 'POST', kwarg `body` must be passed, so body should be '' if no data
-        if data:
-            body = urllib.urlencode(data)
-        else:
-            body = ''
-        return self.request('post', path, body=body, **kwgs)
+    def delete(self, *args, **kwgs):
+        return self.request('delete', *args, **kwgs)
 
-    def delete(self, path, **kwgs):
-        return self.request('delete', path, **kwgs)
+    def post(self, *args, **kwgs):
+        return self.request('post', *args, **kwgs)
 
-    def put(self, path, **kwgs):
-        return self.request('put', path, **kwgs)
+    def put(self, *args, **kwgs):
+        return self.request('put', *args, **kwgs)
+
+    def patch(self, *args, **kwgs):
+        return self.request('patch', *args, **kwgs)
 
     def get_protocol(self):
         return 'http'
