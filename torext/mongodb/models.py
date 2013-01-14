@@ -9,7 +9,7 @@ from torext import errors
 from bson.objectid import ObjectId
 from pymongo.collection import Collection
 from .dstruct import StructuredDict
-from .cursor import Cursor
+from .cursor import Cursor, PymongoCursor
 
 
 def oid(id):
@@ -90,6 +90,7 @@ class Document(StructuredDict):
 
     def save(self):
         if self.__class__.__validate__:
+            print 'VALIDATING MODEL'
             self.validate()
         rv = self.col.save(self, **self._get_operate_options(manipulate=True))
         logging.debug('MongoDB: ObjectId(%s) saved' % rv)
@@ -104,9 +105,20 @@ class Document(StructuredDict):
         logging.debug('MongoDB: %s removed' % self)
         self = Document()
 
-    def update_doc(self, doc, **kwgs):
-        rv = self.col.update(self.identifier, doc, self._get_operate_options(**kwgs))
+    def update_doc(self, spec, **kwgs):
+        #options = self._get_operate_options(**kwgs)
+        #print self.identifier, options
+        rv = self.col.update(self.identifier, spec, **self._get_operate_options(**kwgs))
         return rv
+
+    def pull(self):
+        cursor = PymongoCursor(self.col, self.identifier)
+        try:
+            doc = cursor.next()
+        except StopIteration:
+            raise Exception('Document was deleted before `pull` was called')
+        self.clear()
+        self.update(doc)
 
     @classmethod
     def new(cls, **kwgs):
