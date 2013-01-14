@@ -187,19 +187,22 @@ def set_nose_formatter(logging_options):
     if not MyMemoryHandler:
         return
 
-    kwgs = {}
+    formatter_kwgs = {}
     for i in ('color', 'prefixfmt', 'contentfmt', 'datefmt'):
         v = logging_options.get(i)
         if v:
-            kwgs[i] = v
-    formatter = BaseFormatter(**kwgs)
+            formatter_kwgs[i] = v
+    formatter = BaseFormatter(**formatter_kwgs)
 
-    for loop, h in enumerate(root_logger.handlers):
+    nose_handler = None
+    for h in root_logger.handlers:
         if isinstance(h, MyMemoryHandler):
             h.setFormatter(formatter)
-        else:
-            # only keey nose's handler
-            root_logger.handlers.pop(loop)
+            nose_handler = h
+            break
+
+    if nose_handler:
+        root_logger.handlers = [nose_handler, ]
 
 
 #############

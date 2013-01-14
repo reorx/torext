@@ -210,10 +210,10 @@ class TorextApp(object):
             print 'Setup torext..'
 
         # setup root logger (as early as possible)
+        set_logger('', **settings['LOGGING'])
         if testing:
+            print 'testing, set nose formatter', settings['LOGGING']
             set_nose_formatter(settings['LOGGING'])
-        else:
-            set_logger('', **settings['LOGGING'])
 
         # reset timezone
         os.environ['TZ'] = settings['TIME_ZONE']
@@ -341,10 +341,6 @@ class TorextApp(object):
             content += '\n- %s: %s' % (k, info[k])
 
         logging.info(content)
-
-    def test_patch(self):
-        self.settings['TESTING'] = True
-        set_nose_formatter(settings['LOGGING'])
 
     def test_client(self, **kwgs):
         return testing.TestClient(self, **kwgs)
