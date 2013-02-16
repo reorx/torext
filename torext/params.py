@@ -25,19 +25,29 @@ class Field(object):
     >>> v.validate(s)
     ValidationError: should not contain int
     """
-    _attribute_name = None
+    name = None
 
-    def __init__(self, description=None, required=False, length=None, choices=None):
+    def __init__(self, description=None, key=None, required=False, length=None, choices=None):
         self.description = description  # default message
         self.required = required  # used with ParamSet
         self.choices = choices
+        self.key = key
 
+        self.min_length = None
         assert length is None or isinstance(length, (int, tuple))
         if isinstance(length, int):
             assert length > 0
         if isinstance(length, tuple):
-            assert len(length) == 2 and length[0] > 0 and length[1] > length[0]
+            assert len(length) == 2 and length[0] > 0
+            if length[1] == 0:
+                self.min_length = length[0]
+            else:
+                assert length[1] > length[0]
         self.length = length
+
+    #@property
+    #def name(self):
+        #raise NotImplementedError
 
     def raise_exc(self, error_message=None):
         raise ValidationError(self.description, error_message)
@@ -58,14 +68,18 @@ class Field(object):
             if value_len != length:
                 self.raise_exc('Length of value should be %s, but %s' % (length, value_len))
         else:
-            min, max = length
-            if value_len < min or value_len > max:
-                self.raise_exc('Length should be >= %s and <= %s, but %s' % (min, max, value_len))
+            if self.min_length:
+                if value_len < self.min_length:
+                    self.raise_exc('Length of value should be larger than %s' % self.min_length)
+            else:
+                min, max = length
+                if value_len < min or value_len > max:
+                    self.raise_exc('Length should be >= %s and <= %s, but %s' % (min, max, value_len))
 
         return value
 
     def __get__(self, owner, cls):
-        return owner.data.get(self._attribute_name, None)
+        return owner.data.get(self.key, None)
 
     def spawn(self, **kwargs):
         new = copy.copy(self)
@@ -170,14 +184,21 @@ class DataField(Field):
     pass
 
 
+class ListField(Field):
+    def validate(self, value):
+        if not isinstance(value, list):
+            raise ValidationError('Not a list')
+        return value
+
+
 class ParamSetMeta(type):
     def __new__(cls, name, bases, attrs):
         fields = {}
         for k, v in attrs.iteritems():
             if isinstance(v, Field):
-                if k.startswith('_'):
-                    raise Exception("ParamSet dont support field name starts with '_'")
-                v._attribute_name = k
+                v.name = k
+                if not v.key:
+                    v.key = k
                 fields[k] = v
         attrs['_fields'] = fields
         return type.__new__(cls, name, bases, attrs)
@@ -201,22 +222,24 @@ class ParamSet(object):
         self.validate()
 
     def validate(self):
-        for key, field in self.__class__._fields.iteritems():
+        for name, field in self.__class__._fields.iteritems():
+            key = field.key
             if key in self.raw_data:
                 raw_value = self.raw_data[key]
-                # tornado request.arguments hack, value may be a list,
-                # only use the first one
-                if isinstance(raw_value, list):
-                    # list in request.arguments will not empty
+                if not isinstance(field, ListField) and\
+                        isinstance(raw_value, list):
+                    # tornado request.arguments hack, value may be a list,
+                    # only use the first one
+                    # NOTE do not change request.arguments
                     raw_value = raw_value[0]
-                    # request.arguments will not be changed
                     self.raw_data[key] = raw_value
 
                 try:
                     value = field.validate(raw_value)
-                    func_name = 'validate_' + key
+                    func_name = 'validate_' + name
                     if hasattr(self, func_name):
                         value = getattr(self, func_name)(value)
+                        assert value is not None, 'Forget to return value after validation?'
                 except ValidationError, e:
                     self.errors.append((key, e))
                 else:
@@ -241,7 +264,7 @@ class ParamSet(object):
 
     def __str__(self):
         return '<%s: %s; errors=%s>' % (self.__class__.__name__,
-                                        ','.join(['%s=%s' % (k, v) for k, v in self.data.iteritems()]),
+                                        ','.join(['%s=%s' % (str(k), str(v)) for k, v in self.data.iteritems()]),
                                         self.errors)
 
     @classmethod
@@ -257,7 +280,12 @@ class ParamSet(object):
                 arguments = hdr.request.arguments
             params = cls(**arguments)
             if params.errors:
-                raise ParamsInvalidError(params)
+                raise ParamsInvalidError(params.errors)
             hdr.params = params
             return method(hdr, *args, **kwgs)
         return wrapper
+
+
+def define_params(kwargs):
+    param_class = type('AutoCreatedParams', (ParamSet, ), kwargs)
+    return param_class.validation_required

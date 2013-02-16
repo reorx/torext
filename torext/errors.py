@@ -69,11 +69,14 @@ class MultipleObjectsReturned(TorextException):
 ##
 # TODO add `errors` to its attribute
 class ParamsInvalidError(TorextException):
-    def __init__(self, params):
-        self.params = params
+    def __init__(self, error_s):
+        if isinstance(error_s, list):
+            self.errors = error_s
+        else:
+            self.errors = [error_s, ]
 
     def __str__(self):
-        return 'Invalid params: %s' % self.params
+        return 'Invalid params: %s' % self.errors
 
 
 class OperationNotAllowed(TorextException):
