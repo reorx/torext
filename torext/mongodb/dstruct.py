@@ -8,6 +8,9 @@ from hashlib import md5
 from torext.errors import ValidationError
 from bson.objectid import ObjectId
 
+# TODO change dict building mechanism:
+#      1. no str & unicode difference, only str
+#      2. all allow None, except: list, dict, ObjectId
 
 DEFAULT_TYPE_VALUE = {
     int: int,
