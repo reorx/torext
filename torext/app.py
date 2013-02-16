@@ -57,6 +57,7 @@ class TorextApp(object):
         self.application = None
         self.root_path = None
         self.project = None
+        self.uimodules = {}
 
         global settings
         self.settings = settings
@@ -75,7 +76,8 @@ class TorextApp(object):
             'static_path': None,
             'template_path': None,
             'cookie_secret': None,
-            'log_function': _log_function
+            'log_function': _log_function,
+            'ui_modules': self.uimodules
         }
 
         for k in options:
@@ -145,7 +147,7 @@ class TorextApp(object):
 
         self.update_settings(dict(
             [(i, getattr(settings_module, i)) for i in dir(settings_module)
-             if not i.startswith('_')]))
+             if not i.startswith('_') and i == i.upper()]))
 
         settings._module = settings_module
 
@@ -189,7 +191,8 @@ class TorextApp(object):
             print 'Changed settings:'
             for i in existed_keys:
                 before = settings[i]
-                settings[i] = args_dict[i]
+                type_ = type(before)
+                settings[i] = type_(args_dict[i])
                 print '  %s  %s (%s)' % (i, args_dict[i], before)
 
         if new_keys:
@@ -266,18 +269,7 @@ class TorextApp(object):
         else:
             self.io_loop = IOLoop.instance()
 
-        options = self.get_application_options()
-        logging.debug('Application settings: %s' % options)
-
-        # this method intended to be able to called for multiple times,
-        # so attributes should not be changed, just make a copy
-        host_handlers = copy.copy(self.host_handlers)
-        top_host_handlers = host_handlers.pop('.*$')
-        application = Application(top_host_handlers, **options)
-
-        if host_handlers:
-            for host, handlers in host_handlers.iteritems():
-                application.add_handlers(host, handlers)
+        application = self._make_application()
 
         http_server = HTTPServer(application, io_loop=self.io_loop)
         if not settings['TESTING'] and settings['DEBUG']:
@@ -351,6 +343,28 @@ class TorextApp(object):
             def get_client(self):
                 return _self.test_client()
         return CurrentTestCase
+
+    def register_uimodules(self, **kwargs):
+        self.uimodules.update(kwargs)
+
+    def _make_application(self, application_class=Application):
+        options = self.get_application_options()
+        logging.debug('%s settings: %s', application_class.__name__, options)
+
+        # this method intended to be able to called for multiple times,
+        # so attributes should not be changed, just make a copy
+        host_handlers = copy.copy(self.host_handlers)
+        top_host_handlers = host_handlers.pop('.*$')
+        application = application_class(top_host_handlers, **options)
+
+        if host_handlers:
+            for host, handlers in host_handlers.iteritems():
+                application.add_handlers(host, handlers)
+        return application
+
+    def wsgi_application(self):
+        from tornado.wsgi import WSGIApplication
+        return self._make_application(application_class=WSGIApplication)
 
 
 def _log_function(handler):
