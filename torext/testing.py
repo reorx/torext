@@ -13,10 +13,11 @@ import mimetypes
 from Cookie import SimpleCookie
 from tornado.httpclient import AsyncHTTPClient
 from tornado.ioloop import IOLoop
-from tornado.util import raise_exc_info
 from tornado.stack_context import NullContext
 from tornado.escape import json_encode
 from tornado import web
+
+from torext.utils import raise_exc_info
 
 
 COOKIE_HEADER_KEY = 'Set-Cookie'
