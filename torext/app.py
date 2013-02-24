@@ -69,6 +69,23 @@ class TorextApp(object):
         for i in incoming:
             settings[i] = incoming[i]
 
+    def set_root_path(self, root_path=None, settings_module=None):
+        if root_path:
+            self.root_path = root_path
+            return
+
+        if settings_module:
+            self.root_path = os.path.dirname(os.path.abspath(settings_module.__file__))
+            return
+
+        # try to guess which module import app.py
+        import inspect
+
+        caller = inspect.stack()[1]
+        caller_module = inspect.getmodule(caller[0])
+        assert hasattr(caller_module, '__file__'), 'Caller module %s should have __file__ attr' % caller_module
+        self.root_path = os.path.dirname(os.path.abspath(caller_module.__file__))
+
     def get_application_options(self):
         # TODO full list options
         options = {
@@ -142,6 +159,8 @@ class TorextApp(object):
         Optional function
         """
         assert hasattr(settings_module, '__file__'), 'settings passed in initialize() must be a module'
+        # set root_path according to module file
+        self.set_root_path(module=settings_module)
 
         global settings
 
@@ -221,13 +240,6 @@ class TorextApp(object):
         # reset timezone
         os.environ['TZ'] = settings['TIME_ZONE']
         time.tzset()
-
-        # get root path
-        if settings._module:
-            self.root_path = os.path.dirname(os.path.abspath(settings._module.__file__))
-        else:
-            global _caller_path
-            self.root_path = os.path.dirname(_caller_path)
 
         # determine project name
         if settings._module:
@@ -401,5 +413,8 @@ def _guess_caller():
     caller_module = inspect.getmodule(caller[0])
     if hasattr(caller_module, '__file__'):
         _caller_path = os.path.abspath(caller_module.__file__)
+    return _caller_path
 
-_guess_caller()
+
+def guess():
+    return _guess_caller()
