@@ -160,7 +160,7 @@ class TorextApp(object):
         """
         assert hasattr(settings_module, '__file__'), 'settings passed in initialize() must be a module'
         # set root_path according to module file
-        self.set_root_path(module=settings_module)
+        self.set_root_path(settings_module=settings_module)
 
         global settings
 
