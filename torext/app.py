@@ -55,7 +55,6 @@ class TorextApp(object):
             self.default_host: []
         }
         self.application = None
-        self.root_path = None
         self.project = None
         self.uimodules = {}
 
@@ -88,16 +87,22 @@ class TorextApp(object):
 
     def get_application_options(self):
         # TODO full list options
+        options_keys = [
+            'debug',
+            'static_path',
+            'template_path',
+            'cookie_secret',
+            'log_function',
+            'ui_modules',
+            'static_handler_class',
+            'static_handler_args',
+        ]
         options = {
-            'debug': True,
-            'static_path': None,
-            'template_path': None,
-            'cookie_secret': None,
             'log_function': _log_function,
-            'ui_modules': self.uimodules
+            'ui_modules': self.uimodules,
         }
 
-        for k in options:
+        for k in options_keys:
             k_upper = k.upper()
             if k_upper in settings:
                 options[k] = settings[k_upper]
@@ -211,8 +216,17 @@ class TorextApp(object):
             for i in existed_keys:
                 before = settings[i]
                 type_ = type(before)
-                settings[i] = type_(args_dict[i])
-                print '  %s  %s (%s)' % (i, args_dict[i], before)
+                if type_ is bool:
+                    if args_dict[i] == 'True':
+                        _value = True
+                    elif args_dict[i] == 'False':
+                        _value = False
+                    else:
+                        raise errors.ArgsParseError('%s should only be True or False' % i)
+                else:
+                    _value = type_(args_dict[i])
+                settings[i] = _value
+                print '  %s  [%s]%s (%s)' % (i, type(settings[i]), settings[i], before)
 
         if new_keys:
             print 'New settings:'
@@ -250,17 +264,16 @@ class TorextApp(object):
             else:
                 settings['PROJECT'] = project
 
-        # add upper directory path to sys.path if not in
-        if settings['DEBUG'] and settings._module:
-            _abs = os.path.abspath
-            parent_path = os.path.dirname(self.root_path)
-            if not _abs(parent_path) in [_abs(i) for i in sys.path]:
-                sys.path.insert(0, parent_path)
-                if not testing:
-                    logging.info('Add %s to sys.path' % _abs(parent_path))
-
         # PROJECT should be importable as a python module
         if settings['PROJECT']:
+            # add upper directory path to sys.path if not in
+            if settings._module:
+                _abs = os.path.abspath
+                parent_path = os.path.dirname(self.root_path)
+                if not _abs(parent_path) in [_abs(i) for i in sys.path]:
+                    sys.path.insert(0, parent_path)
+                    if not testing:
+                        logging.info('Add %s to sys.path' % _abs(parent_path))
             try:
                 __import__(settings['PROJECT'])
                 if not testing:
@@ -332,13 +345,13 @@ class TorextApp(object):
             'Home': 'http://127.0.0.1:%s' % settings['PORT'],
         }
 
-        if settings['DEBUG']:
-            buf = []
-            for host, rules in self.application.handlers:
-                buf.append(host.pattern)
-                for i in rules:
-                    buf.append('  ' + i.regex.pattern)
-            info['URL Patterns(by sequence)'] = '\n    ' + '\n    '.join(buf)
+        #if settings['DEBUG']:
+        buf = []
+        for host, rules in self.application.handlers:
+            buf.append(host.pattern)
+            for i in rules:
+                buf.append('  ' + i.regex.pattern)
+        info['URL Patterns(by sequence)'] = '\n    ' + '\n    '.join(buf)
 
         for k in ['Project', 'Port', 'Processes',
                   'Logging(root) Level', 'Locale', 'Debug', 'Home', 'URL Patterns(by sequence)']:
