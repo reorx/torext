@@ -69,6 +69,12 @@ class TorextApp(object):
             settings[i] = incoming[i]
 
     def set_root_path(self, root_path=None, settings_module=None):
+        """
+        root_path will only be used for 3 situations:
+        1. fix ``static_path`` and ``template_path``
+        2. check project's directory name with the value in settings.PROJECT
+        3. append parent path to sys.path
+        """
         if root_path:
             self.root_path = root_path
             return
@@ -107,7 +113,9 @@ class TorextApp(object):
             if k_upper in settings:
                 options[k] = settings[k_upper]
 
-        self._fix_paths(options)
+        if hasattr(self, 'root_path'):
+            logging.info('Fix static_path & template_path to be absolute')
+            self._fix_paths(options)
 
         if self._application_options:
             for k, v in self._application_options.iteritems():
@@ -166,6 +174,8 @@ class TorextApp(object):
         assert hasattr(settings_module, '__file__'), 'settings passed in initialize() must be a module'
         # set root_path according to module file
         self.set_root_path(settings_module=settings_module)
+        #logging.info('set root_path: %s', self.root_path)
+        print 'set root_path: %s' % self.root_path
 
         global settings
 
