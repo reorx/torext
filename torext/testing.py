@@ -179,15 +179,14 @@ class TestClient(object):
             raise_exc_info(failure)
 
     def request(self, method, path,
-                query=None,
                 data=None, json=False,
                 files=None,
                 cookies=None, **kwgs):
 
-        kwgs['method'] = method.upper()
+        kwgs['method'] = method
 
         # `body` must be passed if method is one of those three
-        if method in ['post', 'put', 'patch']:
+        if method in ['POST', 'PUT', 'PATCH']:
             headers = kwgs.setdefault('headers', {})
             body = ''
             if files:
@@ -215,16 +214,17 @@ class TestClient(object):
                         body = json_encode(data)
                         headers['Content-Type'] = 'application/json'
                     else:
-                        headers['Content-Type'] = '"application/x-www-form-urlencoded'
+                        headers['Content-Type'] = 'application/x-www-form-urlencoded'
                         body = urllib.urlencode(data)
             kwgs['body'] = body
         else:
-            if query:
-                path = '%s?%s' % (path, urllib.urlencode(query))
+            if data:
+                path = '%s?%s' % (path, urllib.urlencode(data))
 
         if cookies:
             self._add_cookies(cookies, kwgs)
 
+        print 'fetch kwgs', kwgs
         self.http_client.fetch(self.get_url(path), self.stop, **kwgs)
         resp = self.wait()
 
@@ -233,19 +233,19 @@ class TestClient(object):
         return resp
 
     def get(self, *args, **kwgs):
-        return self.request('get', *args, **kwgs)
+        return self.request('GET', *args, **kwgs)
 
     def delete(self, *args, **kwgs):
-        return self.request('delete', *args, **kwgs)
+        return self.request('DELETE', *args, **kwgs)
 
     def post(self, *args, **kwgs):
-        return self.request('post', *args, **kwgs)
+        return self.request('POST', *args, **kwgs)
 
     def put(self, *args, **kwgs):
-        return self.request('put', *args, **kwgs)
+        return self.request('PUT', *args, **kwgs)
 
     def patch(self, *args, **kwgs):
-        return self.request('patch', *args, **kwgs)
+        return self.request('PATCH', *args, **kwgs)
 
     def get_protocol(self):
         return 'http'

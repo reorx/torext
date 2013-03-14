@@ -123,6 +123,7 @@ class JsonHandler(BaseHandler):
             self.write(self.json_encode(JSON_DICT))
 
     def post(self):
+        print 'headers', self.request.headers
         data = self.get_argument('data')
         d = self.json_decode(data)
         if d == JSON_DICT:
