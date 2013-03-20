@@ -15,4 +15,5 @@ class HomeHandler(BaseHandler):
 
 
 if __name__ == '__main__':
+    app.command_line_config()
     app.run()
