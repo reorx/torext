@@ -150,9 +150,12 @@ def validate_dict(doc, struct, allow_None_types=[], brother_types=[]):
         if not isinstance(o, typ):
             _pass = False
             if o is None:
-                if typ in allow_None_types:
-                    logger.debug('allowing condition: %s can be None' % ck)
-                    _pass = True
+                # if typ in allow_None_types:
+                #     logger.debug('allowing condition: %s can be None' % ck)
+                #     _pass = True
+
+                # Now we allow all fields to be None
+                _pass = True
             else:
                 for bro in brother_types:
                     if typ in bro and isinstance(o, bro):
