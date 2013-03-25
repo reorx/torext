@@ -93,7 +93,7 @@ class Document(StructuredDict):
             print 'VALIDATING MODEL'
             self.validate()
         rv = self.col.save(self, **self._get_operate_options(manipulate=True))
-        logging.debug('MongoDB: ObjectId(%s) saved' % rv)
+        logging.debug('torext.models: ObjectId(%s) saved' % rv)
         self._in_db = True
         return rv
 
@@ -102,7 +102,7 @@ class Document(StructuredDict):
         self._history = self.copy()
         _id = self['_id']
         self.col.remove(_id, **self._get_operate_options())
-        logging.debug('MongoDB: %s removed' % self)
+        logging.debug('torext.models: %s removed' % self)
         self = Document()
 
     def update_doc(self, spec, **kwgs):
@@ -127,13 +127,24 @@ class Document(StructuredDict):
         """
         instance = cls.build_instance(**kwgs)
         instance['_id'] = ObjectId()
-        logging.debug('MongoDB: _id generated %s' % instance['_id'])
+        logging.debug('torext.models: _id generated %s' % instance['_id'])
         return instance
 
     @classmethod
-    def find(cls, *args, **kwgs):
-        kwgs['wrap'] = cls
-        cursor = Cursor(cls.col, *args, **kwgs)
+    def find(cls, *args, **kwargs):
+        # copy from ``find`` in pymongo==2.5, this method should be mostly the same as it
+        if not 'slave_okay' in kwargs:
+            kwargs['slave_okay'] = cls.col.slave_okay
+        if not 'read_preference' in kwargs:
+            kwargs['read_preference'] = cls.col.read_preference
+        if not 'tag_sets' in kwargs:
+            kwargs['tag_sets'] = cls.col.tag_sets
+        if not 'secondary_acceptable_latency_ms' in kwargs:
+            kwargs['secondary_acceptable_latency_ms'] = (
+                cls.col.secondary_acceptable_latency_ms)
+
+        kwargs['wrap'] = cls
+        cursor = Cursor(cls.col, *args, **kwargs)
         return cursor
 
     @classmethod

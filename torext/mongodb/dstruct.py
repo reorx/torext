@@ -8,6 +8,11 @@ from hashlib import md5
 from torext.errors import ValidationError
 from bson.objectid import ObjectId
 
+
+logger = logging.getLogger('torext.mongodb')
+logger.setLevel(logging.INFO)
+
+
 # TODO change dict building mechanism:
 #      1. no str & unicode difference, only str
 #      2. all allow None, except: list, dict, ObjectId
@@ -122,7 +127,7 @@ def validate_dict(doc, struct, allow_None_types=[], brother_types=[]):
     ... }
     >>> validate_dict(doc, struct)
     """
-    logging.debug('------call validate_dict()')
+    logger.debug('------call validate_dict()')
 
     assert isinstance(doc, dict), 'doc must be dict'
     assert isinstance(struct, dict), 'struct must be dict'
@@ -140,18 +145,18 @@ def validate_dict(doc, struct, allow_None_types=[], brother_types=[]):
         else:
             # list or dict
             typ = type(st)
-        logging.debug('@ %s\ndefine: %s\nobj   : %s %s' % (ck, typ, type(o), o))
+        logger.debug('@ %s\ndefine: %s\nobj   : %s %s' % (ck, typ, type(o), o))
 
         if not isinstance(o, typ):
             _pass = False
             if o is None:
                 if typ in allow_None_types:
-                    logging.debug('allowing condition: %s can be None' % ck)
+                    logger.debug('allowing condition: %s can be None' % ck)
                     _pass = True
             else:
                 for bro in brother_types:
                     if typ in bro and isinstance(o, bro):
-                        logging.debug('allowing condition: (%s, %s) in brother_types' % (type(o), typ))
+                        logger.debug('allowing condition: (%s, %s) in brother_types' % (type(o), typ))
                         _pass = True
                         break
 
@@ -159,7 +164,7 @@ def validate_dict(doc, struct, allow_None_types=[], brother_types=[]):
                 raise ValidationError(
                     'Position(%s): type "%s" should be "%s", value: "%s"' % (ck, type(o), typ, o))
 
-        logging.debug('---')
+        logger.debug('---')
 
         # recurse down step
         if isinstance(st, dict):
@@ -182,7 +187,7 @@ def validate_dict(doc, struct, allow_None_types=[], brother_types=[]):
                 recurse_check(nst, i, nk)
 
     recurse_check(struct, doc, None)
-    logging.debug('------validation all passed !')
+    logger.debug('------validation all passed !')
 
 
 def build_dict(struct, **default):
@@ -229,7 +234,7 @@ def build_dict(struct, **default):
                     kv = DEFAULT_TYPE_VALUE.get(v, lambda: None)()
 
             cd[k] = kv
-            logging.debug('build: $.%s -> %s' % (ck, kv))
+            logger.debug('build: $.%s -> %s' % (ck, kv))
 
         return cd
 
