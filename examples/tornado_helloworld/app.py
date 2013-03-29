@@ -29,6 +29,9 @@ class MainHandler(tornado.web.RequestHandler):
         print self.request.arguments
         self.write("Hello, world")
 
+    def post(self):
+        self.write(self.request.arguments)
+
 
 def main():
     tornado.options.parse_command_line()

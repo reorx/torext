@@ -17,18 +17,18 @@ logger.setLevel(logging.INFO)
 #      1. no str & unicode difference, only str
 #      2. all allow None, except: list, dict, ObjectId
 
-DEFAULT_TYPE_VALUE = {
+_None = lambda: None
+
+TYPE_DEFAULT_VALUE = {
     int: int,
     float: float,
-    str: str,
-    unicode: unicode,
+    str: _None,
+    unicode: _None,
     # bool() == False
     bool: bool,
     list: list,
     dict: dict,
-    # to ensure every objectid is generated seperately
-    #ObjectId: lambda: ObjectId(),
-    ObjectId: ObjectId,
+    ObjectId: _None,
     datetime.datetime: lambda: datetime.datetime.now()
 }
 
@@ -234,7 +234,7 @@ def build_dict(struct, **default):
                         v = list
                     assert isinstance(v, type), '%s %s must be <type type>' % (ck, v)
 
-                    kv = DEFAULT_TYPE_VALUE.get(v, lambda: None)()
+                    kv = TYPE_DEFAULT_VALUE.get(v, lambda: None)()
 
             cd[k] = kv
             logger.debug('build: $.%s -> %s' % (ck, kv))
@@ -327,7 +327,7 @@ class Gen(object):
         """
         if the struct indexed is a list, return its first item
 
-        the result can be anything in DEFAULT_TYPE_VALUE except 'list'
+        the result can be anything in TYPE_DEFAULT_VALUE except 'list'
 
         note that '__' is used for naming attributes to avoid conflicts
         """
@@ -350,7 +350,7 @@ class Gen(object):
         if isinstance(struct, dict):
             return build_dict(struct, *args, **kwgs)
         else:
-            return DEFAULT_TYPE_VALUE.get(struct, lambda: None)()
+            return TYPE_DEFAULT_VALUE.get(struct, lambda: None)()
 
     def __getattr__(self, key):
         if self.__dot_key is None:
