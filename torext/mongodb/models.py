@@ -90,7 +90,7 @@ class Document(StructuredDict):
 
     def save(self):
         if self.__class__.__validate__:
-            print 'VALIDATING MODEL'
+            logging.debug('VALIDATING MODEL')
             self.validate()
         rv = self.col.save(self, **self._get_operate_options(manipulate=True))
         logging.debug('torext.models: ObjectId(%s) saved' % rv)

@@ -52,7 +52,7 @@ def _color(lvl, s):
         logging.ERROR: unicode(curses.tparm(fg_color, 1),  # Red
                                "ascii"),
         'grey': unicode(curses.tparm(fg_color, 0),  # Grey
-                               "ascii"),
+                        "ascii"),
     }
     _normal = unicode(curses.tigetstr("sgr0"), "ascii")
 
@@ -72,7 +72,7 @@ class BaseFormatter(logging.Formatter):
                  contentfmt='%(message)s',
                  datefmt='%Y-%m-%d %H:%M:%S',
                  color=False,
-                 tab='  '):
+                 tab=u'  '):
         """
         a log is constituted by two part: prefix + content
 
@@ -89,7 +89,7 @@ class BaseFormatter(logging.Formatter):
         self.color = color
         self.tab = tab
 
-    def _rich_record(self, record):
+    def _format_record(self, record):
         record.message = record.getMessage()
         record.fixed_levelname = FIXED_LEVELNAMES.get(record.levelname, record.levelname)
 
@@ -105,30 +105,35 @@ class BaseFormatter(logging.Formatter):
 
     def format(self, record):
         """
+        return log in unicode
         """
-        self._rich_record(record)
+        self._format_record(record)
 
         prefix = self.prefixfmt % record.__dict__
+        if not isinstance(prefix, unicode):
+            prefix = prefix.decode('utf8', 'replace')
         if self.color:
             prefix = _color(record.levelno, prefix)
 
+        # print 'prefix', type(prefix), prefix
+
         # prefix is unicode, so the result of record format must also be unicode
         content = self.contentfmt % record.__dict__
-        # log = '%s%s' % (prefix, content)
+        if not isinstance(content, unicode):
+            # If the content is not encoded in utf8, gibberish will be showed
+            # instead of raising exception
+            content = content.decode('utf8', 'replace')
+
+        # print 'content', type(content), content
+
         log = prefix + content
-        log = log.encode('utf8')
-        # if not isinstance(content, unicode):
-        #     content = content.decode('utf-8')
 
         if record.exc_text:
-            if log[-1:] != '\n':
-                log += '\n'
-            print type(record.exc_text), type(log)
-            # log = '%s%s' % (log, record.exc_text)
-            log += record.exc_text
-            # log = record.exc_text
+            if log[-1:] != u'\n':
+                log += u'\n'
+            log += record.exc_text.decode('utf8', 'replace')
 
-        log = log.replace('\n', '\n' + self.tab)
+        log = log.replace(u'\n', u'\n' + self.tab)
 
         return log
 
