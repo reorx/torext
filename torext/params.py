@@ -4,6 +4,7 @@
 
 import re
 import copy
+import datetime
 import functools
 import tornado.escape
 from torext.errors import ValidationError, ParamsInvalidError, JSONDecodeError
@@ -180,8 +181,19 @@ class FloatField(Field):
 
 
 # TODO
-class DataField(Field):
-    pass
+class DateField(Field):
+    def __init__(self, *args, **kwargs):
+        datefmt = kwargs.pop('datefmt', None)
+        assert datefmt, '`datefmt` argument should be passed for DateField'
+        self.datefmt = datefmt
+        super(DateField, self).__init__(*args, **kwargs)
+
+    def validate(self, value):
+        try:
+            value = datetime.datetime.strptime(value, self.datefmt)
+        except ValueError, e:
+            self.raise_exc(str(e))
+        return value
 
 
 class ListField(Field):
@@ -213,6 +225,10 @@ class ParamSet(object):
     """
     __metaclass__ = ParamSetMeta
     __datatype__ = 'form'  # or 'json'
+
+    @classmethod
+    def keys(cls):
+        return [i.key for i in cls._fields.itervalues()]
 
     def __init__(self, **kwargs):
         self.raw_data = kwargs
