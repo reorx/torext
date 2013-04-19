@@ -4,8 +4,8 @@
 import os
 import sys
 import copy
-import pkgutil
-import logging
+#import pkgutil
+#import logging
 import datetime
 from bson.objectid import ObjectId
 
@@ -70,14 +70,14 @@ def _json(dic):
     return pyjson.dumps(dic, ensure_ascii=False, cls=CustomJSONEncoder)
 
 
-def force_int(value, desire=0, limit=100):
-    try:
-        value = int(value)
-    except:
-        value = desire
-    if value > limit:
-        return limit / 2
-    return value
+#def force_int(value, desire=0, limit=100):
+    #try:
+        #value = int(value)
+    #except:
+        #value = desire
+    #if value > limit:
+        #return limit / 2
+    #return value
 
 
 def timesince(t):
@@ -94,13 +94,6 @@ def timesince(t):
     if delta.days / 30:
         return '{0} months ago'.format(delta.days / 30)
     return '{0} days ago'.format(delta.days)
-
-
-def uni(s):
-    assert s is not None, 'uni() require input not None'
-    if isinstance(s, str):
-        s = s.decode('utf-8')
-    return s
 
 
 def pprint(o):
@@ -288,24 +281,24 @@ except ImportError:
             self.ordered_keys = []
 
 
-def import_underpath_module(path, name):
-    """
-    arguments::
-    :name :: note that name do not contain `.py` at the end
-    """
-    importer = pkgutil.get_importer(path)
-    logging.debug('loading handler module: ' + name)
-    return importer.find_module(name).load_module(name)
+#def import_underpath_module(path, name):
+    #"""
+    #arguments::
+    #:name :: note that name do not contain `.py` at the end
+    #"""
+    #importer = pkgutil.get_importer(path)
+    #logging.debug('loading handler module: ' + name)
+    #return importer.find_module(name).load_module(name)
 
 
-def autoload_submodules(dirpath):
-    """Load submodules by dirpath
-    NOTE. ignore packages
-    """
-    import pkgutil
-    importer = pkgutil.get_importer(dirpath)
-    return (importer.find_module(name).load_module(name)
-            for name, is_pkg in importer.iter_modules())
+#def autoload_submodules(dirpath):
+    #"""Load submodules by dirpath
+    #NOTE. ignore packages
+    #"""
+    #import pkgutil
+    #importer = pkgutil.get_importer(dirpath)
+    #return (importer.find_module(name).load_module(name)
+            #for name, is_pkg in importer.iter_modules())
 
 
 ######################################
