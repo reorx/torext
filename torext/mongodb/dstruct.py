@@ -471,12 +471,14 @@ class StructuredDict(dict):
         use build_dict() to create a dict object,
         return an instance of cls from that dict object.
         """
+        assert hasattr(cls, 'struct'), '`build_instance` method requires definition of `struct`'
         ins = cls(build_dict(cls.struct, *args, **kwgs))
         ins.validate()
         return ins
 
     def validate(self):
         cls = self.__class__
+        assert hasattr(cls, 'struct'), '`validate` method requires definition of `struct`'
         validate_dict(self, cls.struct,
                       allow_None_types=cls.allow_None_types,
                       brother_types=cls.brother_types)
