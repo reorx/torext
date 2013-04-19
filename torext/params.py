@@ -106,10 +106,19 @@ class RegexField(Field):
     def validate(self, value):
         value = super(RegexField, self).validate(value)
 
-        #print 'value', value
-        if not self.regex.search(value):
+        # Equate the type of regex pattern and the checking value
+        pattern_type = type(self.regex.pattern)
+        c_value = value
+        if not isinstance(value, pattern_type):
+            try:
+                c_value = pattern_type(value)
+            except Exception, e:
+                self.raise_exc(
+                    'value could not be converted into type "%s" of regex pattern'
+                    ', error: %s' % (pattern_type, e))
+        if not self.regex.search(c_value):
             self.raise_exc('regex pattern (%s, %s) is not match with value "%s"' %
-                           (self.regex.pattern, self.regex.flags, value))
+                           (self.regex.pattern, self.regex.flags, c_value))
         return value
 
 
