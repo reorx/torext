@@ -4,3 +4,5 @@ build/
 *.egg*/
 dist/
 *.db
+.coverage
+cover/
