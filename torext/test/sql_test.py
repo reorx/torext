@@ -12,7 +12,7 @@ class MysqlTestCase(unittest.TestCase):
         app = TorextApp()
         app.settings['DEBUG'] = False
         app.settings['SQLALCHEMY'] = {
-            'uri': 'mysql://reorx:mx320lf2@localhost/test_sa',
+            'uri': 'mysql://root:zxsaqw21@localhost/torext_test',
             'echo': True
         }
         app.setup()
