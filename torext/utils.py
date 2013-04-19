@@ -6,7 +6,6 @@ import sys
 import copy
 import pkgutil
 import logging
-import warnings
 import datetime
 from bson.objectid import ObjectId
 
@@ -158,143 +157,135 @@ class ObjectDict(dict):
         return '<ObjectDict %s >' % dict(self)
 
 
-class SortedDict(dict):
-    """
-    A dictionary that keeps its keys in the order in which they're inserted.
-    """
-    def __new__(cls, *args, **kwargs):
-        instance = super(SortedDict, cls).__new__(cls, *args, **kwargs)
-        instance.keyOrder = []
-        return instance
-
-    def __init__(self, data=None):
-        if data is None or isinstance(data, dict):
-            data = data or []
-            super(SortedDict, self).__init__(data)
-            self.keyOrder = list(data) if data else []
-        else:
-            super(SortedDict, self).__init__()
-            super_set = super(SortedDict, self).__setitem__
-            for key, value in data:
-                # Take the ordering from first key
-                if key not in self:
-                    self.keyOrder.append(key)
-                # But override with last value in data (dict() does this)
-                super_set(key, value)
-
-    def __deepcopy__(self, memo):
-        return self.__class__([(key, copy.deepcopy(value, memo))
-                               for key, value in self.items()])
-
-    def __copy__(self):
-        # The Python's default copy implementation will alter the state
-        # of self. The reason for this seems complex but is likely related to
-        # subclassing dict.
-        return self.copy()
-
-    def __setitem__(self, key, value):
-        if key not in self:
-            self.keyOrder.append(key)
-        super(SortedDict, self).__setitem__(key, value)
-
-    def __delitem__(self, key):
-        super(SortedDict, self).__delitem__(key)
-        self.keyOrder.remove(key)
-
-    def __iter__(self):
-        return iter(self.keyOrder)
-
-    def __reversed__(self):
-        return reversed(self.keyOrder)
-
-    def pop(self, k, *args):
-        result = super(SortedDict, self).pop(k, *args)
-        try:
-            self.keyOrder.remove(k)
-        except ValueError:
-            # Key wasn't in the dictionary in the first place. No problem.
-            pass
-        return result
-
-    def popitem(self):
-        result = super(SortedDict, self).popitem()
-        self.keyOrder.remove(result[0])
-        return result
-
-    def _iteritems(self):
-        for key in self.keyOrder:
-            yield key, self[key]
-
-    def _iterkeys(self):
-        for key in self.keyOrder:
-            yield key
-
-    def _itervalues(self):
-        for key in self.keyOrder:
-            yield self[key]
-
-    iteritems = _iteritems
-    iterkeys = _iterkeys
-    itervalues = _itervalues
-
-    def items(self):
-        return [(k, self[k]) for k in self.keyOrder]
-
-    def keys(self):
-        return self.keyOrder[:]
-
-    def values(self):
-        return [self[k] for k in self.keyOrder]
-
-    def update(self, dict_):
-        for k, v in dict_.iteritems():
-            self[k] = v
-
-    def setdefault(self, key, default):
-        if key not in self:
-            self.keyOrder.append(key)
-        return super(SortedDict, self).setdefault(key, default)
-
-    def value_for_index(self, index):
-        """Returns the value of the item at the given zero-based index."""
-        # This, and insert() are deprecated because they cannot be implemented
-        # using collections.OrderedDict (Python 2.7 and up), which we'll
-        # eventually switch to
-        warnings.warn(
-            "SortedDict.value_for_index is deprecated", DeprecationWarning,
-            stacklevel=2
-        )
-        return self[self.keyOrder[index]]
-
-    def insert(self, index, key, value):
-        """Inserts the key, value pair before the item with the given index."""
-        warnings.warn(
-            "SortedDict.insert is deprecated", DeprecationWarning,
-            stacklevel=2
-        )
-        if key in self.keyOrder:
-            n = self.keyOrder.index(key)
-            del self.keyOrder[n]
-            if n < index:
-                index -= 1
-        self.keyOrder.insert(index, key)
-        super(SortedDict, self).__setitem__(key, value)
-
-    def copy(self):
-        """Returns a copy of this object."""
-        # This way of initializing the copy means it works for subclasses, too.
-        return self.__class__(self)
-
-    def __repr__(self):
+try:
+    from collections import OrderedDict
+except ImportError:
+    class OrderedDict(dict):
         """
-        Replaces the normal dict.__repr__ with a version that returns the keys
-        in their sorted order.
-        """
-        return '{%s}' % ', '.join(['%r: %r' % (k, v) for k, v in self.iteritems()])
+        A dictionary that keeps its keys in the order in which they're inserted.
 
-    def clear(self):
-        super(SortedDict, self).clear()
-        self.keyOrder = []
+        # No initial order
+        >>> d = OrderedDict({'a': 1, 'b': 2})
+
+        # Ordered
+        >>> d = OrderedDict([('a', 1), ('b', 2)])
+
+        # Ordered
+        >>> d = OrderedDict()
+        >>> d['a'] = 1
+        >>> d['b'] = 2
+
+        # Chaos-ordered
+        >>> d = OrderedDict({'a': 1, 'b': 2})
+        >>> d['c'] = 3
+        >>> d['d'] = 4
+        """
+        def __new__(cls, *args, **kwargs):
+            instance = super(OrderedDict, cls).__new__(cls, *args, **kwargs)
+            instance.ordered_keys = []
+            return instance
+
+        def __init__(self, data=None):
+            if data is None or isinstance(data, dict):
+                data = data or []
+                super(OrderedDict, self).__init__(data)
+                self.ordered_keys = list(data) if data else []
+            else:
+                super(OrderedDict, self).__init__()
+                super_set = super(OrderedDict, self).__setitem__
+                for key, value in data:
+                    # Take the ordering from first key
+                    if key not in self:
+                        self.ordered_keys.append(key)
+                    # But override with last value in data (dict() does this)
+                    super_set(key, value)
+
+        def __deepcopy__(self, memo):
+            return self.__class__([(key, copy.deepcopy(value, memo))
+                                   for key, value in self.items()])
+
+        def __copy__(self):
+            # The Python's default copy implementation will alter the state
+            # of self. The reason for this seems complex but is likely related to
+            # subclassing dict.
+            return self.copy()
+
+        def __setitem__(self, key, value):
+            if key not in self:
+                self.ordered_keys.append(key)
+            super(OrderedDict, self).__setitem__(key, value)
+
+        def __delitem__(self, key):
+            super(OrderedDict, self).__delitem__(key)
+            self.ordered_keys.remove(key)
+
+        def __iter__(self):
+            return iter(self.ordered_keys)
+
+        def __reversed__(self):
+            return reversed(self.ordered_keys)
+
+        def pop(self, k, *args):
+            result = super(OrderedDict, self).pop(k, *args)
+            try:
+                self.ordered_keys.remove(k)
+            except ValueError:
+                # Key wasn't in the dictionary in the first place. No problem.
+                pass
+            return result
+
+        def popitem(self):
+            result = super(OrderedDict, self).popitem()
+            self.ordered_keys.remove(result[0])
+            return result
+
+        def iteritems(self):
+            for key in self.ordered_keys:
+                yield key, self[key]
+
+        def iterkeys(self):
+            for key in self.ordered_keys:
+                yield key
+
+        def itervalues(self):
+            for key in self.ordered_keys:
+                yield self[key]
+
+        def items(self):
+            return list(self.iteritems())
+
+        def keys(self):
+            return self.ordered_keys[:]
+
+        def values(self):
+            return list(self.itervalues())
+
+        def update(self, dict_):
+            for k, v in dict_.iteritems():
+                self[k] = v
+
+        def setdefault(self, key, default):
+            if key in self:
+                return self[key]
+            else:
+                self[key] = default
+                return default
+
+        def copy(self):
+            """Returns a copy of this object."""
+            # This way of initializing the copy means it works for subclasses, too.
+            return self.__class__(self)
+
+        def __repr__(self):
+            """
+            Replaces the normal dict.__repr__ with a version that returns the keys
+            in their sorted order.
+            """
+            return '{%s}' % ', '.join(['%r: %r' % (k, v) for k, v in self.iteritems()])
+
+        def clear(self):
+            super(OrderedDict, self).clear()
+            self.ordered_keys = []
 
 
 def import_underpath_module(path, name):
@@ -413,3 +404,6 @@ def start_shell(local_vars=None):
 
     code.interact(local=local_vars)
 
+
+def fix_request_arguments(arguments):
+    return dict((k, v[0]) for k, v in arguments.iteritems())
