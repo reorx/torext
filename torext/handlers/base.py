@@ -181,9 +181,9 @@ class BaseHandler(tornado.web.RequestHandler):
         chunk could be any type of (str, dict, list)
         """
         assert chunk is not None, 'None cound not be written in write_json'
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
         if isinstance(chunk, dict) or isinstance(chunk, list):
             chunk = self.json_encode(chunk)
-            self.set_header("Content-Type", "application/json; charset=UTF-8")
 
         # convert chunk to utf8 before `RequestHandler.write()`
         # so that if any error occurs, we can catch and log it
