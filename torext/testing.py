@@ -53,6 +53,9 @@ class TestClient(object):
 
     def setup(self):
         """Setup facilities for running the server
+
+        NOTE if you get all "Address already in use" error except the first one,
+        the bug may well happened in this function.
         """
         # start::tornado.testing.AsyncTestCase
         #self.io_loop = self.get_new_ioloop()
