@@ -39,7 +39,6 @@ setup(
     packages=[
         'torext',
         'torext.handlers',
-        'torext.mongodb',
         'torext.scripts',
         'torext.test',
     ],
