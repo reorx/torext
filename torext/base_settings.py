@@ -9,7 +9,7 @@
 
 
 #############
-# necessary #
+# essential #
 #############
 
 PROJECT = None
@@ -25,6 +25,11 @@ DEBUG = True
 TESTING = False
 
 LOGGING = 'INFO'
+
+LOGGING_OPTIONS = {
+    'propagate': 1,
+    'color': True,
+}
 
 LOG_REQUEST = False
 

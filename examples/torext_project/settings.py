@@ -8,8 +8,9 @@ PORT = 8000
 
 DEBUG = True
 
-LOGGING = {
-    'level': 'DEBUG',
+LOGGING = 'DEBUG'
+
+LOGGING_OPTIONS = {
     'propagate': 1,
     'color': True,
     'contentfmt': '-> %(message)s'

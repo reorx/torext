@@ -21,7 +21,7 @@ class Field(object):
       * regex pattern
       # * transferable type (int, float, eg.)
 
-    >>> v = BaseField('should not contain int')
+    >>> v = Field('should not contain int')
     >>> s = 'oh123'
     >>> v.validate(s)
     ValidationError: should not contain int
@@ -309,6 +309,26 @@ class ParamSet(object):
             hdr.params = params
             return method(hdr, *args, **kwgs)
         return wrapper
+
+
+def validation_required(cls):
+    def _wrapper(method):
+        @functools.wraps(method)
+        def wrapper(hdr, *args, **kwgs):
+            if 'json' == cls.__datatype__:
+                try:
+                    arguments = tornado.escape.json_decode(hdr.request.body)
+                except Exception, e:
+                    raise JSONDecodeError(str(e))
+            else:
+                arguments = hdr.request.arguments
+            params = cls(**arguments)
+            if params.errors:
+                raise ParamsInvalidError(params.errors)
+            hdr.params = params
+            return method(hdr, *args, **kwgs)
+        return wrapper
+    return _wrapper
 
 
 def define_params(kwargs):

@@ -288,16 +288,13 @@ class TorextApp(object):
             print 'Setup torext..'
 
         # setup root logger (as early as possible)
-        logging_options = {
-            'level': settings['LOGGING'],
-            'propagate': 1,
-            'color': True
-        }
-        print logging_options
-        set_logger('', **logging_options)
+        logging_kwargs = settings['LOGGING_OPTIONS'].copy()
+        logging_kwargs['level'] = settings['LOGGING']
+        print logging_kwargs
+        set_logger('', **logging_kwargs)
         if testing:
-            print 'testing, set nose formatter', logging_options
-            set_nose_formatter(logging_options)
+            print 'testing, set nose formatter', logging_kwargs
+            set_nose_formatter(logging_kwargs)
 
         # reset timezone
         os.environ['TZ'] = settings['TIME_ZONE']
