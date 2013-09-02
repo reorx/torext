@@ -4,7 +4,6 @@
 import sys
 import logging
 import httplib
-import functools
 import datetime
 import email.utils
 import hashlib
@@ -18,9 +17,9 @@ import tornado.locale
 from tornado.web import HTTPError
 from tornado.escape import utf8, json_encode, json_decode
 
-from torext import settings, errors
+from torext import settings
 from torext.app import TorextApp
-from torext.utils import ObjectDict, raise_exc_info
+from torext.utils import raise_exc_info
 
 
 def log_response(handler):

@@ -33,8 +33,9 @@ class ModuleSearcher(object):
 
 
 class Router(object):
-    def __init__(self, specs):
+    def __init__(self, specs, prefix=None):
         self.specs = specs
+        self.prefix = prefix
         self._handlers = []
 
     def get_handlers(self):
@@ -51,6 +52,8 @@ class Router(object):
         return self._handlers
 
     def add(self, spec):
+        if self.prefix:
+            spec = (self.prefix + spec[0], spec[1])
         logging.debug('add url spec in router: %s' % str(spec))
         self._handlers.append(spec)
 

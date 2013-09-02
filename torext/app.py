@@ -25,7 +25,8 @@ class TorextApp(object):
     """
     current_app = None
 
-    def __init__(self, settings_module=None, extra_settings=None, application_options=None,
+    def __init__(self, settings_module=None, extra_settings=None,
+                 application_options=None, httpserver_options=None,
                  io_loop=None):
         """
         Automatically involves torext's settings
@@ -42,12 +43,14 @@ class TorextApp(object):
             UI_MODULES
             UI_METHODS
             GZIP
+            XHEADERS
         """
         if settings_module:
             self.module_config(settings_module)
         if extra_settings:
             self.update_settings(extra_settings)
         self._application_options = application_options
+        self._httpserver_options = httpserver_options
         self.io_loop = io_loop
         self.is_setuped = False
         self.handlers = []
@@ -94,6 +97,20 @@ class TorextApp(object):
         assert hasattr(caller_module, '__file__'), 'Caller module %s should have __file__ attr' % caller_module
         self.root_path = os.path.dirname(os.path.abspath(caller_module.__file__))
 
+    def get_httpserver_options(self):
+        keys = ('xheaders', )
+        options = {}
+        for k in keys:
+            k_upper = k.upper()
+            if k_upper in settings:
+                options[k] = settings[k_upper]
+
+        if self._httpserver_options:
+            for k, v in self._httpserver_options.iteritems():
+                options[k] = v
+
+        return options
+
     def get_application_options(self):
         # TODO full list options
         options_keys = [
@@ -117,7 +134,6 @@ class TorextApp(object):
                 options[k] = settings[k_upper]
 
         if hasattr(self, 'root_path'):
-            logging.info('Fix static_path & template_path to be absolute')
             self._fix_paths(options)
 
         if self._application_options:
@@ -137,6 +153,7 @@ class TorextApp(object):
                 if not os.path.isabs(v):
                     v = os.path.abspath(
                         os.path.join(self.root_path, v))
+                    logging.debug('Fix %s to be absolute: %s' % (k, v))
                 options[k] = v
 
     def _get_handlers_on_host(self, host=None):
@@ -156,7 +173,7 @@ class TorextApp(object):
             return handler_cls
         return fn
 
-    def route_many(self, rules, host=None):
+    def route_many(self, *args, **kwargs):
         """
         >>> from torext.route import include
         >>> app = TorextApp()
@@ -165,8 +182,15 @@ class TorextApp(object):
         ...     ('/account', include('account.views')),
         ... ], '^account.example.com$')
         """
-        router = Router(rules)
-        self.add_handlers(router.get_handlers(), host)
+        if len(args) == 2:
+            prefix, rules = args
+        elif len(args) == 1:
+            prefix = None
+            rules = args[0]
+        else:
+            raise ValueError('The amount of args of route_many method can only be one or two')
+        router = Router(rules, prefix=prefix)
+        self.add_handlers(router.get_handlers(), host=kwargs.get('host'))
 
     def add_handlers(self, handlers, host=None):
         handlers_container = self._get_handlers_on_host(host)
@@ -255,16 +279,25 @@ class TorextApp(object):
 
         it will:
         """
+        # Read command line configs before setup
+        self.command_line_config()
+
         testing = settings.get('TESTING')
 
         if not testing:
             print 'Setup torext..'
 
         # setup root logger (as early as possible)
-        set_logger('', **settings['LOGGING'])
+        logging_options = {
+            'level': settings['LOGGING'],
+            'propagate': 1,
+            'color': True
+        }
+        print logging_options
+        set_logger('', **logging_options)
         if testing:
-            print 'testing, set nose formatter', settings['LOGGING']
-            set_nose_formatter(settings['LOGGING'])
+            print 'testing, set nose formatter', logging_options
+            set_nose_formatter(logging_options)
 
         # reset timezone
         os.environ['TZ'] = settings['TIME_ZONE']
@@ -311,7 +344,8 @@ class TorextApp(object):
 
         application = self._make_application()
 
-        http_server = HTTPServer(application, io_loop=self.io_loop)
+        http_server_options = self.get_httpserver_options()
+        http_server = HTTPServer(application, io_loop=self.io_loop, **http_server_options)
         if not settings['TESTING'] and settings['DEBUG']:
             if settings['PROCESSES'] and settings['PROCESSES'] > 1:
                 logging.info('Multiprocess could not be used in debug mode')
@@ -354,7 +388,7 @@ class TorextApp(object):
             'Project': settings['PROJECT'] or 'None (better be assigned)',
             'Port': settings['PORT'],
             'Processes': settings['DEBUG'] and 1 or settings['PROCESSES'],
-            'Logging(root) Level': settings['LOGGING']['level'],
+            'Logging(root) Level': settings['LOGGING'],
             'Locale': settings['LOCALE'],
             'Debug': settings['DEBUG'],
             'Home': 'http://127.0.0.1:%s' % settings['PORT'],

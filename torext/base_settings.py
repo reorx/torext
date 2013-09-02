@@ -24,11 +24,7 @@ DEBUG = True
 
 TESTING = False
 
-LOGGING = {
-    'level': 'INFO',
-    'propagate': 1,
-    'color': True
-}
+LOGGING = 'INFO'
 
 LOG_REQUEST = False
 
