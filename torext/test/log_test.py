@@ -3,7 +3,7 @@
 
 import logging
 from torext.log import set_logger
-from nose.tools import *
+from nose.tools import with_setup
 
 
 def test_logging():

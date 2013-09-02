@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-from nose.tools import *
+from nose.tools import assert_raises
 from torext import params
 from torext.errors import ValidationError, ParamsInvalidError
 

@@ -4,7 +4,7 @@ build:
 	@python setup.py build
 
 test:
-	@nosetests -s
+	@nosetests -v
 
 lint:
 	@flake8 terminal tests

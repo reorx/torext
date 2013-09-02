@@ -1,8 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+try:
+    import sqlalchemy
+except ImportError:
+    print 'sqlalchemy is not installed, skip testing'
+    from nose.plugins.skip import SkipTest
+    raise SkipTest
+
 import unittest
-from nose.tools import *
 from torext.app import TorextApp
 from torext.sql import SQLAlchemy
 
