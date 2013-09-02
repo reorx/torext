@@ -8,12 +8,12 @@ def test_generate_cookie_secret():
     assert utils.generate_cookie_secret()
 
 
-def test__dict():
-    assert isinstance(utils._dict('{"a": 1}'), dict)
+def test_json_decode():
+    assert isinstance(utils.json_decode('{"a": 1}'), dict)
 
 
-def test__json():
-    assert isinstance(utils._json({"a": 1}), str)
+def test_json_encode():
+    assert isinstance(utils.json_encode({"a": 1}), str)
 
 
 def test_timesince():

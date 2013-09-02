@@ -23,14 +23,6 @@ from torext.app import TorextApp
 from torext.utils import ObjectDict, raise_exc_info
 
 
-def _format_headers_log(headers):
-    # length of '+-...-+' is 19
-    block = '+-----Headers-----+\n'
-    for k, v in headers.iteritems():
-        block += '| {0:<15} | {1:<15} \n'.format(k, v)
-    return block
-
-
 def log_response(handler):
     """
     Acturally, logging response is not a server's responsibility,
@@ -77,6 +69,14 @@ def log_request(handler):
     logging.info(block)
 
 
+def _format_headers_log(headers):
+    # length of '+-...-+' is 19
+    block = '+-----Headers-----+\n'
+    for k, v in headers.iteritems():
+        block += '| {0:<15} | {1:<15} \n'.format(k, v)
+    return block
+
+
 class BaseHandler(tornado.web.RequestHandler):
     """
     Request
@@ -91,9 +91,6 @@ class BaseHandler(tornado.web.RequestHandler):
     EXCEPTION_HANDLERS = None
 
     PREPARES = []
-
-    def initialize(self):
-        logging.debug('%s initializing' % self.__class__.__name__)
 
     def _exception_default_handler(self, e):
         """This method is a copy of tornado.web.RequestHandler._handle_request_exception
@@ -148,12 +145,11 @@ class BaseHandler(tornado.web.RequestHandler):
 
     @property
     def db(self):
-        """Return the default sqlalchemy session"""
-        raise NotImplementedError
+        """Rewrite this method to implement the default database connection object,
+        eg. a sqlalchemy session
 
-    @property
-    def mongodb(self):
-        """Return the default MongoDB databse"""
+        Other names like ``mongodb``, ``redis``, ``memcache`` could also be used in this way.
+        """
         raise NotImplementedError
 
     @property
@@ -176,7 +172,7 @@ class BaseHandler(tornado.web.RequestHandler):
         super(BaseHandler, self).flush(*args, **kwgs)
 
     def write_json(self, chunk, code=None, headers=None):
-        """A convenient method to bind `chunk`, `code`, `headers` together
+        """A convenient method that binds `chunk`, `code`, `headers` together
 
         chunk could be any type of (str, dict, list)
         """
@@ -264,96 +260,3 @@ class BaseHandler(tornado.web.RequestHandler):
             getattr(self, 'prepare_' + i)()
             if self._finished:
                 return
-
-
-class define_api(object):
-    """Decorator for validating request arguments and raising relevant exception
-
-    Example:
-    >>> _user_data_api = define_api(
-            [
-                ('username', True,
-                    WordsValidator(4, 16, 'must be words in 4~16 range')),
-                ('password', True,
-                    RegexValidator(6, 32, 'must be words&symbols in 6~32 range',
-                                    regex=re.compile(r'^[A-Za-z0-9@#$%^&+=]+$'))),
-            ]
-        )
-    >>> class UserHandler(MyBaseHandler):
-            @ _user_data_api
-            def get(self):
-                ...
-
-    NOTE. This class is deprecated since `torext.params.ParamSet` can replace it and do better,
-    """
-    def __init__(self, rules, extra_validator=None):
-        """
-        rules:
-            [
-                ('arg_name0', ),
-                ('arg_name1', True, WordsValidator())
-                ('arg_name2', False, IntstringValidator())
-            ]
-        """
-        self.rules = rules
-        self.extra_validator = extra_validator
-
-    def __call__(self, method):
-        @functools.wraps(method)
-        def wrapper(hdr, *args, **kwgs):
-
-            params = ObjectDict()
-            extra_validator = self.extra_validator
-            error_list = []
-
-            for rule in self.rules:
-                if isinstance(rule, str):
-                    rule = (rule, False)
-                assert len(rule) > 1 and len(rule) < 4
-
-                key = rule[0]
-                is_required = rule[1]
-
-                value = hdr.get_argument(key, None)
-
-                # judge existence
-                if not value:
-                    if is_required:
-                        error_list.append('missing params: %s' % key)
-                    continue
-
-                # judge validator
-                if len(rule) == 3:
-                    validator = rule[2]
-                    try:
-                        value = validator(value)
-                    except errors.ValidationError, e:
-                        error_list.append(u'params %s, %s' % (key, e))
-
-                # if len(rule) == 3:
-                #     typ = rule[2]
-                #     try:
-                #         value = typ(value)
-                #     except ValueError:
-                #         error_list.append('error type of params %s, should be %s' % (key, typ))
-
-                params[key] = value
-
-            if error_list:
-                raise errors.ParamsInvalidError(
-                    '; '.join(['%s.%s' % (i + 1, v) for i, v in enumerate(error_list)]))
-
-            logging.debug('params: %s' % params)
-
-            if extra_validator:
-                try:
-                    extra_validator(params)
-                except errors.ValidationError, e:
-                    raise errors.ParamsInvalidError(e)
-                # message = 'failed in extra validator checking'
-
-            hdr.params = params
-
-            return method(hdr, *args, **kwgs)
-
-        return wrapper

@@ -13,9 +13,10 @@ from tornado.web import Application
 
 from torext import settings
 from torext import errors
-from torext import testing
+from torext.testing import TestClient, AppTestCase
 from torext.log import set_logger, set_nose_formatter
 from torext.route import Router
+from torext.utils import json_encode, json_decode
 
 
 class TorextApp(object):
@@ -57,6 +58,8 @@ class TorextApp(object):
         self.application = None
         self.project = None
         self.uimodules = {}
+        self.json_encoder = json_encode
+        self.json_decoder = json_decode
 
         global settings
         self.settings = settings
@@ -155,10 +158,12 @@ class TorextApp(object):
 
     def route_many(self, rules, host=None):
         """
+        >>> from torext.route import include
+        >>> app = TorextApp()
         >>> app.route_many([
-                ('/account', include('account.views')),
-                ('/account', include('account.views')),
-            ], '^account.example.com$')
+        ...     ('/account', include('account.views')),
+        ...     ('/account', include('account.views')),
+        ... ], '^account.example.com$')
         """
         router = Router(rules)
         self.add_handlers(router.get_handlers(), host)
@@ -370,17 +375,23 @@ class TorextApp(object):
         logging.info(content)
 
     def test_client(self, **kwgs):
-        return testing.TestClient(self, **kwgs)
+        return TestClient(self, **kwgs)
 
     @property
     def TestCase(_self):
-        class CurrentTestCase(testing.AppTestCase):
+        class CurrentTestCase(AppTestCase):
             def get_client(self):
                 return _self.test_client()
         return CurrentTestCase
 
     def register_uimodules(self, **kwargs):
         self.uimodules.update(kwargs)
+
+    def register_json_encoder(self, encoder_func):
+        self.json_encoder = encoder_func
+
+    def register_json_decoder(self, decoder_func):
+        self.json_decoder = decoder_func
 
     def _make_application(self, application_class=Application):
         options = self.get_application_options()
