@@ -7,7 +7,7 @@ import copy
 #import pkgutil
 #import logging
 import datetime
-from bson.objectid import ObjectId
+import functools
 
 
 try:
@@ -42,32 +42,10 @@ def generate_cookie_secret():
     return base64.b64encode(uuid.uuid4().bytes + uuid.uuid4().bytes)
 
 
-class CustomJSONEncoder(pyjson.JSONEncoder):
-    """
-    copy from django.core.serializers.json
-    """
-    DATE_FORMAT = "%Y-%m-%d"
-    TIME_FORMAT = "%H:%M:%S"
-
-    def default(self, o):
-        if isinstance(o, ObjectId):
-            return o.__str__()
-        elif isinstance(o, datetime.datetime):
-            return o.strftime("%s %s" % (self.DATE_FORMAT, self.TIME_FORMAT))
-        elif isinstance(o, datetime.date):
-            return o.strftime(self.DATE_FORMAT)
-        elif isinstance(o, datetime.time):
-            return o.strftime(self.TIME_FORMAT)
-        else:
-            return super(CustomJSONEncoder, self).default(o)
+json_decode = functools.partial(pyjson.loads, encoding='utf-8')
 
 
-def _dict(json):
-    return pyjson.loads(json, encoding='utf-8')
-
-
-def _json(dic):
-    return pyjson.dumps(dic, ensure_ascii=False, cls=CustomJSONEncoder)
+json_encode = functools.partial(pyjson.dumps, ensure_ascii=False)
 
 
 #def force_int(value, desire=0, limit=100):
@@ -105,11 +83,11 @@ def pprint(o):
 class SingletonMixin(object):
     """Globally hold one instance class
 
-    Usage::
-        >>> class SpecObject(OneInstanceImp):
-        >>>     pass
+    Usage:
+    >>> class SpecObject(SingletonMixin):
+    ...     pass
 
-        >>> ins = SpecObject.instance()
+    >>> ins = SpecObject.instance()
     """
     @classmethod
     def instance(cls, *args, **kwgs):
