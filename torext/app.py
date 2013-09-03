@@ -275,13 +275,8 @@ class TorextApp(object):
 
     def setup(self):
         """
-        setups before run, it recommended to call this method in the project's app.py
-
-        it will:
+        setups before run
         """
-        # Read command line configs before setup
-        self.command_line_config()
-
         testing = settings.get('TESTING')
 
         if not testing:

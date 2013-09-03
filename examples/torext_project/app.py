@@ -9,7 +9,6 @@ import settings
 app = TorextApp(settings, {
     'LOG_RESPONSE': True
 })
-app.setup()
 
 
 app.route_many([
