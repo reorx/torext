@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import unittest
+import json
 from nose.tools import assert_raises
 from torext import params
 from torext.errors import ValidationError, ParamsInvalidError
@@ -186,6 +187,7 @@ def check_param(data, error_num):
 PARAMS_ID_MSG = 'id shoud be int larger than 1'
 PARAMS_TOKEN_MSG = 'token should be a 32 length string'
 PARAMS_TAG_MSG = 'tag should be word without punctuations, less than 8 characters'
+PARAMS_FROM = 'from should be less than 8 characters'
 
 
 class WebTestCase(unittest.TestCase):
@@ -198,7 +200,8 @@ class WebTestCase(unittest.TestCase):
         class APIParams(params.ParamSet):
             id = params.IntegerField(PARAMS_ID_MSG, required=True, min=1)
             token = params.Field(PARAMS_TOKEN_MSG, required=True, length=32)
-            tag = params.WordField(PARAMS_TAG_MSG, required=False, length=8)
+            tag = params.WordField(PARAMS_TAG_MSG, required=False, length=8, default='foo')
+            from_ = params.WordField(PARAMS_FROM, key='from', required=False, length=16)
 
         @app.route('/api')
         class APIHandler(BaseHandler):
@@ -206,6 +209,7 @@ class WebTestCase(unittest.TestCase):
             def get(self):
                 print self.params
                 print self.request.arguments
+                self.write_json(self.params.to_dict())
                 pass
 
             def post(self):
@@ -225,6 +229,11 @@ class WebTestCase(unittest.TestCase):
             'token': '0cc175b9c0f1b6a831c399e269772661'
         })
         assert resp.code == 200
+        data = json.loads(resp.body)
+        assert data['id'] == 1
+        assert data['token'] == '0cc175b9c0f1b6a831c399e269772661'
+        assert data['tag'] == 'foo'
+        assert data['from'] is None
 
     def test_bad_id(self):
         resp = self.c.get('/api', {
@@ -232,7 +241,7 @@ class WebTestCase(unittest.TestCase):
             'token': '0cc175b9c0f1b6a831c399e269772661'
         })
         assert resp.code == 500
-        self.assertRaises(ParamsInvalidError, self.c.handler_exc)
+        self.assertRaises(ParamsInvalidError, self.c.get_handler_exc)
 
     def test_bad_token(self):
         resp = self.c.get('/api', {
@@ -240,7 +249,7 @@ class WebTestCase(unittest.TestCase):
             'token': '1c399e26977266'
         })
         assert resp.code == 500
-        self.assertRaises(ParamsInvalidError, self.c.handler_exc)
+        self.assertRaises(ParamsInvalidError, self.c.get_handler_exc)
 
     def test_bad_tag(self):
         resp = self.c.get('/api', {
@@ -249,7 +258,7 @@ class WebTestCase(unittest.TestCase):
             'tag': 'good man'
         })
         assert resp.code == 500
-        self.assertRaises(ParamsInvalidError, self.c.handler_exc)
+        self.assertRaises(ParamsInvalidError, self.c.get_handler_exc)
 
 
 if __name__ == '__main__':

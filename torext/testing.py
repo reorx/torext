@@ -3,7 +3,7 @@
 #
 # Application level testing solution
 #
-# it should make testing easy as a shit
+# it should make testing easy as shit
 
 import sys
 import time
@@ -261,7 +261,7 @@ class TestClient(object):
         return '%s://localhost:%s%s' % (self.get_protocol(),
                                         self.get_http_port(), path)
 
-    def handler_exc(self):
+    def get_handler_exc(self):
         if self._handler_exc_info:
             raise_exc_info(self._handler_exc_info)
 
@@ -277,7 +277,6 @@ class TestClient(object):
 
 
 def _handle_request_exception(self, e):
-    import sys
     import httplib
     import logging
     from tornado.web import HTTPError

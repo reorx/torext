@@ -15,24 +15,14 @@ _pattern_class = re.compile('').__class__
 
 
 class Field(object):
-    """
-    Basic conditions:
-      * length range
-      * regex pattern
-      # * transferable type (int, float, eg.)
-
-    >>> v = Field('should not contain int')
-    >>> s = 'oh123'
-    >>> v.validate(s)
-    ValidationError: should not contain int
-    """
     name = None
 
-    def __init__(self, description=None, key=None, required=False, length=None, choices=None):
+    def __init__(self, description=None, key=None, required=False, length=None, choices=None, default=None):
         self.description = description  # default message
         self.required = required  # used with ParamSet
         self.choices = choices
         self.key = key
+        self.default = default
 
         self.min_length = None
         assert length is None or isinstance(length, (int, tuple))
@@ -55,7 +45,7 @@ class Field(object):
 
     def validate(self, value):
         if not value:
-            raise ValidationError('value should be empty')
+            raise ValidationError('empty value')
 
         if self.choices and not value in self.choices:
             raise ValidationError('value "%s" is not one of %s' % (value, self.choices))
@@ -80,7 +70,10 @@ class Field(object):
         return value
 
     def __get__(self, owner, cls):
-        return owner.data.get(self.key, None)
+        return owner.data.get(self.key, self.default)
+
+    def __set__(self, owner, value):
+        raise AttributeError('You can not set value to a param field')
 
     def spawn(self, **kwargs):
         new = copy.copy(self)
@@ -123,6 +116,13 @@ class RegexField(Field):
 
 
 class WordField(RegexField):
+    """
+    >>> v = WordField('should not contain punctuations')
+    >>> s = 'oh123,'
+    >>> v.validate(s)
+    ValidationError: should not contain punctuations
+    """
+
     regex = re.compile(r'^[\w]+$')
 
 
@@ -287,6 +287,11 @@ class ParamSet(object):
     def has(self, name):
         return name in self.data
 
+    def to_dict(self):
+        """Convert the ParamSet instance to a dict that represents both its schema and data
+        """
+        return {f.key: self.data.get(f.key, f.default) for f in self.__class__._fields.itervalues()}
+
     def __str__(self):
         return '<%s: %s; errors=%s>' % (self.__class__.__name__,
                                         ','.join(['%s=%s' % (str(k), str(v)) for k, v in self.data.iteritems()]),
@@ -323,6 +328,9 @@ def validation_required(cls):
             else:
                 arguments = hdr.request.arguments
             params = cls(**arguments)
+            # Reserve a reference of handler object on params
+            params.handler = hdr
+
             if params.errors:
                 raise ParamsInvalidError(params.errors)
             hdr.params = params
