@@ -15,7 +15,7 @@ import time
 import tornado.web
 import tornado.locale
 from tornado.web import HTTPError
-from tornado.escape import utf8, json_encode, json_decode
+from tornado.escape import utf8
 
 from torext import settings
 from torext.app import TorextApp
@@ -153,11 +153,11 @@ class BaseHandler(tornado.web.RequestHandler):
 
     @property
     def json_decode(self):
-        return json_decode
+        return self.app.json_decoder
 
     @property
     def json_encode(self):
-        return json_encode
+        return self.app.json_encoder
 
     def flush(self, *args, **kwgs):
         """
