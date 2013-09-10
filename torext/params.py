@@ -4,6 +4,7 @@
 
 import re
 import copy
+import uuid
 import datetime
 import functools
 import tornado.escape
@@ -210,6 +211,14 @@ class ListField(Field):
         if not isinstance(value, list):
             raise ValidationError('Not a list')
         return value
+
+
+class UUIDField(Field):
+    def validate(self, value):
+        try:
+            return uuid.UUID(value)
+        except ValueError, e:
+            raise ValidationError('Invalid uuid string: %s' % e)
 
 
 class ParamSetMeta(type):

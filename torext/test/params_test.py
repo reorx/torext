@@ -126,6 +126,26 @@ def check_intstring(args):
         assert_raises(ValidationError, f.validate, args[0])
 
 
+def test_uuidstring():
+    pairs = [
+        ('asdf', False),
+        ('1234', False),
+        ('216edfae-19c0-11e3-9e93-10604b8a89ab', True)
+    ]
+
+    for s, res in pairs:
+        yield check_uuidstring, s, res
+
+
+def check_uuidstring(s, res):
+    f = params.UUIDField()
+    if res:
+        f.validate(s)
+    else:
+        with assert_raises(ValidationError):
+            f.validate(s)
+
+
 class FakeParams(params.ParamSet):
     id = params.IntegerField('wat are you?', required=True, min=1)
     name = params.WordField('name should be 8', required=True, length=(1, 8))
