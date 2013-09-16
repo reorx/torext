@@ -187,7 +187,7 @@ def test_param():
             'id': 'd5'
         }, 3),
         ({
-            'id': 999
+            'id': '999'
         }, 2),
         ({
             'content': 'The project to complete the final episodes (retelling episodes 25 and 26 of the series) was completed later in 1997 and released on July 19 as The End of Evangelion. '

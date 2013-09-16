@@ -7,7 +7,7 @@ import copy
 import uuid
 import datetime
 import functools
-import tornado.escape
+from tornado.escape import utf8, _unicode, json_decode
 from torext.errors import ValidationError, ParamsInvalidError, JSONDecodeError
 
 
@@ -208,6 +208,7 @@ class DateField(Field):
 
 class ListField(Field):
     def validate(self, value):
+        print 'value', value
         if not isinstance(value, list):
             raise ValidationError('Not a list')
         return value
@@ -249,7 +250,14 @@ class ParamSet(object):
         return [i.key for i in cls._fields.itervalues()]
 
     def __init__(self, **kwargs):
-        self.raw_data = kwargs
+        self._raw_data = {}
+        # handler.request.arguments, utf-8 values
+        for k in kwargs:
+            if isinstance(kwargs[k], list):
+                self._raw_data[k] = map(_unicode, kwargs[k])
+            else:
+                self._raw_data[k] = _unicode(kwargs[k])
+
         self.data = {}
         self.errors = []
 
@@ -258,18 +266,17 @@ class ParamSet(object):
     def validate(self):
         for name, field in self.__class__._fields.iteritems():
             key = field.key
-            if key in self.raw_data:
-                raw_value = self.raw_data[key]
-                if not isinstance(field, ListField) and\
-                        isinstance(raw_value, list):
+            if key in self._raw_data:
+
+                value = self._raw_data[key]
+
+                if not isinstance(field, ListField) and isinstance(value, list):
                     # tornado request.arguments hack, value may be a list,
                     # only use the first one
-                    # NOTE do not change request.arguments
-                    raw_value = raw_value[0]
-                    self.raw_data[key] = raw_value
+                    value = value[0]
 
                 try:
-                    value = field.validate(raw_value)
+                    value = field.validate(value)
                     func_name = 'validate_' + name
                     if hasattr(self, func_name):
                         value = getattr(self, func_name)(value)
@@ -312,7 +319,7 @@ class ParamSet(object):
         def wrapper(hdr, *args, **kwgs):
             if 'json' == cls.__datatype__:
                 try:
-                    arguments = tornado.escape.json_decode(hdr.request.body)
+                    arguments = json_decode(hdr.request.body)
                 except Exception, e:
                     raise JSONDecodeError(str(e))
             else:
@@ -331,7 +338,7 @@ def validation_required(cls):
         def wrapper(hdr, *args, **kwgs):
             if 'json' == cls.__datatype__:
                 try:
-                    arguments = tornado.escape.json_decode(hdr.request.body)
+                    arguments = json_decode(hdr.request.body)
                 except Exception, e:
                     raise JSONDecodeError(str(e))
             else:

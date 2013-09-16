@@ -48,6 +48,7 @@ class ValidationError(TorextException):
         self.error_message = error_message
 
     def __str__(self):
+        #return '%s (%s)' % (self.description, self.error_message) if self.error_message else self.description
         return self.description or self.error_message
 
     def __repr__(self):
