@@ -229,7 +229,7 @@ class WebTestCase(unittest.TestCase):
             def get(self):
                 print self.params
                 print self.request.arguments
-                self.write_json(self.params.to_dict())
+                self.write_json(self.params.to_dict(include_none=True))
                 pass
 
             def post(self):

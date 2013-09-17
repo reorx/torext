@@ -7,7 +7,7 @@ import copy
 import uuid
 import datetime
 import functools
-from tornado.escape import utf8, _unicode, json_decode
+from tornado.escape import _unicode, json_decode
 from torext.errors import ValidationError, ParamsInvalidError, JSONDecodeError
 
 
@@ -168,12 +168,12 @@ class IntegerField(Field):
         super(IntegerField, self).__init__(*args, **kwargs)
 
     def validate(self, value):
-        value = super(IntegerField, self).validate(value)
-
         try:
             value = int(value)
         except (ValueError, TypeError):
             self.raise_exc('could not convert value "%s" into int type' % value)
+
+        value = super(IntegerField, self).validate(value)
 
         if self.min:
             if value < self.min:
@@ -303,10 +303,16 @@ class ParamSet(object):
     def has(self, name):
         return name in self.data
 
-    def to_dict(self):
-        """Convert the ParamSet instance to a dict that represents both its schema and data
+    def to_dict(self, include_none=False):
+        """Convert the ParamSet instance to a dict, if `include_none` is True,
+        the result will represent both data and schema.
         """
-        return {f.key: self.data.get(f.key, f.default) for f in self.__class__._fields.itervalues()}
+        d = {}
+        for f in self.__class__._fields.itervalues():
+            value = getattr(self, f.name)
+            if value is not None or (value is None and include_none):
+                d[f.key] = value
+        return d
 
     def __str__(self):
         return '<%s: %s; errors=%s>' % (self.__class__.__name__,
