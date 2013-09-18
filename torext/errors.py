@@ -32,13 +32,6 @@ class URLRouteError(TorextException):
     pass
 
 
-class ConnectionError(TorextException):
-    """
-    error occurs in connection
-    """
-    pass
-
-
 class ValidationError(TorextException):
     """
     error occur when validating values
@@ -56,14 +49,6 @@ class ValidationError(TorextException):
 
 
 class AuthenticationNotPass(TorextException):
-    pass
-
-
-class ObjectNotFound(TorextException):
-    pass
-
-
-class MultipleObjectsReturned(TorextException):
     pass
 
 
