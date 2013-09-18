@@ -227,7 +227,7 @@ class TestClient(object):
         if cookies:
             self._add_cookies(cookies, kwgs)
 
-        print 'fetch kwgs', kwgs
+        #print 'fetch kwgs', kwgs
         self.http_client.fetch(self.get_url(path), self.stop, **kwgs)
         resp = self.wait()
 
@@ -259,7 +259,7 @@ class TestClient(object):
     def get_url(self, path):
         """Returns an absolute url for the given path on the test server."""
         return '%s://localhost:%s%s' % (self.get_protocol(),
-                                        self.get_http_port(), path)
+                                        self.get_http_port(), urllib.quote(path))
 
     def get_handler_exc(self):
         if self._handler_exc_info:
