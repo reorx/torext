@@ -146,8 +146,32 @@ def check_uuidstring(s, res):
             f.validate(s)
 
 
+def test_simple_list():
+    list_field = params.ListField(choices=['a', 'b', 'c'])
+
+    list_field.validate(['a'])
+    list_field.validate(['a', 'b', 'c'])
+
+    with assert_raises(ValidationError):
+        list_field.validate(['b', 'c', 'd'])
+    with assert_raises(ValidationError):
+        list_field.validate(['z', 'a', 'b'])
+
+
+def test_type_list():
+    list_field = params.ListField(item_field=params.IntegerField(min=1, max=9), choices=[1, 2, 3])
+
+    list_field.validate(['1', '2', '3'])
+    with assert_raises(ValidationError):
+        list_field.validate(['0', '1', '2'])
+    with assert_raises(ValidationError):
+        list_field.validate(['1', '2', '3', '4'])
+    with assert_raises(ValidationError):
+        list_field.validate(['a', '2', '3'])
+
+
 class FakeParams(params.ParamSet):
-    id = params.IntegerField('wat are you?', required=True, min=1)
+    id = params.IntegerField('wat are you?', required=True, min=0)
     name = params.WordField('name should be 8', required=True, length=(1, 8))
     email = params.EmailField('email not valid in format', required=True)
     content = params.Field('content should be < 20', length=(1, 20))
@@ -156,7 +180,7 @@ class FakeParams(params.ParamSet):
 def test_param():
     data_pairs = [
         ({
-            'id': '1',
+            'id': '0',
             'name': 'asuka',
             'email': 'asuka@nerv.com'
         }, 0),

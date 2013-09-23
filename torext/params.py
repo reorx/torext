@@ -221,10 +221,29 @@ class DateField(Field):
 
 
 class ListField(Field):
+    def __init__(self, *args, **kwargs):
+        self.item_field = kwargs.pop('item_field', None)
+        super(ListField, self).__init__(*args, **kwargs)
+
     def validate(self, value):
-        print 'value', value
+        self._validate_exist(value)
         if not isinstance(value, list):
             raise ValidationError('Not a list')
+
+        if self.item_field:
+            formatted_value = []
+            for i in value:
+                formatted_value.append(self.item_field.validate(i))
+            value = formatted_value
+
+        bad_values = []
+        if self.choices:
+            for i in value:
+                if not i in self.choices:
+                    bad_values.append(i)
+        if bad_values:
+            raise ValidationError('%s is/are not allowed' % bad_values)
+
         return value
 
 
