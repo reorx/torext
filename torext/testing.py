@@ -188,6 +188,10 @@ class TestClient(object):
 
         kwgs['method'] = method
 
+        if isinstance(path, unicode):
+            path = path.encode('utf8')
+        path = urllib.quote(path)
+
         # `body` must be passed if method is one of those three
         if method in ['POST', 'PUT', 'PATCH']:
             headers = kwgs.setdefault('headers', {})
@@ -258,10 +262,8 @@ class TestClient(object):
 
     def get_url(self, path):
         """Returns an absolute url for the given path on the test server."""
-        if isinstance(path, unicode):
-            path = path.encode('utf8')
         return '%s://localhost:%s%s' % (self.get_protocol(),
-                                        self.get_http_port(), urllib.quote(path))
+                                        self.get_http_port(), path)
 
     def get_handler_exc(self):
         if self._handler_exc_info:

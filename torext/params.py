@@ -44,13 +44,7 @@ class Field(object):
     def raise_exc(self, error_message=None):
         raise ValidationError(self.description, error_message)
 
-    def validate(self, value):
-        if not value:
-            raise ValidationError('empty value')
-
-        if self.choices and not value in self.choices:
-            raise ValidationError('value "%s" is not one of %s' % (value, self.choices))
-
+    def _validate_length(self, value):
         if not self.length:
             return value
         length = self.length
@@ -67,6 +61,24 @@ class Field(object):
                 min, max = length
                 if value_len < min or value_len > max:
                     self.raise_exc('Length should be >= %s and <= %s, but %s' % (min, max, value_len))
+        return value
+
+    def _validate_choices(self, value):
+        if self.choices and not value in self.choices:
+            raise ValidationError('value "%s" is not one of %s' % (value, self.choices))
+        return value
+
+    def _validate_exist(self, value):
+        if not value:
+            raise ValidationError('empty value')
+        return value
+
+    def validate(self, value):
+        self._validate_exist(value)
+
+        self._validate_choices(value)
+
+        self._validate_length(value)
 
         return value
 
@@ -168,12 +180,14 @@ class IntegerField(Field):
         super(IntegerField, self).__init__(*args, **kwargs)
 
     def validate(self, value):
+        self._validate_exist(value)
+
         try:
             value = int(value)
         except (ValueError, TypeError):
             self.raise_exc('could not convert value "%s" into int type' % value)
 
-        value = super(IntegerField, self).validate(value)
+        self._validate_choices(value)
 
         if self.min:
             if value < self.min:
