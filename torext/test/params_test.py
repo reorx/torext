@@ -36,8 +36,7 @@ def check_regex(pattern, match, result):
 
 def test_words():
     f0 = params.WordField()
-    with assert_raises(ValidationError):
-        f0.validate('')
+    f0.validate('')
     f0.validate('goodstr')
     with assert_raises(ValidationError):
         f0.validate('should not contain space')
@@ -51,6 +50,10 @@ def test_words():
         f1.validate('s')
     with assert_raises(ValidationError):
         f1.validate('longggggg')
+
+    f2 = params.WordField(null=False)
+    with assert_raises(ValidationError):
+        f2.validate('')
 
 
 def test_email():
@@ -146,8 +149,32 @@ def check_uuidstring(s, res):
             f.validate(s)
 
 
+def test_simple_list():
+    list_field = params.ListField(choices=['a', 'b', 'c'])
+
+    list_field.validate(['a'])
+    list_field.validate(['a', 'b', 'c'])
+
+    with assert_raises(ValidationError):
+        list_field.validate(['b', 'c', 'd'])
+    with assert_raises(ValidationError):
+        list_field.validate(['z', 'a', 'b'])
+
+
+def test_type_list():
+    list_field = params.ListField(item_field=params.IntegerField(min=1, max=9), choices=[1, 2, 3])
+
+    list_field.validate(['1', '2', '3'])
+    with assert_raises(ValidationError):
+        list_field.validate(['0', '1', '2'])
+    with assert_raises(ValidationError):
+        list_field.validate(['1', '2', '3', '4'])
+    with assert_raises(ValidationError):
+        list_field.validate(['a', '2', '3'])
+
+
 class FakeParams(params.ParamSet):
-    id = params.IntegerField('wat are you?', required=True, min=1)
+    id = params.IntegerField('wat are you?', required=True, min=0)
     name = params.WordField('name should be 8', required=True, length=(1, 8))
     email = params.EmailField('email not valid in format', required=True)
     content = params.Field('content should be < 20', length=(1, 20))
@@ -156,7 +183,7 @@ class FakeParams(params.ParamSet):
 def test_param():
     data_pairs = [
         ({
-            'id': '1',
+            'id': '0',
             'name': 'asuka',
             'email': 'asuka@nerv.com'
         }, 0),
@@ -220,15 +247,18 @@ class WebTestCase(unittest.TestCase):
         class APIParams(params.ParamSet):
             id = params.IntegerField(PARAMS_ID_MSG, required=True, min=1)
             token = params.Field(PARAMS_TOKEN_MSG, required=True, length=32)
-            tag = params.WordField(PARAMS_TAG_MSG, required=False, length=8, default='foo')
+
+            tag = params.WordField(PARAMS_TAG_MSG, length=8, default='foo')
             from_ = params.WordField(PARAMS_FROM, key='from', required=False, length=16)
+            text_anyway = params.WordField()
+            text_not_null = params.WordField(null=False)
 
         @app.route('/api')
         class APIHandler(BaseHandler):
             @APIParams.validation_required
             def get(self):
-                print self.params
-                print self.request.arguments
+                print 'arguments', self.request.arguments
+                print 'params', self.params
                 self.write_json(self.params.to_dict(include_none=True))
                 pass
 
@@ -279,6 +309,25 @@ class WebTestCase(unittest.TestCase):
         })
         assert resp.code == 500
         self.assertRaises(ParamsInvalidError, self.c.get_handler_exc)
+
+    def test_null(self):
+        resp = self.c.get('/api', {
+            'id': 1,
+            'token': '0cc175b9c0f1b6a831c399e269772661',
+            'text_anyway': ''
+        })
+        assert resp.code == 200
+        data = json.loads(resp.body)
+        print 'data', data
+        assert data['text_anyway'] == ''
+
+        resp = self.c.get('/api', {
+            'id': 1,
+            'token': '0cc175b9c0f1b6a831c399e269772661',
+            'text_anyway': '',
+            'text_not_null': ''
+        })
+        assert resp.code == 500
 
 
 if __name__ == '__main__':

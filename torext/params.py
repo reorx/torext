@@ -18,12 +18,13 @@ _pattern_class = type(re.compile(''))
 class Field(object):
     name = None
 
-    def __init__(self, description=None, key=None, required=False, length=None, choices=None, default=None):
+    def __init__(self, description=None, key=None, required=False, length=None, choices=None, default=None, null=True):
         self.description = description  # default message
         self.required = required  # used with ParamSet
         self.choices = choices
         self.key = key
         self.default = default
+        self.null = null
 
         self.min_length = None
         assert length is None or isinstance(length, (int, tuple))
@@ -44,13 +45,7 @@ class Field(object):
     def raise_exc(self, error_message=None):
         raise ValidationError(self.description, error_message)
 
-    def validate(self, value):
-        if not value:
-            raise ValidationError('empty value')
-
-        if self.choices and not value in self.choices:
-            raise ValidationError('value "%s" is not one of %s' % (value, self.choices))
-
+    def _validate_length(self, value):
         if not self.length:
             return value
         length = self.length
@@ -67,6 +62,24 @@ class Field(object):
                 min, max = length
                 if value_len < min or value_len > max:
                     self.raise_exc('Length should be >= %s and <= %s, but %s' % (min, max, value_len))
+        return value
+
+    def _validate_choices(self, value):
+        if self.choices and not value in self.choices:
+            raise ValidationError('value "%s" is not one of %s' % (value, self.choices))
+        return value
+
+    def _validate_null(self, value):
+        if not self.null and not value:
+            raise ValidationError('empty value is not allowed')
+        return value
+
+    def validate(self, value):
+        self._validate_null(value)
+
+        self._validate_choices(value)
+
+        self._validate_length(value)
 
         return value
 
@@ -99,6 +112,10 @@ class RegexField(Field):
 
     def validate(self, value):
         value = super(RegexField, self).validate(value)
+
+        # If null is allowed, then skip regex check
+        if not value:
+            return value
 
         # Equate the type of regex pattern and the checking value
         pattern_type = type(self.regex.pattern)
@@ -168,12 +185,14 @@ class IntegerField(Field):
         super(IntegerField, self).__init__(*args, **kwargs)
 
     def validate(self, value):
+        #self._validate_null(value)
+
         try:
             value = int(value)
         except (ValueError, TypeError):
             self.raise_exc('could not convert value "%s" into int type' % value)
 
-        value = super(IntegerField, self).validate(value)
+        self._validate_choices(value)
 
         if self.min:
             if value < self.min:
@@ -207,10 +226,29 @@ class DateField(Field):
 
 
 class ListField(Field):
+    def __init__(self, *args, **kwargs):
+        self.item_field = kwargs.pop('item_field', None)
+        super(ListField, self).__init__(*args, **kwargs)
+
     def validate(self, value):
-        print 'value', value
+        #self._validate_null(value)
         if not isinstance(value, list):
             raise ValidationError('Not a list')
+
+        if self.item_field:
+            formatted_value = []
+            for i in value:
+                formatted_value.append(self.item_field.validate(i))
+            value = formatted_value
+
+        bad_values = []
+        if self.choices:
+            for i in value:
+                if not i in self.choices:
+                    bad_values.append(i)
+        if bad_values:
+            raise ValidationError('%s is/are not allowed' % bad_values)
+
         return value
 
 
@@ -299,6 +337,14 @@ class ParamSet(object):
                     getattr(self, attr_name)()
                 except ValidationError, e:
                     self.errors.append(e)
+
+    def kwargs(self, *args):
+        d = {}
+        for k in args:
+            v = getattr(self, k)
+            if v is not None:
+                d[k] = v
+        return d
 
     def has(self, name):
         return name in self.data

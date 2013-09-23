@@ -9,6 +9,7 @@ import sys
 import time
 import urllib
 import unittest
+import logging
 import mimetypes
 from Cookie import SimpleCookie
 from tornado.httpclient import AsyncHTTPClient
@@ -188,6 +189,10 @@ class TestClient(object):
 
         kwgs['method'] = method
 
+        if isinstance(path, unicode):
+            path = path.encode('utf8')
+        #path = urllib.quote(path)
+
         # `body` must be passed if method is one of those three
         if method in ['POST', 'PUT', 'PATCH']:
             headers = kwgs.setdefault('headers', {})
@@ -228,7 +233,9 @@ class TestClient(object):
             self._add_cookies(cookies, kwgs)
 
         #print 'fetch kwgs', kwgs
-        self.http_client.fetch(self.get_url(path), self.stop, **kwgs)
+        url = self.get_url(path)
+        logging.debug('testing fetch url: %s', url)
+        self.http_client.fetch(url, self.stop, **kwgs)
         resp = self.wait()
 
         self._parse_cookies(resp)
@@ -258,10 +265,8 @@ class TestClient(object):
 
     def get_url(self, path):
         """Returns an absolute url for the given path on the test server."""
-        if isinstance(path, unicode):
-            path = path.encode('utf8')
         return '%s://localhost:%s%s' % (self.get_protocol(),
-                                        self.get_http_port(), urllib.quote(path))
+                                        self.get_http_port(), path)
 
     def get_handler_exc(self):
         if self._handler_exc_info:
