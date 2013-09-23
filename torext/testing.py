@@ -190,7 +190,7 @@ class TestClient(object):
 
         if isinstance(path, unicode):
             path = path.encode('utf8')
-        path = urllib.quote(path)
+        #path = urllib.quote(path)
 
         # `body` must be passed if method is one of those three
         if method in ['POST', 'PUT', 'PATCH']:
