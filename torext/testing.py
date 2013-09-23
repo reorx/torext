@@ -9,6 +9,7 @@ import sys
 import time
 import urllib
 import unittest
+import logging
 import mimetypes
 from Cookie import SimpleCookie
 from tornado.httpclient import AsyncHTTPClient
@@ -232,7 +233,9 @@ class TestClient(object):
             self._add_cookies(cookies, kwgs)
 
         #print 'fetch kwgs', kwgs
-        self.http_client.fetch(self.get_url(path), self.stop, **kwgs)
+        url = self.get_url(path)
+        logging.debug('testing fetch url: %s', url)
+        self.http_client.fetch(url, self.stop, **kwgs)
         resp = self.wait()
 
         self._parse_cookies(resp)

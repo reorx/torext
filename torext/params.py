@@ -18,12 +18,13 @@ _pattern_class = type(re.compile(''))
 class Field(object):
     name = None
 
-    def __init__(self, description=None, key=None, required=False, length=None, choices=None, default=None):
+    def __init__(self, description=None, key=None, required=False, length=None, choices=None, default=None, null=True):
         self.description = description  # default message
         self.required = required  # used with ParamSet
         self.choices = choices
         self.key = key
         self.default = default
+        self.null = null
 
         self.min_length = None
         assert length is None or isinstance(length, (int, tuple))
@@ -68,13 +69,13 @@ class Field(object):
             raise ValidationError('value "%s" is not one of %s' % (value, self.choices))
         return value
 
-    def _validate_exist(self, value):
-        if not value:
-            raise ValidationError('empty value')
+    def _validate_null(self, value):
+        if not self.null and not value:
+            raise ValidationError('empty value is not allowed')
         return value
 
     def validate(self, value):
-        self._validate_exist(value)
+        self._validate_null(value)
 
         self._validate_choices(value)
 
@@ -111,6 +112,10 @@ class RegexField(Field):
 
     def validate(self, value):
         value = super(RegexField, self).validate(value)
+
+        # If null is allowed, then skip regex check
+        if not value:
+            return value
 
         # Equate the type of regex pattern and the checking value
         pattern_type = type(self.regex.pattern)
@@ -180,7 +185,7 @@ class IntegerField(Field):
         super(IntegerField, self).__init__(*args, **kwargs)
 
     def validate(self, value):
-        self._validate_exist(value)
+        #self._validate_null(value)
 
         try:
             value = int(value)
@@ -226,7 +231,7 @@ class ListField(Field):
         super(ListField, self).__init__(*args, **kwargs)
 
     def validate(self, value):
-        self._validate_exist(value)
+        #self._validate_null(value)
         if not isinstance(value, list):
             raise ValidationError('Not a list')
 
@@ -332,6 +337,14 @@ class ParamSet(object):
                     getattr(self, attr_name)()
                 except ValidationError, e:
                     self.errors.append(e)
+
+    def kwargs(self, *args):
+        d = {}
+        for k in args:
+            v = getattr(self, k)
+            if v is not None:
+                d[k] = v
+        return d
 
     def has(self, name):
         return name in self.data
