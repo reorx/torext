@@ -12,6 +12,7 @@ import unittest
 import logging
 import mimetypes
 from Cookie import SimpleCookie
+from urllib import quote
 from tornado.httpclient import AsyncHTTPClient
 from tornado.ioloop import IOLoop
 from tornado.stack_context import NullContext
@@ -22,6 +23,47 @@ from torext.utils import raise_exc_info
 
 
 COOKIE_HEADER_KEY = 'Set-Cookie'
+
+
+# The one variable and two functions below are copied from
+# requests HTTP library <http://python-requests.org>.
+# :copyright: (c) 2013 by Kenneth Reitz.
+# :license: Apache 2.0, see LICENSE for more details.
+
+# The unreserved URI characters (RFC 3986)
+UNRESERVED_SET = frozenset(
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    + "0123456789-._~")
+
+
+def unquote_unreserved(uri):
+    """Un-escape any percent-escape sequences in a URI that are unreserved
+    characters. This leaves all reserved, illegal and non-ASCII bytes encoded.
+    """
+    parts = uri.split('%')
+    for i in range(1, len(parts)):
+        h = parts[i][0:2]
+        if len(h) == 2 and h.isalnum():
+            c = chr(int(h, 16))
+            if c in UNRESERVED_SET:
+                parts[i] = c + parts[i][2:]
+            else:
+                parts[i] = '%' + parts[i]
+        else:
+            parts[i] = '%' + parts[i]
+    return ''.join(parts)
+
+
+def requote_uri(uri):
+    """Re-quote the given URI.
+
+    This function passes the given URI through an unquote/quote cycle to
+    ensure that it is fully and consistently quoted.
+    """
+    # Unquote only the unreserved characters
+    # Then quote only illegal characters (do not quote reserved, unreserved,
+    # or '%')
+    return quote(unquote_unreserved(uri), safe="!#$%&'()*+,/:;=?@[]~")
 
 
 class TestClient(object):
@@ -189,9 +231,10 @@ class TestClient(object):
 
         kwgs['method'] = method
 
+        # `path` should be utf-8 encoded string to complete requote process
         if isinstance(path, unicode):
             path = path.encode('utf8')
-        #path = urllib.quote(path)
+        path = requote_uri(path)
 
         # `body` must be passed if method is one of those three
         if method in ['POST', 'PUT', 'PATCH']:
