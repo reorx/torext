@@ -339,20 +339,23 @@ class TorextApp(object):
 
         http_server_options = self.get_httpserver_options()
         http_server = HTTPServer(application, io_loop=self.io_loop, **http_server_options)
+        listen_kwargs = {}
+        if settings.get('ADDRESS'):
+            listen_kwargs['address'] = settings.get('ADDRESS')
         if not settings['TESTING'] and settings['DEBUG']:
             if settings['PROCESSES'] and settings['PROCESSES'] > 1:
                 logging.info('Multiprocess could not be used in debug mode')
             try:
-                http_server.listen(settings['PORT'])
+                http_server.listen(settings['PORT'], **listen_kwargs)
             except socket.error, e:
-                logging.warning('Pass 0.0.0.0 as address for http_server to listen due to socket.error: %s' % e)
-                http_server.listen(settings['PORT'], '0.0.0.0')
+                logging.warning('socket.error detected on http_server.listen, set ADDRESS="0.0.0.0" in settings to avoid this problem')
+                raise e
         else:
             try:
-                http_server.bind(settings['PORT'])
+                http_server.bind(settings['PORT'], **listen_kwargs)
             except socket.error, e:
-                logging.warning('Pass 0.0.0.0 as address for http_server to bind due to socket.error: %s' % e)
-                http_server.bind(settings['PORT'], '0.0.0.0')
+                logging.warning('socket.error detected on http_server.listen, set ADDRESS="0.0.0.0" in settings to avoid this problem')
+                raise e
             http_server.start(settings['PROCESSES'])
 
         self.http_server = http_server
