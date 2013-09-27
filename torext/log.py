@@ -90,7 +90,10 @@ class BaseFormatter(logging.Formatter):
         self.tab = tab
 
     def _format_record(self, record):
-        record.message = record.getMessage()
+        try:
+            record.message = record.getMessage()
+        except Exception as e:
+            record.message = "Bad message (%r): %r" % (e, record.__dict__)
         record.fixed_levelname = FIXED_LEVELNAMES.get(record.levelname, record.levelname)
 
         allfmt = self.contentfmt + self.prefixfmt
@@ -153,23 +156,31 @@ HANDLER_TYPES = {
 }
 
 
-def set_logger(name,
-               level='INFO',
-               propagate=1,
-               color=True,
-               prefixfmt=None,
-               contentfmt=None,
-               datefmt=None):
-    """
-    This function will clear the previous handlers and set only one handler,
+def set_logger(
+        name,
+        level='INFO',
+        propagate=1,
+        color=True,
+        prefixfmt=None,
+        contentfmt=None,
+        datefmt=None):
+    """This function will clear the previous handlers and set only one handler,
     which will only be StreamHandler for the logger.
+
+    Although this function can be used to configure any logger, but it will mostly
+    be used to set the root logger, since descendant loggers will propagate its
+    log event to root logger, all you have to do is to set handler(s) to root logger,
+    and everything will work properly.
     """
     # NOTE if the logger has no handlers, it will be added a handler automatically when it is used.
     # logging.getLogger(name).handlers = []
 
     logger = logging.getLogger(name)
-    logger.setLevel(getattr(logging, level))
-    logger.propagate = propagate
+    if not isinstance(level, int):
+        level = getattr(logging, level)
+    logger.setLevel(level)
+    if not propagate:
+        logger.propagate = propagate
 
     handler = None
     for h in logger.handlers:
