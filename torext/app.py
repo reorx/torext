@@ -5,6 +5,7 @@ import os
 import sys
 import time
 import copy
+import socket
 import logging
 
 from tornado.ioloop import IOLoop
@@ -341,9 +342,17 @@ class TorextApp(object):
         if not settings['TESTING'] and settings['DEBUG']:
             if settings['PROCESSES'] and settings['PROCESSES'] > 1:
                 logging.info('Multiprocess could not be used in debug mode')
-            http_server.listen(settings['PORT'])
+            try:
+                http_server.listen(settings['PORT'])
+            except socket.error, e:
+                logging.warning('Pass 0.0.0.0 as address for http_server to listen due to socket.error: %s' % e)
+                http_server.listen(settings['PORT'], '0.0.0.0')
         else:
-            http_server.bind(settings['PORT'])
+            try:
+                http_server.bind(settings['PORT'])
+            except socket.error, e:
+                logging.warning('Pass 0.0.0.0 as address for http_server to bind due to socket.error: %s' % e)
+                http_server.bind(settings['PORT'], '0.0.0.0')
             http_server.start(settings['PROCESSES'])
 
         self.http_server = http_server
