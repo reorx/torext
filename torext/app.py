@@ -435,9 +435,15 @@ class TorextApp(object):
 
     def register_json_encoder(self, encoder_func):
         self.json_encoder = encoder_func
+        return encoder_func
 
     def register_json_decoder(self, decoder_func):
         self.json_decoder = decoder_func
+        return decoder_func
+
+    def register_application_configurator(self, config_func):
+        self.application_configurator = config_func
+        return config_func
 
     def _make_application(self, application_class=Application):
         options = self.get_application_options()
@@ -452,6 +458,9 @@ class TorextApp(object):
         if host_handlers:
             for host, handlers in host_handlers.iteritems():
                 application.add_handlers(host, handlers)
+
+        # call `application_configurator` to do extra setups
+        self.application_configurator(application)
         return application
 
     def wsgi_application(self):
