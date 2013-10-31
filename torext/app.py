@@ -70,6 +70,10 @@ class TorextApp(object):
 
         TorextApp.current_app = self
 
+        # call ``setup``
+        print 'Initialize finished, setup torext the first time..'
+        self.setup()
+
     def update_settings(self, incoming):
         global settings
         for i in incoming:
@@ -205,7 +209,7 @@ class TorextApp(object):
         # set root_path according to module file
         self.set_root_path(settings_module=settings_module)
         #logging.info('set root_path: %s', self.root_path)
-        print 'set root_path: %s' % self.root_path
+        print 'Set root_path: %s' % self.root_path
 
         global settings
 
@@ -274,6 +278,10 @@ class TorextApp(object):
                 settings[i] = args_dict[i]
                 print '  %s  %s' % (i, args_dict[i])
 
+        # NOTE if ``command_line_config`` is called, torext must be re-setup
+        print 'Command line config finished, re-setup torext..'
+        self.setup()
+
     def setup(self):
         """
         setups before run
@@ -286,7 +294,7 @@ class TorextApp(object):
         # setup root logger (as early as possible)
         logging_kwargs = settings['LOGGING_OPTIONS'].copy()
         logging_kwargs['level'] = settings['LOGGING']
-        print logging_kwargs
+        print 'logging kwargs: %s' % logging_kwargs
         set_logger('', **logging_kwargs)
         if testing:
             print 'testing, set nose formatter', logging_kwargs
@@ -318,7 +326,7 @@ class TorextApp(object):
             try:
                 __import__(settings['PROJECT'])
                 if not testing:
-                    logging.debug('import %s success' % settings['PROJECT'])
+                    logging.debug('import package `%s` success' % settings['PROJECT'])
             except ImportError:
                 raise ImportError('PROJECT could not be imported, may be app.py is outside the project'
                                   'or there is no __init__ in the package.')
