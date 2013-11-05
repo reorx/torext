@@ -334,11 +334,10 @@ def add_to_syspath(pth, relative_to=None):
         sys.path.insert(0, pth)
 
 
-def start_shell(local_vars=None):
-    import os
+def start_shell(extra_vars=None):
     import code
-    import readline
     import rlcompleter
+    import readline
 
     class irlcompleter(rlcompleter.Completer):
         def complete(self, text, state):
@@ -351,29 +350,55 @@ def start_shell(local_vars=None):
     readline.parse_and_bind("tab: complete")
     readline.set_completer(irlcompleter().complete)
 
-    pythonrc = os.environ.get("PYTHONSTARTUP")
-    if pythonrc and os.path.isfile(pythonrc):
-        try:
-            execfile(pythonrc)
-        except NameError:
-            pass
-    # This will import .pythonrc.py as a side-effect
-    import user
-    user.__file__
+    import __main__
+    if extra_vars:
+        __main__.__dict__.update(
+            {k: v for k, v in extra_vars.iteritems() if not k.startswith('__')})
 
-    _locals = locals()
-    for i in _locals:
-        if not i.startswith('__') and i != 'local_vars':
-            local_vars[i] = _locals[i]
-    local_vars.update({
-        '__name__': '__main__',
-        '__package__': None,
-        '__doc__': None,
-    })
+    # As completer class search complement variables in `__main__.__dict__`
+    # (`self.namespace = __main__.__dict__` in 'rlcompleter.Completer.complete'),
+    # and the code is executed by `exec code in self.locals`
+    # (in `code.InteractiveInterpreter.runcode`),
+    # `__main__.__dict__` must be used as the local variables scope,
+    # not `globals()`, `locals()` or any other dict,
+    # (`__main__` module is explained here: http://docs.python.org/2/library/__main__.html)
+    shell = code.InteractiveConsole(__main__.__dict__)
+    shell.interact()
 
-    # TODO problem: could not complete exising vars.
 
-    code.interact(local=local_vars)
+def start_shell_a(extra_vars=None):
+
+    import code
+    import rlcompleter
+    import readline
+
+    #class irlcompleter(rlcompleter.Completer):
+        #def complete(self, text, state):
+            #if text == "":
+                ##you could  replace \t to 4 or 8 spaces if you prefer indent via spaces
+                #return ['    ', None][state]
+            #else:
+                #return rlcompleter.Completer.complete(self, text, state)
+
+    #readline.set_completer(irlcompleter().complete)
+    readline.parse_and_bind("tab: complete")
+
+    #_globals = globals()
+    #_globals.update(extra_vars)
+    #import __builtin__ as bt
+    #local_vars = {
+        #'__name__': '__main__',
+        #'__package__': None,
+        #'__doc__': None,
+        #'__builtins__': bt
+    #}
+    g = globals()
+    g['__name__'] == '__main__'
+    print g['datetime']
+    import __main__
+    #shell = code.InteractiveConsole(g)
+    #shell.interact()
+    code.interact(local=__main__.__dict__)
 
 
 def fix_request_arguments(arguments):
