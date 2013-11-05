@@ -463,6 +463,9 @@ class TorextApp(object):
         self.application_configurator(application)
         return application
 
+    def application_configurator(self, *args, **kwargs):
+        pass
+
     def wsgi_application(self):
         from tornado.wsgi import WSGIApplication
         return self._make_application(application_class=WSGIApplication)
