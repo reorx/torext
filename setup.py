@@ -1,30 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-Copyright (c) 2012 reorx xiao
-
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
-
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-"""
-
-__version__ = '1.0'
+# Always stay on 0.9 before documentation is finished
+__version__ = '0.9'
 
 from setuptools import setup
 
@@ -35,6 +13,7 @@ setup(
     author='reorx',
     author_email='novoreorx@gmail.com',
     url='http://github.com/reorx/torext',
+    # TODO replace with README.rst later
     description='torext is an instrumental package which aim at easy implementation of tornado based project',
     packages=[
         'torext',
@@ -44,7 +23,6 @@ setup(
     ],
     package_data={
         'torext': [
-            'templates/flask_style.py',
             'templates/project/__init__.py',
             'templates/project/app.py',
             'templates/project/settings.py',
@@ -52,10 +30,10 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'torext.sketch = torext.scripts.sketch:main',
+            'torext-sketch = torext.scripts.sketch:main',
         ]
     },
     install_requires=[
-        'tornado>=2.1.1'
+        'tornado>=3.0'
     ],
 )
