@@ -8,11 +8,7 @@ PORT = 8000
 
 DEBUG = True
 
-LOGGING = {
-    'level': 'INFO',
-    'propagate': 1,
-    'color': True,
-}
+LOGGING = 'INFO'
 
 LOG_REQUEST = True
 

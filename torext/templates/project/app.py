@@ -6,10 +6,8 @@ import settings
 
 
 app = TorextApp(settings)
-app.setup()
 
 
-if __name__ == '__main__':
-
+if '__main__' == __name__:
     app.command_line_config()
     app.run()
