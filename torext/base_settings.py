@@ -43,6 +43,8 @@ STATIC_PATH = 'static'
 
 TEMPLATE_PATH = 'template'
 
+TEMPLATE_ENGINE = 'tornado'
+
 LOGGING_IGNORE_URLS = [
     '/favicon.ico',
 ]

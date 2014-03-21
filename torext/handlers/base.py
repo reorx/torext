@@ -17,7 +17,7 @@ import tornado.locale
 from tornado.web import HTTPError
 from tornado.escape import utf8
 
-from torext import settings
+from torext import settings, errors
 from torext.app import TorextApp
 from torext.utils import raise_exc_info
 
@@ -259,3 +259,32 @@ class BaseHandler(tornado.web.RequestHandler):
             getattr(self, 'prepare_' + i)()
             if self._finished:
                 return
+
+    def render_string(self, template_name, **kwargs):
+        """This method was rewrited to support multiple template engine
+        (Determine by `TEMPLATE_ENGINE` setting, could be `tornado` and `jinja2`),
+        it will only affect on template rendering process, ui modules feature,
+        which is mostly exposed in `render` method, is kept to be used as normal.
+        """
+        if 'tornado' == settings['TEMPLATE_ENGINE']:
+            return super(BaseHandler, self).render_string(template_name, **kwargs)
+        elif 'jinja2' == settings['TEMPLATE_ENGINE']:
+            return jinja2_render(template_name, **kwargs)
+        else:
+            raise errors.SettingsError(
+                '%s is not a supported TEMPLATE_ENGINE, should be `tornado` or `jinja2`'
+                % settings['TEMPLATE_ENGINE'])
+
+
+_jinja2_env = None
+
+
+def jinja2_render(template_name, **kwargs):
+    from jinja2 import Environment, PackageLoader
+
+    global _jinja2_env
+    if not _jinja2_env:
+        _jinja2_env = Environment(loader=PackageLoader(settings['PROJECT'], settings['TEMPLATE_PATH']))
+
+    template = _jinja2_env.get_template(template_name)
+    return template.render(**kwargs)

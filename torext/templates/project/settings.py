@@ -20,6 +20,9 @@ STATIC_PATH = 'static'
 
 TEMPLATE_PATH = 'template'
 
+# You can use jinja2 instead
+TEMPLATE_ENGINE = 'tornado'
+
 LOGGING_IGNORE_URLS = [
     '/favicon.ico',
 ]
