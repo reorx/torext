@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import argparse
 import inspect
 
@@ -5,7 +8,7 @@ import inspect
 class Command(object):
     def __init__(self, func, options=None):
         self.func = func
-        parser = ArgumentParser(
+        parser = argparse.ArgumentParser(
             description='Calling function %s in manager script' % func.__name__)
         if isinstance(options, tuple):
             parser.add_argument()
@@ -16,6 +19,11 @@ class Manager(object):
     def __init__(self, app):
         self.commands = {}
         pass
+
+    def run(self):
+        pass
+
+    # Flask-Script like decorators
 
     def command(self, func=None, options=None):
         """
@@ -46,11 +54,14 @@ class Manager(object):
                 return _func
             return wrapper
 
-        raise Exception('You should call add_command'\
-            'with both `func` and `options` argument')
+        raise Exception('You should call add_command\
+                        with both `func` and `options` argument')
 
     def add_command(self, func, options=None):
         self.commands[func.__name__] = Command(func, options)
 
-    def main(self):
-        pass
+
+# Fabric like utilities
+
+def confirm():
+    pass
