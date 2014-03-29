@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from torext_project.base import MyBaseHandler
+from sampleproject.base import MyBaseHandler
 
 
 class HomeHdr(MyBaseHandler):

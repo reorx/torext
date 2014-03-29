@@ -1,4 +1,4 @@
-PROJECT = 'torext_project'
+PROJECT = 'sampleproject'
 
 LOCALE = 'en_US'
 
@@ -8,7 +8,7 @@ PORT = 8000
 
 DEBUG = True
 
-LOGGING = 'DEBUG'
+LOGGING = 'INFO'
 
 LOGGING_OPTIONS = {
     'propagate': 1,

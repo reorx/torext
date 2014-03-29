@@ -9,7 +9,7 @@ from tornado.escape import json_encode, json_decode
 class AllTestCase(unittest.TestCase):
 
     def setUp(self):
-        from torext_project.app import app
+        from sampleproject.app import app
 
         self.c = app.test_client()
         self.app = app

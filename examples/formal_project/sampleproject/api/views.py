@@ -3,7 +3,7 @@
 
 import os
 import logging
-from torext_project.base import MyBaseHandler
+from sampleproject.base import MyBaseHandler
 from tornado.web import HTTPError
 
 
