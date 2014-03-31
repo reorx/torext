@@ -35,7 +35,7 @@ class Command(object):
             if '\n' in doc:
                 doc = ' '.join(i.strip() for i in doc.split('\n'))
         else:
-            doc = 'Command %s in manage script' % func.func_name
+            doc = "Command '%s' in manage script" % func.func_name
         self.doc = doc
 
     def parse_args(self, all_args=None):
@@ -143,8 +143,21 @@ class Manager(object):
         if all_args[0] not in self._commands:
             self.print_small_help("'%s' is not a command" % all_args[0])
             return
-        else:
-            self._commands[all_args[0]].execute(all_args[1:])
+
+        # Execute
+        command = self._commands[all_args[0]]
+        try:
+            command.execute(all_args[1:])
+        except CommandArgumentError as e:
+            print 'Command execution failed: %s' % e
+            self.print_command_help(command)
+
+    def print_command_help(self, command):
+        buf = []
+        buf.append("'%s' usage:" % command.func.func_name)
+        buf.append("  Arguments        : %s" % ','.join(command.parameters))
+        buf.append("  Keyword arguments: %s" % ','.join('%s=%s' % (k, v) for k, v in command.keyword_parameters.iteritems()))
+        print '\n'.join(buf)
 
     def print_small_help(self, hint=None):
         s = "Type '%s -h' or '%s --help' for more information"
@@ -214,6 +227,11 @@ class Manager(object):
         self._commands_list.append(func.func_name)
 
         return func
+
+    def _init_default_commands(self):
+        # TODO
+        # init_completion
+        pass
 
 
 # Fabric like utilities

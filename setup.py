@@ -2,9 +2,12 @@
 # -*- coding: utf-8 -*-
 
 # Always stay on 0.9 before documentation is finished
-__version__ = '0.9.2'
+__version__ = '0.9.3'
 
 from setuptools import setup
+
+with open('README.rst', 'r') as f:
+    description = f.read()
 
 setup(
     license='License :: OSI Approved :: MIT License',
@@ -14,7 +17,7 @@ setup(
     author_email='novoreorx@gmail.com',
     url='http://github.com/reorx/torext',
     # TODO replace with README.rst later
-    description='torext is an instrumental package which aim at easy implementation of tornado based project',
+    description=description,
     packages=[
         'torext',
         'torext.handlers',
