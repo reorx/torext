@@ -20,7 +20,7 @@ class Command(object):
         argnames = (spec.args or [])[:]
         defaults = list(spec.defaults or [])
 
-        self.parameters = argnames[:- len(defaults)]
+        self.parameters = argnames[:len(argnames) - len(defaults)]
         self.keyword_parameters = dict(zip(argnames[- len(defaults):], defaults))
 
         # Check defined keyword parameters
@@ -39,7 +39,7 @@ class Command(object):
         self.doc = doc
 
     def parse_args(self, all_args=None):
-        if all_args:
+        if all_args is not None:
             all_args = all_args[:]
         else:
             all_args = sys.argv[2:]
