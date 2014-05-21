@@ -21,6 +21,7 @@ class ModuleSearcher(object):
         try:
             self._handlers = getattr(module, 'handlers')
         except AttributeError, e:
+            # TODO enhanced traceback
             raise URLRouteError('Caught error when router was getting handlers from module: %s' % e)
 
         logging.debug('got handlers from module %s' % self.import_path)
