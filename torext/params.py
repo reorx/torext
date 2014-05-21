@@ -361,9 +361,12 @@ class ParamSet(object):
         return d
 
     def __str__(self):
-        return '<%s: %s; errors=%s>' % (self.__class__.__name__,
-                                        ','.join(['%s=%s' % (str(k), str(v)) for k, v in self.data.iteritems()]),
-                                        self.errors)
+        return self.__unicode__().encode('utf8')
+
+    def __unicode__(self):
+        return u'<%s: %s; errors=%s>' % (self.__class__.__name__,
+                                         u','.join([u'%s=%s' % (k, v) for k, v in self.data.iteritems()]),
+                                         self.errors)
 
     @classmethod
     def validation_required(cls, method):
