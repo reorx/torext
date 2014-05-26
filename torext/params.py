@@ -8,7 +8,7 @@ import uuid
 import datetime
 import functools
 from tornado.escape import _unicode, json_decode
-from torext.errors import ValidationError, ParamsInvalidError, JSONDecodeError
+from torext.errors import ValidationError, ParamsInvalidError
 
 
 # don't know where to find the <type '_sre.SRE_Pattern'>
@@ -376,7 +376,7 @@ class ParamSet(object):
                 try:
                     arguments = json_decode(hdr.request.body)
                 except Exception, e:
-                    raise JSONDecodeError(str(e))
+                    raise ParamsInvalidError('JSON decode failed: %s' % e)
             else:
                 arguments = hdr.request.arguments
             params = cls(**arguments)
@@ -385,29 +385,6 @@ class ParamSet(object):
             hdr.params = params
             return method(hdr, *args, **kwgs)
         return wrapper
-
-
-def validation_required(cls):
-    def _wrapper(method):
-        @functools.wraps(method)
-        def wrapper(hdr, *args, **kwgs):
-            if 'json' == cls.__datatype__:
-                try:
-                    arguments = json_decode(hdr.request.body)
-                except Exception, e:
-                    raise JSONDecodeError(str(e))
-            else:
-                arguments = hdr.request.arguments
-            params = cls(**arguments)
-            # Reserve a reference of handler object on params
-            params.handler = hdr
-
-            if params.errors:
-                raise ParamsInvalidError(params.errors)
-            hdr.params = params
-            return method(hdr, *args, **kwgs)
-        return wrapper
-    return _wrapper
 
 
 def define_params(kwargs):
