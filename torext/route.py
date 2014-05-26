@@ -13,10 +13,7 @@ class ModuleSearcher(object):
         self._handlers = []
 
     def get_handlers(self):
-        try:
-            module = __import__(self.import_path, fromlist=[settings['PROJECT']])
-        except ImportError, e:
-            raise URLRouteError('Caught ImportError when router was searching modules: %s' % e)
+        module = __import__(self.import_path, fromlist=[settings['PROJECT']])
 
         try:
             self._handlers = getattr(module, 'handlers')
