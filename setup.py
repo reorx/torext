@@ -16,8 +16,8 @@ setup(
     author='reorx',
     author_email='novoreorx@gmail.com',
     url='http://github.com/reorx/torext',
-    # TODO replace with README.rst later
-    description=description,
+    description="The missing tornado mate",
+    long_description=description,
     packages=[
         'torext',
         'torext.handlers',
