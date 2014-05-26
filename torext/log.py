@@ -163,6 +163,8 @@ def set_logger(name,
     """
     This function will clear the previous handlers and set only one handler,
     which will only be StreamHandler for the logger.
+
+    This function is designed to be able to called multiple times in a context.
     """
     # NOTE if the logger has no handlers, it will be added a handler automatically when it is used.
     # logging.getLogger(name).handlers = []

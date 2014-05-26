@@ -70,14 +70,38 @@ class TorextApp(object):
 
         TorextApp.current_app = self
 
-        # call ``setup``
-        logging.debug('Initialize finished, setup torext the first time..')
-        self.setup()
-
-    def update_settings(self, incoming):
+    def update_settings(self, incoming, convert_type=False, log_changes=False):
         global settings
+
+        def _log(s):
+            if log_changes:
+                print s
+
         for i in incoming:
-            settings[i] = incoming[i]
+            incoming_v = incoming[i]
+
+            if i in settings:
+                _log('Settings update "%s": %s -> %s' % (i, settings[i], incoming_v))
+
+                if convert_type:
+                    incoming_v = _convert_type(incoming_v, settings[i])
+            else:
+                _log('Settings add "%s": %s' % (i, incoming_v))
+
+            settings[i] = incoming_v
+
+        self.is_setuped = False
+
+        # Config logger here so that it can be done as early as possible,
+        # and reflect as soon as possible each time relevant settings changed.
+        logging_config = self._get_logging_config()
+        set_logger('', **logging_config)
+        logging.debug('logging config: %s', logging_config)
+
+    def _get_logging_config(self):
+        logging_config = settings['LOGGING_OPTIONS'].copy()
+        logging_config['level'] = settings['LOGGING']
+        return logging_config
 
     def set_root_path(self, root_path=None, settings_module=None):
         """
@@ -205,10 +229,9 @@ class TorextApp(object):
         """
         Optional function
         """
-        assert hasattr(settings_module, '__file__'), 'settings passed in initialize() must be a module'
+        assert hasattr(settings_module, '__file__'), 'settings must be a module'
         # set root_path according to module file
         self.set_root_path(settings_module=settings_module)
-        #logging.info('set root_path: %s', self.root_path)
         logging.debug('Set root_path: %s', self.root_path)
 
         global settings
@@ -233,6 +256,8 @@ class TorextApp(object):
 
         example:
         $ python app.py --PORT=1000
+
+        NOTE This method is deprecated, use `torext.script` to parse command line arguments instead.
         """
 
         args = sys.argv[1:]
@@ -278,27 +303,19 @@ class TorextApp(object):
                 settings[i] = args_dict[i]
                 logging.debug('  %s  %s', i, args_dict[i])
 
-        # NOTE if ``command_line_config`` is called, torext must be re-setup
-        logging.debug('Command line config finished, re-setup torext..')
-        self.setup()
+        # NOTE if ``command_line_config`` is called, logging must be re-configed
+        self.update_settings({})
 
     def setup(self):
-        """
-        setups before run
+        """This function will be called both before `run` and testing started.
         """
         testing = settings.get('TESTING')
 
-        if not testing:
-            logging.debug('Setup torext..')
-
-        # setup root logger (as early as possible)
-        logging_kwargs = settings['LOGGING_OPTIONS'].copy()
-        logging_kwargs['level'] = settings['LOGGING']
-        logging.debug('logging kwargs: %s', logging_kwargs)
-        set_logger('', **logging_kwargs)
         if testing:
-            logging.debug('testing, set nose formatter: %s', logging_kwargs)
-            set_nose_formatter(logging_kwargs)
+            # Fix nose handler in testing situation.
+            logging_config = self._get_logging_config()
+            set_nose_formatter(logging_config)
+            print 'testing, set nose formatter: %s' % logging_config
 
         # reset timezone
         os.environ['TZ'] = settings['TIME_ZONE']
@@ -321,12 +338,10 @@ class TorextApp(object):
                 parent_path = os.path.dirname(self.root_path)
                 if not _abs(parent_path) in [_abs(i) for i in sys.path]:
                     sys.path.insert(0, parent_path)
-                    if not testing:
-                        logging.info('Add %s to sys.path' % _abs(parent_path))
+                    logging.info('Add %s to sys.path' % _abs(parent_path))
             try:
                 __import__(settings['PROJECT'])
-                if not testing:
-                    logging.debug('import package `%s` success' % settings['PROJECT'])
+                logging.debug('import package `%s` success' % settings['PROJECT'])
             except ImportError:
                 raise ImportError('PROJECT could not be imported, may be app.py is outside the project'
                                   'or there is no __init__ in the package.')
@@ -510,3 +525,17 @@ def _guess_caller():
 
 def guess():
     return _guess_caller()
+
+
+def _convert_type(raw, before):
+    type_ = type(before)
+    if type_ is bool:
+        if raw == 'True':
+            value = True
+        elif raw == 'False':
+            value = False
+        else:
+            raise errors.ArgsParseError('Should only be True or False, got: %s' % raw)
+    else:
+        value = type_(raw)
+    return value
