@@ -71,7 +71,7 @@ class TorextApp(object):
         TorextApp.current_app = self
 
         # call ``setup``
-        print 'Initialize finished, setup torext the first time..'
+        logging.debug('Initialize finished, setup torext the first time..')
         self.setup()
 
     def update_settings(self, incoming):
@@ -209,7 +209,7 @@ class TorextApp(object):
         # set root_path according to module file
         self.set_root_path(settings_module=settings_module)
         #logging.info('set root_path: %s', self.root_path)
-        print 'Set root_path: %s' % self.root_path
+        logging.debug('Set root_path: %s', self.root_path)
 
         global settings
 
@@ -256,7 +256,7 @@ class TorextApp(object):
                 new_keys.append(key)
 
         if existed_keys:
-            print 'Changed settings:'
+            logging.debug('Changed settings:')
             for i in existed_keys:
                 before = settings[i]
                 type_ = type(before)
@@ -270,16 +270,16 @@ class TorextApp(object):
                 else:
                     _value = type_(args_dict[i])
                 settings[i] = _value
-                print '  %s  [%s]%s (%s)' % (i, type(settings[i]), settings[i], before)
+                logging.debug('  %s  [%s]%s (%s)', i, type(settings[i]), settings[i], before)
 
         if new_keys:
-            print 'New settings:'
+            logging.debug('New settings:')
             for i in new_keys:
                 settings[i] = args_dict[i]
-                print '  %s  %s' % (i, args_dict[i])
+                logging.debug('  %s  %s', i, args_dict[i])
 
         # NOTE if ``command_line_config`` is called, torext must be re-setup
-        print 'Command line config finished, re-setup torext..'
+        logging.debug('Command line config finished, re-setup torext..')
         self.setup()
 
     def setup(self):
@@ -289,15 +289,15 @@ class TorextApp(object):
         testing = settings.get('TESTING')
 
         if not testing:
-            print 'Setup torext..'
+            logging.debug('Setup torext..')
 
         # setup root logger (as early as possible)
         logging_kwargs = settings['LOGGING_OPTIONS'].copy()
         logging_kwargs['level'] = settings['LOGGING']
-        print 'logging kwargs: %s' % logging_kwargs
+        logging.debug('logging kwargs: %s', logging_kwargs)
         set_logger('', **logging_kwargs)
         if testing:
-            print 'testing, set nose formatter', logging_kwargs
+            logging.debug('testing, set nose formatter: %s', logging_kwargs)
             set_nose_formatter(logging_kwargs)
 
         # reset timezone
