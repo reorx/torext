@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Always stay on 0.9 before documentation is finished
-__version__ = '0.9.3'
+__version__ = '0.9.4'
 
 from setuptools import setup
 
