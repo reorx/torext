@@ -3,10 +3,7 @@
 
 import sys
 import inspect
-
-
-class CommandArgumentError(Exception):
-    pass
+from .errors import CommandArgumentError
 
 
 class Command(object):
@@ -104,7 +101,6 @@ class Command(object):
         return typ
 
     def _convert_to_type(self, source, typ):
-        print source, typ
         if typ in (int, float, str, unicode):
             try:
                 v = typ(source)

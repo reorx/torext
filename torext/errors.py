@@ -65,6 +65,10 @@ class ParamsInvalidError(TorextException):
         return 'Invalid params: %s' % self.errors
 
 
+class CommandArgumentError(TorextException):
+    pass
+
+
 class OperationNotAllowed(TorextException):
     pass
 
