@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import sys
-import logging
 import httplib
 import datetime
 import email.utils
@@ -18,6 +17,7 @@ from tornado.web import HTTPError
 from tornado.escape import utf8
 
 from torext import settings, errors
+from torext.log import torext_log
 from torext.app import TorextApp
 from torext.utils import raise_exc_info
 
@@ -50,7 +50,7 @@ def log_response(handler):
         for i in body.split('\n'):
             lines += ['| ' + j for j in cut(i)]
         block += '\nBody:\n' + '\n'.join(lines)
-    logging.info(block)
+    torext_log.info(block)
 
 
 def log_request(handler):
@@ -65,7 +65,7 @@ def log_request(handler):
         for k, v in handler.request.arguments.iteritems():
             block += '| {0:<15} | {1:<15} \n'.format(repr(k), repr(v))
 
-    logging.info(block)
+    torext_log.info(block)
 
 
 def _format_headers_log(headers):
@@ -98,15 +98,15 @@ class BaseHandler(tornado.web.RequestHandler):
             if e.log_message:
                 format = "%d %s: " + e.log_message
                 args = [e.status_code, self._request_summary()] + list(e.args)
-                logging.warning(format, *args)
+                torext_log.warning(format, *args)
             if e.status_code not in httplib.responses:
-                logging.error("Bad HTTP status code: %d", e.status_code)
+                torext_log.error("Bad HTTP status code: %d", e.status_code)
                 self.send_error(500, exc_info=sys.exc_info())
             else:
                 self.send_error(e.status_code, exc_info=sys.exc_info())
         else:
-            logging.error("Uncaught exception %s\n%r", self._request_summary(),
-                          self.request, exc_info=True)
+            torext_log.error("Uncaught exception %s\n%r", self._request_summary(),
+                             self.request, exc_info=True)
             self.send_error(500, exc_info=sys.exc_info())
 
     def _handle_request_exception(self, e):
@@ -185,7 +185,7 @@ class BaseHandler(tornado.web.RequestHandler):
         try:
             chunk = utf8(chunk)
         except Exception:
-            logging.error('chunk encoding error, repr: %s' % repr(chunk))
+            torext_log.error('chunk encoding error, repr: %s' % repr(chunk))
             raise_exc_info(sys.exc_info())
 
         self.write(chunk)

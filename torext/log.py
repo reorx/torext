@@ -14,6 +14,8 @@ except ImportError:
 
 root_logger = logging.getLogger()
 
+torext_log = logging.getLogger('torext')
+
 
 # borrow from tornado.options._LogFormatter.__init__
 def _color(lvl, s):
