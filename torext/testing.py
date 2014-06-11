@@ -86,7 +86,8 @@ class TestClient(object):
         self._handler_exc_info = None
 
         app.update_settings({
-            'TESTING': True
+            'TESTING': True,
+            'PROCESSES': 1
         })
         # redo setup to make settings changes effective
         app.setup()

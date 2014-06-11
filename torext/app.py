@@ -93,9 +93,9 @@ class TorextApp(object):
 
         # Config logger here so that it can be done as early as possible,
         # and reflect as soon as possible each time relevant settings changed.
-        logging_config = self._get_logging_config()
-        set_logger('torext', **logging_config)
-        torext_log.debug('logging config: %s', logging_config)
+        #logging_config = self._get_logging_config()
+        #set_logger('torext', **logging_config)
+        #torext_log.debug('logging config: %s', logging_config)
 
     def _get_logging_config(self):
         logging_config = settings['LOGGING_OPTIONS'].copy()
@@ -353,15 +353,23 @@ class TorextApp(object):
         self.is_setuped = True
 
     def _init_infrastructures(self):
+        multiprocessing = False
+        if settings['PROCESSES'] and settings['PROCESSES'] > 1:
+            if settings['DEBUG']:
+                torext_log.info('Multiprocess could not be used in debug mode')
+            else:
+                multiprocessing = True
+
         if self.io_loop:
             if not self.io_loop.initialized():
                 # this means self.io_loop is a customized io_loop, so `install` should be called
                 # to make it the singleton instance
                 #print self.io_loop.__class__.__name__
                 self.io_loop.install()
-        #else:
-            # NOTE To support running tornado for multiple processes, we do not instance ioloop before run HTTPServer now.
-            #self.io_loop = IOLoop.instance()
+        else:
+            # NOTE To support running tornado for multiple processes, we do not instance ioloop if multiprocessing is True
+            if not multiprocessing:
+                self.io_loop = IOLoop.instance()
 
         application = self._make_application()
 
@@ -370,21 +378,22 @@ class TorextApp(object):
         listen_kwargs = {}
         if settings.get('ADDRESS'):
             listen_kwargs['address'] = settings.get('ADDRESS')
-        if not settings['TESTING'] and settings['DEBUG']:
-            if settings['PROCESSES'] and settings['PROCESSES'] > 1:
-                torext_log.info('Multiprocess could not be used in debug mode')
-            try:
-                http_server.listen(settings['PORT'], **listen_kwargs)
-            except socket.error, e:
-                torext_log.warning('socket.error detected on http_server.listen, set ADDRESS="0.0.0.0" in settings to avoid this problem')
-                raise e
-        else:
+
+        if multiprocessing:
+            # Multiprocessing mode
             try:
                 http_server.bind(settings['PORT'], **listen_kwargs)
             except socket.error, e:
                 torext_log.warning('socket.error detected on http_server.listen, set ADDRESS="0.0.0.0" in settings to avoid this problem')
                 raise e
             http_server.start(settings['PROCESSES'])
+        else:
+            # Single process mode
+            try:
+                http_server.listen(settings['PORT'], **listen_kwargs)
+            except socket.error, e:
+                torext_log.warning('socket.error detected on http_server.listen, set ADDRESS="0.0.0.0" in settings to avoid this problem')
+                raise e
 
         self.http_server = http_server
         self.application = application
