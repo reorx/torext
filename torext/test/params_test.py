@@ -175,9 +175,9 @@ def test_type_list():
 
 class FakeParams(params.ParamSet):
     id = params.IntegerField('wat are you?', required=True, min=0)
-    name = params.WordField('name should be 8', required=True, length=(1, 8))
-    email = params.EmailField('email not valid in format', required=True)
-    content = params.Field('content should be < 20', length=(1, 20))
+    name = params.WordField('name should be a 1~8 length string, and is required', required=True, length=(1, 8))
+    email = params.EmailField('email should be a valid email format, and is required', required=True)
+    content = params.Field('content should be a 1~20 length string', length=(1, 20))
 
 
 def test_param():

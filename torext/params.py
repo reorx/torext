@@ -17,6 +17,7 @@ _pattern_class = type(re.compile(''))
 
 class Field(object):
     name = None
+    with_choices = True
 
     def __init__(self, description=None, key=None, required=False, length=None, choices=None, default=None, null=True):
         self.description = description  # default message
@@ -46,8 +47,6 @@ class Field(object):
         raise ValidationError(self.description, error_message)
 
     def _validate_length(self, value):
-        if not self.length:
-            return value
         length = self.length
         value_len = len(value)
 
@@ -65,21 +64,30 @@ class Field(object):
         return value
 
     def _validate_choices(self, value):
-        if self.choices and not value in self.choices:
+        if not value in self.choices:
             raise ValidationError('value "%s" is not one of %s' % (value, self.choices))
         return value
 
-    def _validate_null(self, value):
-        if not self.null and not value:
-            raise ValidationError('empty value is not allowed')
+    def _validate_type(self, value):
+        """Override this method to implement type specified validation"""
         return value
 
     def validate(self, value):
-        self._validate_null(value)
+        # If null is allowed, skip other validates
+        if not value:
+            if self.null:
+                return value
+            else:
+                raise ValidationError('empty value is not allowed')
 
-        self._validate_choices(value)
+        if self.length:
+            self._validate_length(value)
 
-        self._validate_length(value)
+        value = self._validate_type(value)
+
+        # Validate choices after type, so that the value has been converted
+        if self.with_choices and self.choices:
+            self._validate_choices(value)
 
         return value
 
@@ -110,13 +118,7 @@ class RegexField(Field):
 
         super(RegexField, self).__init__(*args, **kwgs)
 
-    def validate(self, value):
-        value = super(RegexField, self).validate(value)
-
-        # If null is allowed, then skip regex check
-        if not value:
-            return value
-
+    def _validate_type(self, value):
         # Equate the type of regex pattern and the checking value
         pattern_type = type(self.regex.pattern)
         c_value = value
@@ -184,15 +186,11 @@ class IntegerField(Field):
 
         super(IntegerField, self).__init__(*args, **kwargs)
 
-    def validate(self, value):
-        #self._validate_null(value)
-
+    def _validate_type(self, value):
         try:
             value = int(value)
         except (ValueError, TypeError):
             self.raise_exc('could not convert value "%s" into int type' % value)
-
-        self._validate_choices(value)
 
         if self.min:
             if value < self.min:
@@ -217,7 +215,7 @@ class DateField(Field):
         self.datefmt = datefmt
         super(DateField, self).__init__(*args, **kwargs)
 
-    def validate(self, value):
+    def _validate_type(self, value):
         try:
             value = datetime.datetime.strptime(value, self.datefmt)
         except ValueError, e:
@@ -226,12 +224,13 @@ class DateField(Field):
 
 
 class ListField(Field):
+    with_choices = False
+
     def __init__(self, *args, **kwargs):
         self.item_field = kwargs.pop('item_field', None)
         super(ListField, self).__init__(*args, **kwargs)
 
-    def validate(self, value):
-        #self._validate_null(value)
+    def _validate_type(self, value):
         if not isinstance(value, list):
             raise ValidationError('Not a list')
 
@@ -253,7 +252,7 @@ class ListField(Field):
 
 
 class UUIDField(Field):
-    def validate(self, value):
+    def _validate_type(self, value):
         try:
             return uuid.UUID(value)
         except ValueError, e:
