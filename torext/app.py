@@ -14,7 +14,7 @@ from tornado.web import Application
 from torext import settings
 from torext import errors
 from torext.testing import TestClient, AppTestCase
-from torext.log import set_logger, set_nose_formatter, torext_log
+from torext.log import set_logger, set_nose_formatter, request_log
 from torext.route import Router
 from torext.utils import json_encode, json_decode
 
@@ -95,7 +95,7 @@ class TorextApp(object):
         # and reflect as soon as possible each time relevant settings changed.
         #logging_config = self._get_logging_config()
         #set_logger('torext', **logging_config)
-        #torext_log.debug('logging config: %s', logging_config)
+        #request_log.debug('logging config: %s', logging_config)
 
     def _get_logging_config(self):
         logging_config = settings['LOGGING_OPTIONS'].copy()
@@ -157,7 +157,7 @@ class TorextApp(object):
             'serve_traceback'
         ]
         options = {
-            'log_function': _log_function,
+            'log_function': self._log_function,
             'ui_modules': self.uimodules,
         }
 
@@ -186,7 +186,7 @@ class TorextApp(object):
                 if not os.path.isabs(v):
                     v = os.path.abspath(
                         os.path.join(self.root_path, v))
-                    torext_log.debug('Fix %s to be absolute: %s' % (k, v))
+                    request_log.debug('Fix %s to be absolute: %s' % (k, v))
                 options[k] = v
 
     def _get_handlers_on_host(self, host=None):
@@ -236,7 +236,7 @@ class TorextApp(object):
         assert hasattr(settings_module, '__file__'), 'settings must be a module'
         # set root_path according to module file
         self.set_root_path(settings_module=settings_module)
-        torext_log.debug('Set root_path: %s', self.root_path)
+        request_log.debug('Set root_path: %s', self.root_path)
 
         global settings
 
@@ -285,7 +285,7 @@ class TorextApp(object):
                 new_keys.append(key)
 
         if existed_keys:
-            torext_log.debug('Changed settings:')
+            request_log.debug('Changed settings:')
             for i in existed_keys:
                 before = settings[i]
                 type_ = type(before)
@@ -299,13 +299,13 @@ class TorextApp(object):
                 else:
                     _value = type_(args_dict[i])
                 settings[i] = _value
-                torext_log.debug('  %s  [%s]%s (%s)', i, type(settings[i]), settings[i], before)
+                request_log.debug('  %s  [%s]%s (%s)', i, type(settings[i]), settings[i], before)
 
         if new_keys:
-            torext_log.debug('New settings:')
+            request_log.debug('New settings:')
             for i in new_keys:
                 settings[i] = args_dict[i]
-                torext_log.debug('  %s  %s', i, args_dict[i])
+                request_log.debug('  %s  %s', i, args_dict[i])
 
         # NOTE if ``command_line_config`` is called, logging must be re-configed
         self.update_settings({})
@@ -342,10 +342,10 @@ class TorextApp(object):
                 parent_path = os.path.dirname(self.root_path)
                 if not _abs(parent_path) in [_abs(i) for i in sys.path]:
                     sys.path.insert(0, parent_path)
-                    torext_log.info('Add %s to sys.path' % _abs(parent_path))
+                    request_log.info('Add %s to sys.path' % _abs(parent_path))
             try:
                 __import__(settings['PROJECT'])
-                torext_log.debug('import package `%s` success' % settings['PROJECT'])
+                request_log.debug('import package `%s` success' % settings['PROJECT'])
             except ImportError:
                 raise ImportError('PROJECT could not be imported, may be app.py is outside the project'
                                   'or there is no __init__ in the package.')
@@ -356,7 +356,7 @@ class TorextApp(object):
         multiprocessing = False
         if settings['PROCESSES'] and settings['PROCESSES'] > 1:
             if settings['DEBUG']:
-                torext_log.info('Multiprocess could not be used in debug mode')
+                request_log.info('Multiprocess could not be used in debug mode')
             else:
                 multiprocessing = True
 
@@ -384,7 +384,7 @@ class TorextApp(object):
             try:
                 http_server.bind(settings['PORT'], **listen_kwargs)
             except socket.error, e:
-                torext_log.warning('socket.error detected on http_server.listen, set ADDRESS="0.0.0.0" in settings to avoid this problem')
+                request_log.warning('socket.error detected on http_server.listen, set ADDRESS="0.0.0.0" in settings to avoid this problem')
                 raise e
             http_server.start(settings['PROCESSES'])
         else:
@@ -392,7 +392,7 @@ class TorextApp(object):
             try:
                 http_server.listen(settings['PORT'], **listen_kwargs)
             except socket.error, e:
-                torext_log.warning('socket.error detected on http_server.listen, set ADDRESS="0.0.0.0" in settings to avoid this problem')
+                request_log.warning('socket.error detected on http_server.listen, set ADDRESS="0.0.0.0" in settings to avoid this problem')
                 raise e
 
         self.http_server = http_server
@@ -452,7 +452,7 @@ class TorextApp(object):
                   'Logging(root) Level', 'Locale', 'Debug', 'Home', 'URL Patterns(by sequence)']:
             content += '\n- %s: %s' % (k, info[k])
 
-        torext_log.info(content)
+        request_log.info(content)
 
     def test_client(self, **kwgs):
         return TestClient(self, **kwgs)
@@ -481,7 +481,7 @@ class TorextApp(object):
 
     def _make_application(self, application_class=Application):
         options = self.get_application_options()
-        torext_log.debug('%s settings: %s', application_class.__name__, options)
+        request_log.debug('%s settings: %s', application_class.__name__, options)
 
         # this method intended to be able to called for multiple times,
         # so attributes should not be changed, just make a copy
@@ -504,25 +504,23 @@ class TorextApp(object):
         from tornado.wsgi import WSGIApplication
         return self._make_application(application_class=WSGIApplication)
 
+    def _log_function(self, handler):
+        """Override Applicaion.log_function so that what to log can be controlled.
+        """
+        if handler.get_status() < 400:
+            log_method = request_log.info
+        elif handler.get_status() < 500:
+            log_method = request_log.warning
+        else:
+            log_method = request_log.error
+        for i in settings['LOGGING_IGNORE_URLS']:
+            if handler.request.uri.startswith(i):
+                log_method = request_log.debug
+                break
 
-def _log_function(handler):
-    """
-    override Applicaion.log_function so that what to log can be controled.
-    """
-    if handler.get_status() < 400:
-        log_method = torext_log.info
-    elif handler.get_status() < 500:
-        log_method = torext_log.warning
-    else:
-        log_method = torext_log.error
-    for i in settings['LOGGING_IGNORE_URLS']:
-        if handler.request.uri.startswith(i):
-            log_method = torext_log.debug
-            break
-
-    request_time = 1000.0 * handler.request.request_time()
-    log_method("%d %s %.2fms", handler.get_status(),
-               handler._request_summary(), request_time)
+        request_time = 1000.0 * handler.request.request_time()
+        log_method("%d %s %.2fms", handler.get_status(),
+                   handler._request_summary(), request_time)
 
 
 _caller_path = None

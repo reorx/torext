@@ -14,7 +14,8 @@ except ImportError:
 
 root_logger = logging.getLogger()
 
-torext_log = logging.getLogger('torext')
+app_log = logging.getLogger('torext.app')
+request_log = logging.getLogger('torext.request')
 
 
 # borrow from tornado.options._LogFormatter.__init__

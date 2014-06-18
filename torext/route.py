@@ -3,7 +3,7 @@
 
 from torext import settings
 from torext.errors import URLRouteError
-from torext.log import torext_log
+from torext.log import app_log
 
 
 class ModuleSearcher(object):
@@ -21,7 +21,7 @@ class ModuleSearcher(object):
             # TODO enhanced traceback
             raise URLRouteError('Caught error when router was getting handlers from module: %s' % e)
 
-        torext_log.debug('got handlers from module %s' % self.import_path)
+        app_log.debug('got handlers from module %s' % self.import_path)
 
         for i in self._handlers:
             if isinstance(i[1], ModuleSearcher):
@@ -52,7 +52,7 @@ class Router(object):
     def add(self, spec):
         if self.prefix:
             spec = (self.prefix + spec[0], spec[1])
-        torext_log.debug('add url spec in router: %s' % str(spec))
+        app_log.debug('add url spec in router: %s' % str(spec))
         self._handlers.append(spec)
 
 
