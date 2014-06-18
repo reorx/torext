@@ -218,8 +218,8 @@ class DateField(Field):
     def _validate_type(self, value):
         try:
             value = datetime.datetime.strptime(value, self.datefmt)
-        except ValueError, e:
-            self.raise_exc(str(e))
+        except ValueError:
+            self.raise_exc('Could not convert %s to datetime object by format %s' % (value, self.datefmt))
         return value
 
 
@@ -317,7 +317,7 @@ class ParamSet(object):
                     func_name = 'validate_' + name
                     if hasattr(self, func_name):
                         value = getattr(self, func_name)(value)
-                        assert value is not None, 'Forget to return value after validation?'
+                        assert value is not None, 'Forget to return value after validation? Or this is caused by your explicitly returns None, which is not allowed in the mechanism.'
                 except ValidationError, e:
                     self.errors.append((key, e))
                 else:
@@ -389,3 +389,19 @@ class ParamSet(object):
 def define_params(kwargs):
     param_class = type('AutoCreatedParams', (ParamSet, ), kwargs)
     return param_class.validation_required
+
+
+def simple_params(method):
+    @functools.wraps(method)
+    def wrapper(hdr, *args, **kwgs):
+        if 'json' == getattr(method.__class__, '__datatype__', None):
+            try:
+                params = json_decode(hdr.request.body)
+            except Exception, e:
+                raise ParamsInvalidError('JSON decode failed: %s' % e)
+        else:
+            params = {k: v[0] for k, v in hdr.request.arguments.iteritems()}
+
+        hdr.params = params
+        return method(hdr, *args, **kwgs)
+    return wrapper
