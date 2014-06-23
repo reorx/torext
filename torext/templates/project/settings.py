@@ -8,7 +8,14 @@ PORT = 8000
 
 DEBUG = True
 
-LOGGING = 'INFO'
+LOGGERS = {
+    '': {
+        'level': 'INFO',
+        'fmt': '%(color)s[%(fixed_levelname)s %(asctime)s %(module)s:%(lineno)d]%(end_color)s %(message)s',
+        #'fmt': '[%(fixed_levelname)s %(asctime)s %(module)s:%(lineno)d] %(message)s',
+        'datefmt': '%Y-%m-%d %H:%M:%S',
+    }
+}
 
 LOG_REQUEST = True
 

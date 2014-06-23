@@ -19,7 +19,7 @@ request_log = logging.getLogger('torext.request')
 
 
 # borrow from tornado.options._LogFormatter.__init__
-def _color(lvl, s):
+def _color(lvl):
     try:
         import curses
     except ImportError:
@@ -33,7 +33,7 @@ def _color(lvl, s):
         except:
             pass
     if not color:
-        return s
+        return u'', u''
     # The curses module has some str/bytes confusion in
     # python3.  Until version 3.2.3, most methods return
     # bytes, but only accept strings.  In addition, we want to
@@ -59,7 +59,7 @@ def _color(lvl, s):
     }
     _normal = unicode(curses.tigetstr("sgr0"), "ascii")
 
-    return colors_map.get(lvl, _normal) + s + _normal
+    return colors_map.get(lvl, _normal), _normal
 
 
 FIXED_LEVELNAMES = {
@@ -71,11 +71,10 @@ FIXED_LEVELNAMES = {
 
 class BaseFormatter(logging.Formatter):
     def __init__(self,
-                 prefixfmt='[%(fixed_levelname)s %(asctime)s %(module)s:%(lineno)s] ',
-                 contentfmt='%(message)s',
+                 fmt='%(color)s[%(fixed_levelname)s %(asctime)s %(module)s:%(lineno)d]%(end_color)s %(message)s',
                  datefmt='%Y-%m-%d %H:%M:%S',
                  color=False,
-                 tab=u'  '):
+                 tab='  '):
         """
         a log is constituted by two part: prefix + content
 
@@ -87,8 +86,8 @@ class BaseFormatter(logging.Formatter):
         # (just store two attributes on self: _fmt & datefmt), execute it firstly
         logging.Formatter.__init__(self, datefmt=datefmt)
 
-        self.prefixfmt = prefixfmt
-        self.contentfmt = contentfmt
+        self.fmt = fmt
+        self.ufmt = fmt.decode('utf8')
         self.color = color
         self.tab = tab
 
@@ -96,10 +95,9 @@ class BaseFormatter(logging.Formatter):
         record.message = record.getMessage()
         record.fixed_levelname = FIXED_LEVELNAMES.get(record.levelname, record.levelname)
 
-        allfmt = self.contentfmt + self.prefixfmt
-        if 'asctime' in allfmt:
+        if 'asctime' in self.fmt:
             record.asctime = self.formatTime(record, self.datefmt)
-        if 'secs' in allfmt:
+        if 'secs' in self.fmt:
             record.secs = record.msecs / 1000
 
         if record.exc_info:
@@ -112,24 +110,18 @@ class BaseFormatter(logging.Formatter):
         """
         self._format_record(record)
 
-        prefix = self.prefixfmt % record.__dict__
-        if not isinstance(prefix, unicode):
-            prefix = prefix.decode('utf8', 'replace')
-        if self.color:
-            prefix = _color(record.levelno, prefix)
+        record_dict = {}
+        for k, v in record.__dict__.iteritems():
+            if isinstance(k, str):
+                k = k.decode('utf8')
+            if isinstance(v, str):
+                v = v.decode('utf8', 'replace')
+            record_dict[k] = v
 
-        # print 'prefix', type(prefix), prefix
+        if 'color' in self.fmt or 'end_color' in self.fmt:
+            record_dict['color'], record_dict['end_color'] = _color(record.levelno)
 
-        # prefix is unicode, so the result of record format must also be unicode
-        content = self.contentfmt % record.__dict__
-        if not isinstance(content, unicode):
-            # If the content is not encoded in utf8, gibberish will be showed
-            # instead of raising exception
-            content = content.decode('utf8', 'replace')
-
-        # print 'content', type(content), content
-
-        log = prefix + content
+        log = self.ufmt % record_dict
 
         if record.exc_text:
             if log[-1:] != u'\n':
@@ -158,23 +150,25 @@ HANDLER_TYPES = {
 
 def set_logger(name,
                level='INFO',
+               fmt=None,
+               datefmt=None,
                propagate=1,
-               color=True,
-               prefixfmt=None,
-               contentfmt=None,
-               datefmt=None):
+               remove_handlers=False):
     """
     This function will clear the previous handlers and set only one handler,
     which will only be StreamHandler for the logger.
 
     This function is designed to be able to called multiple times in a context.
-    """
-    # NOTE if the logger has no handlers, it will be added a handler automatically when it is used.
-    # logging.getLogger(name).handlers = []
 
+    Note that if a logger has no handlers, it will be added a handler automatically when it is used.
+    """
     logger = logging.getLogger(name)
     logger.setLevel(getattr(logging, level))
     logger.propagate = propagate
+
+    if remove_handlers:
+        logger.handlers = []
+        return
 
     handler = None
     for h in logger.handlers:
@@ -187,10 +181,15 @@ def set_logger(name,
         logger.addHandler(handler)
 
     formatter_kwgs = {}
-    for i in ('color', 'prefixfmt', 'contentfmt', 'datefmt'):
+    for i in ('fmt', 'datefmt'):
         if locals()[i] is not None:
             formatter_kwgs[i] = locals()[i]
     handler.setFormatter(BaseFormatter(**formatter_kwgs))
+
+
+def set_loggers(loggers):
+    for name, config in loggers.iteritems():
+        set_logger(name, **config)
 
 
 def set_nose_formatter(logging_options):
@@ -198,10 +197,9 @@ def set_nose_formatter(logging_options):
         return
 
     formatter_kwgs = {}
-    for i in ('color', 'prefixfmt', 'contentfmt', 'datefmt'):
-        v = logging_options.get(i)
-        if v:
-            formatter_kwgs[i] = v
+    for i in ('fmt', 'datefmt'):
+        if i in logging_options:
+            formatter_kwgs[i] = logging_options[i]
     formatter = BaseFormatter(**formatter_kwgs)
 
     nose_handler = None
