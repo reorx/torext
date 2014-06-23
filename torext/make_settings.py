@@ -3,6 +3,7 @@
 
 from torext.utils import SingletonMixin
 from torext.errors import SettingsError
+from torext.log import set_loggers
 
 
 class Settings(dict, SingletonMixin):
@@ -42,6 +43,9 @@ class Settings(dict, SingletonMixin):
         """
         Setting definitions in base_settings are indispensable
         """
+        self._callbacks = {}
+        self.add_key_callback('LOGGERS', set_loggers)
+
         from torext import base_settings
 
         for i in dir(base_settings):
@@ -64,9 +68,15 @@ class Settings(dict, SingletonMixin):
             if i != i.upper():
                 raise SettingsError('Key "%s" is not allowed, you should always define'
                                     ' UPPER CASE VARIABLE as setting' % key)
-        super(Settings, self).__setitem__(key.upper(), value)
+        key_upper = key.upper()
+        super(Settings, self).__setitem__(key_upper, value)
+        if key_upper in self._callbacks:
+            self._callbacks[key](value)
 
     def __str__(self):
         return '<Settings. %s >' % dict(self)
+
+    def add_key_callback(self, key, callback):
+        self._callbacks[key] = callback
 
 settings = Settings.instance()
