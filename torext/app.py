@@ -6,6 +6,7 @@ import sys
 import time
 import copy
 import socket
+import logging
 
 from tornado.ioloop import IOLoop
 from tornado.httpserver import HTTPServer
@@ -14,7 +15,7 @@ from tornado.web import Application
 from torext import settings
 from torext import errors
 from torext.testing import TestClient, AppTestCase
-from torext.log import set_logger, set_nose_formatter, app_log, request_log, root_logger
+from torext.log import set_nose_formatter, app_log, request_log
 from torext.route import Router
 from torext.utils import json_encode, json_decode
 
@@ -419,12 +420,18 @@ class TorextApp(object):
     def log_app_info(self):
         mode = settings['DEBUG'] and 'Debug' or 'Product'
         content = '\nMode %s, Service Info:' % mode
+        loggers_info = {}
+        for k in settings['LOGGERS']:
+            _logger = logging.getLogger(k)
+            loggers_info[k] = {i: getattr(_logger, i) for i in ('level', 'handlers', 'propagate')}
+            level = loggers_info[k]['level']
+            loggers_info[k]['level'] = '%s (%s)' % (level, logging._levelNames[level])
 
         info = {
             'Project': settings['PROJECT'] or 'None (better be assigned)',
             'Port': settings['PORT'],
             'Processes': settings['DEBUG'] and 1 or settings['PROCESSES'],
-            'Logging(root) Level': settings['LOGGING'],
+            'Loggers': loggers_info,
             'Locale': settings['LOCALE'],
             'Debug': settings['DEBUG'],
             'Home': 'http://127.0.0.1:%s' % settings['PORT'],
@@ -439,7 +446,7 @@ class TorextApp(object):
         info['URL Patterns(by sequence)'] = '\n    ' + '\n    '.join(buf)
 
         for k in ['Project', 'Port', 'Processes',
-                  'Logging(root) Level', 'Locale', 'Debug', 'Home', 'URL Patterns(by sequence)']:
+                  'Loggers', 'Locale', 'Debug', 'Home', 'URL Patterns(by sequence)']:
             content += '\n- %s: %s' % (k, info[k])
 
         app_log.info(content)
