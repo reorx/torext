@@ -59,7 +59,8 @@ class Command(object):
 
             # Get args and keyword_args
             args = all_args[:_kw_pos[0]]
-            keyword_args = {all_args[i][2:]: all_args[i + 1] for i in _kw_pos}
+            #keyword_args = {all_args[i][2:]: all_args[i + 1] for i in _kw_pos}
+            keyword_args = dict((all_args[i][2:], all_args[i + 1]) for i in _kw_pos)
         else:
             args = all_args
             keyword_args = {}

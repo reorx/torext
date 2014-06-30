@@ -423,7 +423,8 @@ class TorextApp(object):
         loggers_info = {}
         for k in settings['LOGGERS']:
             _logger = logging.getLogger(k)
-            loggers_info[k] = {i: getattr(_logger, i) for i in ('level', 'handlers', 'propagate')}
+            #loggers_info[k] = {i: getattr(_logger, i) for i in ('level', 'handlers', 'propagate')}
+            loggers_info[k] = dict((i, getattr(_logger, i)) for i in ('level', 'handlers', 'propagate'))
             level = loggers_info[k]['level']
             loggers_info[k]['level'] = '%s (%s)' % (level, logging._levelNames[level])
 
