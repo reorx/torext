@@ -353,7 +353,7 @@ def start_shell(extra_vars=None):
     import __main__
     if extra_vars:
         __main__.__dict__.update(
-            {k: v for k, v in extra_vars.iteritems() if not k.startswith('__')})
+            dict((k, v) for k, v in extra_vars.iteritems() if not k.startswith('__')))
 
     # As completer class search complement variables in `__main__.__dict__`
     # (`self.namespace = __main__.__dict__` in 'rlcompleter.Completer.complete'),
