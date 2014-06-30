@@ -400,7 +400,7 @@ def simple_params(method):
             except Exception, e:
                 raise ParamsInvalidError('JSON decode failed: %s' % e)
         else:
-            params = {k: v[0] for k, v in hdr.request.arguments.iteritems()}
+            params = dict((k, v[0]) for k, v in hdr.request.arguments.iteritems())
 
         hdr.params = params
         return method(hdr, *args, **kwgs)
