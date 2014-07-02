@@ -106,7 +106,7 @@ class BaseHandler(tornado.web.RequestHandler):
                 self.send_error(e.status_code, exc_info=sys.exc_info())
         else:
             app_log.error("Uncaught exception %s\n%r", self._request_summary(),
-                             self.request, exc_info=True)
+                          self.request, exc_info=True)
             self.send_error(500, exc_info=sys.exc_info())
 
     def _handle_request_exception(self, e):
@@ -280,11 +280,15 @@ _jinja2_env = None
 
 
 def jinja2_render(template_name, **kwargs):
+    env = get_jinja2_env()
+    template = env.get_template(template_name)
+    return template.render(**kwargs)
+
+
+def get_jinja2_env():
     from jinja2 import Environment, PackageLoader
 
     global _jinja2_env
     if not _jinja2_env:
         _jinja2_env = Environment(loader=PackageLoader(settings['PROJECT'], settings['TEMPLATE_PATH']))
-
-    template = _jinja2_env.get_template(template_name)
-    return template.render(**kwargs)
+    return _jinja2_env
