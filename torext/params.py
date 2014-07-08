@@ -287,13 +287,16 @@ class ParamSet(object):
         return [i.key for i in cls._fields.itervalues()]
 
     def __init__(self, **kwargs):
-        self._raw_data = {}
-        # handler.request.arguments, utf-8 values
-        for k in kwargs:
-            if isinstance(kwargs[k], list):
-                self._raw_data[k] = map(_unicode, kwargs[k])
-            else:
-                self._raw_data[k] = _unicode(kwargs[k])
+        if 'form' == self.__datatype__:
+            self._raw_data = {}
+            # handler.request.arguments, utf-8 values
+            for k in kwargs:
+                if isinstance(kwargs[k], list):
+                    self._raw_data[k] = map(_unicode, kwargs[k])
+                else:
+                    self._raw_data[k] = _unicode(kwargs[k])
+        else:
+            self._raw_data = kwargs
 
         self.data = {}
         self.errors = []
@@ -378,6 +381,7 @@ class ParamSet(object):
                     raise ParamsInvalidError('JSON decode failed: %s' % e)
             else:
                 arguments = hdr.request.arguments
+            # Instantiate ParamSet
             params = cls(**arguments)
             if params.errors:
                 raise ParamsInvalidError(params.errors)

@@ -78,7 +78,6 @@ def check_email(email, result):
         f.validate(email)
     else:
         assert_raises(ValidationError, f.validate, email)
-        pass
 
 
 def test_url():
@@ -260,11 +259,9 @@ class WebTestCase(unittest.TestCase):
                 print 'arguments', self.request.arguments
                 print 'params', self.params
                 self.write_json(self.params.to_dict(include_none=True))
-                pass
 
             def post(self):
                 self.write('ok')
-                pass
 
         # let exceptions raised in handler be rethrowed in test function
         self.c = app.test_client(raise_handler_exc=True)
@@ -328,6 +325,56 @@ class WebTestCase(unittest.TestCase):
             'text_not_null': ''
         })
         assert resp.code == 500
+
+
+class JSONTestCase(unittest.TestCase):
+    def setUp(self):
+        from torext.app import TorextApp
+        from torext.handlers import BaseHandler
+
+        app = TorextApp()
+        #app.settings.update(LOG_REQUEST=True)
+
+        class APIParams(params.ParamSet):
+            __datatype__ = 'json'
+
+            id = params.IntegerField(required=True, min=1)
+            token = params.Field(required=True, length=32)
+
+            tag = params.WordField(PARAMS_TAG_MSG, length=8, default='foo')
+            from_ = params.WordField(PARAMS_FROM, key='from', required=False, length=16)
+            text_anyway = params.WordField()
+            text_not_null = params.WordField(null=False)
+
+        @app.route('/api')
+        class APIHandler(BaseHandler):
+            @APIParams.validation_required
+            def post(self):
+                print 'arguments', self.request.arguments
+                print 'params', self.params
+                self.write_json(self.params.to_dict(include_none=True))
+
+        # let exceptions raised in handler be rethrowed in test function
+        self.c = app.test_client(raise_handler_exc=True)
+
+    def tearDown(self):
+        self.c.close()
+
+    def test_good(self):
+        print 'test good'
+        resp = self.c.post('/api', {
+            'id': 1,
+            'token': '0cc175b9c0f1b6a831c399e269772661'
+        }, json=True)
+        assert resp.code == 200
+
+    def test_bad(self):
+        resp = self.c.post('/api', {
+            'id': 'a2',
+            'token': '0cc175b9c0f1b6a831c399e269772661'
+        }, json=True)
+        assert resp.code == 500
+        self.assertRaises(ParamsInvalidError, self.c.get_handler_exc)
 
 
 if __name__ == '__main__':
