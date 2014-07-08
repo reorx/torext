@@ -19,7 +19,8 @@ class Field(object):
     name = None
     with_choices = True
 
-    def __init__(self, description=None, key=None, required=False, length=None, choices=None, default=None, null=True):
+    def __init__(self, description=None, key=None, required=False,
+                 length=None, choices=None, default=None, null=True):
         self.description = description  # default message
         self.required = required  # used with ParamSet
         self.choices = choices
@@ -52,20 +53,27 @@ class Field(object):
 
         if isinstance(length, int):
             if value_len != length:
-                self.raise_exc('Length of value should be %s, but %s' % (length, value_len))
+                self.raise_exc(
+                    'Length of value should be %s, but %s' %
+                    (length, value_len))
         else:
             if self.min_length:
                 if value_len < self.min_length:
-                    self.raise_exc('Length of value should be larger than %s' % self.min_length)
+                    self.raise_exc(
+                        'Length of value should be larger than %s' %
+                        self.min_length)
             else:
                 min, max = length
                 if value_len < min or value_len > max:
-                    self.raise_exc('Length should be >= %s and <= %s, but %s' % (min, max, value_len))
+                    self.raise_exc(
+                        'Length should be >= %s and <= %s, but %s' %
+                        (min, max, value_len))
         return value
 
     def _validate_choices(self, value):
         if not value in self.choices:
-            raise ValidationError('value "%s" is not one of %s' % (value, self.choices))
+            self.raise_exc(
+                'value "%s" is not one of %s' % (value, self.choices))
         return value
 
     def _validate_type(self, value):
@@ -78,7 +86,7 @@ class Field(object):
             if self.null:
                 return value
             else:
-                raise ValidationError('empty value is not allowed')
+                self.raise_exc('empty value is not allowed')
 
         if self.length:
             self._validate_length(value)
@@ -127,11 +135,12 @@ class RegexField(Field):
                 c_value = pattern_type(value)
             except Exception, e:
                 self.raise_exc(
-                    'value could not be converted into type "%s" of regex pattern'
-                    ', error: %s' % (pattern_type, e))
+                    'value could not be converted into type "%s"'
+                    'of regex pattern, error: %s' % (pattern_type, e))
         if not self.regex.search(c_value):
-            self.raise_exc('regex pattern (%s, %s) is not match with value "%s"' %
-                           (self.regex.pattern, self.regex.flags, c_value))
+            self.raise_exc(
+                'regex pattern (%s, %s) is not match with value "%s"' %
+                (self.regex.pattern, self.regex.flags, c_value))
         return value
 
 
@@ -148,9 +157,14 @@ class WordField(RegexField):
 
 # take from Django
 EMAIL_REGEX = re.compile(
-    r"(^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*"  # dot-atom
-    r'|^"([\001-\010\013\014\016-\037!#-\[\]-\177]|\\[\001-011\013\014\016-\177])*"'  # quoted-string
-    r')@(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?$', re.IGNORECASE)  # domain
+    # dot-atom
+    r"(^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*"
+    # quoted-string
+    r'|^"([\001-\010\013\014\016-\037!#-\[\]-\177]|'
+    r'\\[\001-011\013\014\016-\177])*"'
+    # domain
+    r')@(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?$',
+    re.IGNORECASE)
 
 
 class EmailField(RegexField):
@@ -159,7 +173,8 @@ class EmailField(RegexField):
 
 URL_REGEX = re.compile(
     r'^(?:http|ftp)s?://'  # http:// or https://
-    r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain
+    r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+'
+    r'(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain
     r'localhost|'  # localhost...
     r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
     r'(?::\d+)?'  # optional port
@@ -190,7 +205,8 @@ class IntegerField(Field):
         try:
             value = int(value)
         except (ValueError, TypeError):
-            self.raise_exc('could not convert value "%s" into int type' % value)
+            self.raise_exc(
+                'could not convert value "%s" into int type' % value)
 
         if self.min:
             if value < self.min:
@@ -219,7 +235,9 @@ class DateField(Field):
         try:
             value = datetime.datetime.strptime(value, self.datefmt)
         except ValueError:
-            self.raise_exc('Could not convert %s to datetime object by format %s' % (value, self.datefmt))
+            self.raise_exc(
+                'Could not convert %s to datetime object by format %s' %
+                (value, self.datefmt))
         return value
 
 
@@ -232,7 +250,7 @@ class ListField(Field):
 
     def _validate_type(self, value):
         if not isinstance(value, list):
-            raise ValidationError('Not a list')
+            self.raise_exc('Not a list')
 
         if self.item_field:
             formatted_value = []
@@ -246,7 +264,7 @@ class ListField(Field):
                 if not i in self.choices:
                     bad_values.append(i)
         if bad_values:
-            raise ValidationError('%s is/are not allowed' % bad_values)
+            self.raise_exc('%s is/are not allowed' % bad_values)
 
         return value
 
@@ -256,7 +274,7 @@ class UUIDField(Field):
         try:
             return uuid.UUID(value)
         except ValueError, e:
-            raise ValidationError('Invalid uuid string: %s' % e)
+            self.raise_exc('Invalid uuid string: %s' % e)
 
 
 class ParamSetMeta(type):
@@ -310,7 +328,8 @@ class ParamSet(object):
 
                 value = self._raw_data[key]
 
-                if not isinstance(field, ListField) and isinstance(value, list):
+                if not isinstance(field, ListField)\
+                        and isinstance(value, list):
                     # tornado request.arguments hack, value may be a list,
                     # only use the first one
                     value = value[0]
@@ -320,7 +339,10 @@ class ParamSet(object):
                     func_name = 'validate_' + name
                     if hasattr(self, func_name):
                         value = getattr(self, func_name)(value)
-                        assert value is not None, 'Forget to return value after validation? Or this is caused by your explicitly returns None, which is not allowed in the mechanism.'
+                        assert value is not None, (
+                            'Forget to return value after validation?'
+                            'Or this is caused by your explicitly returns'
+                            'None, which is not allowed in the mechanism.')
                 except ValidationError, e:
                     self.errors.append((key, e))
                 else:
@@ -366,9 +388,10 @@ class ParamSet(object):
         return self.__unicode__().encode('utf8')
 
     def __unicode__(self):
-        return u'<%s: %s; errors=%s>' % (self.__class__.__name__,
-                                         u','.join([u'%s=%s' % (k, v) for k, v in self.data.iteritems()]),
-                                         self.errors)
+        return u'<%s: %s; errors=%s>' % (
+            self.__class__.__name__,
+            u','.join([u'%s=%s' % (k, v) for k, v in self.data.iteritems()]),
+            self.errors)
 
     @classmethod
     def validation_required(cls, method):
@@ -390,22 +413,28 @@ class ParamSet(object):
         return wrapper
 
 
-def define_params(kwargs):
+def define_params(kwargs, datatype='form'):
     param_class = type('AutoCreatedParams', (ParamSet, ), kwargs)
+    param_class.__datatype__ = datatype
     return param_class.validation_required
 
 
-def simple_params(method):
-    @functools.wraps(method)
-    def wrapper(hdr, *args, **kwgs):
-        if 'json' == getattr(method.__class__, '__datatype__', None):
-            try:
-                params = json_decode(hdr.request.body)
-            except Exception, e:
-                raise ParamsInvalidError('JSON decode failed: %s' % e)
-        else:
-            params = dict((k, v[0]) for k, v in hdr.request.arguments.iteritems())
+def simple_params(datatype='form'):
+    assert datatype in ('form', 'json')
 
-        hdr.params = params
-        return method(hdr, *args, **kwgs)
-    return wrapper
+    def decorator(method):
+        @functools.wraps(method)
+        def wrapper(hdr, *args, **kwgs):
+            if 'json' == datatype:
+                try:
+                    params = json_decode(hdr.request.body)
+                except Exception, e:
+                    raise ParamsInvalidError('JSON decode failed: %s' % e)
+            else:
+                params = dict((k, v[0])
+                              for k, v in hdr.request.arguments.iteritems())
+
+            hdr.params = params
+            return method(hdr, *args, **kwgs)
+        return wrapper
+    return decorator
