@@ -281,6 +281,7 @@ class ParamSetMeta(type):
     def __new__(cls, name, bases, attrs):
         fields = {}
         for k, v in attrs.iteritems():
+            # TODO Assert not reserved attribute name
             if isinstance(v, Field):
                 v.name = k
                 if not v.key:
@@ -307,10 +308,13 @@ class ParamSet(object):
     def __init__(self, **kwargs):
         if 'form' == self.__datatype__:
             self._raw_data = {}
-            # handler.request.arguments, utf-8 values
+            # Processing on handler.request.arguments, utf-8 values
             for k in kwargs:
                 if isinstance(kwargs[k], list):
-                    self._raw_data[k] = map(_unicode, kwargs[k])
+                    if len(kwargs[k]) > 1:
+                        self._raw_data[k] = map(_unicode, kwargs[k])
+                    else:
+                        self._raw_data[k] = _unicode(kwargs[k][0])
                 else:
                     self._raw_data[k] = _unicode(kwargs[k])
         else:
@@ -327,12 +331,6 @@ class ParamSet(object):
             if key in self._raw_data:
 
                 value = self._raw_data[key]
-
-                if not isinstance(field, ListField)\
-                        and isinstance(value, list):
-                    # tornado request.arguments hack, value may be a list,
-                    # only use the first one
-                    value = value[0]
 
                 try:
                     value = field.validate(value)
@@ -353,6 +351,8 @@ class ParamSet(object):
                         field.raise_exc('%s is required' % key)
                     except ValidationError, e:
                         self.errors.append((key, e))
+                #elif field.default is not None:
+                    #self.data[key] = field.default
 
         for attr_name in dir(self):
             if attr_name.startswith('validate_') and\
@@ -405,6 +405,7 @@ class ParamSet(object):
             else:
                 arguments = hdr.request.arguments
             # Instantiate ParamSet
+            print 'cls', cls.__datatype__
             params = cls(**arguments)
             if params.errors:
                 raise ParamsInvalidError(params.errors)

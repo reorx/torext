@@ -340,6 +340,7 @@ class JSONTestCase(unittest.TestCase):
 
             id = params.IntegerField(required=True, min=1)
             token = params.Field(required=True, length=32)
+            headers = params.Field()
 
             tag = params.WordField(PARAMS_TAG_MSG, length=8, default='foo')
             from_ = params.WordField(PARAMS_FROM, key='from', required=False, length=16)
@@ -352,6 +353,9 @@ class JSONTestCase(unittest.TestCase):
             def post(self):
                 print 'arguments', self.request.arguments
                 print 'params', self.params
+                if 'headers' in self.params.data:
+                    print 'get headers'
+                    assert self.params.headers == [[1, 2]]
                 self.write_json(self.params.to_dict(include_none=True))
 
         # let exceptions raised in handler be rethrowed in test function
@@ -364,7 +368,8 @@ class JSONTestCase(unittest.TestCase):
         print 'test good'
         resp = self.c.post('/api', {
             'id': 1,
-            'token': '0cc175b9c0f1b6a831c399e269772661'
+            'token': '0cc175b9c0f1b6a831c399e269772661',
+            'headers': [[1, 2]]
         }, json=True)
         assert resp.code == 200
 
