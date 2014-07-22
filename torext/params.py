@@ -250,7 +250,8 @@ class ListField(Field):
 
     def _validate_type(self, value):
         if not isinstance(value, list):
-            self.raise_exc('Not a list')
+            #self.raise_exc('Not a list')
+            value = [value]
 
         if self.item_field:
             formatted_value = []
