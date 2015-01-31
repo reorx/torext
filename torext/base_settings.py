@@ -33,6 +33,12 @@ LOGGERS = {
     }
 }
 
+LOGGING_LEVEL = None
+
+LOGGING_IGNORE_URLS = [
+    '/favicon.ico',
+]
+
 LOG_REQUEST = False
 
 LOG_RESPONSE = False
@@ -46,10 +52,6 @@ STATIC_PATH = 'static'
 TEMPLATE_PATH = 'template'
 
 TEMPLATE_ENGINE = 'tornado'
-
-LOGGING_IGNORE_URLS = [
-    '/favicon.ico',
-]
 
 
 ############
