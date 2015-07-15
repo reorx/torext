@@ -306,6 +306,8 @@ def import_module(name, package=None):
     specifies the package to use as the anchor point from which to resolve the
     relative import to an absolute import.
 
+    Usage:
+    >>> epoll_module = import_module('tornado.platform.epoll')
     """
     if name.startswith('.'):
         if not package:
