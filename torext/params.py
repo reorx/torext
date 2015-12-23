@@ -158,7 +158,7 @@ class WordField(RegexField):
 # take from Django
 EMAIL_REGEX = re.compile(
     # dot-atom
-    r"(^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*"
+    r'(^[-!#$%&\'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&\'*+/=?^_`{}|~0-9A-Z]+)*'
     # quoted-string
     r'|^"([\001-\010\013\014\016-\037!#-\[\]-\177]|'
     r'\\[\001-011\013\014\016-\177])*"'
@@ -307,6 +307,7 @@ class ParamSet(object):
         return [i.key for i in cls._fields.itervalues()]
 
     def __init__(self, **kwargs):
+        # TODO handle UnicodeDecodeError that may occur from _unicode
         if 'form' == self.__datatype__:
             self._raw_data = {}
             # Processing on handler.request.arguments, utf-8 values
