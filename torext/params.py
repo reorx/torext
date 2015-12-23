@@ -310,15 +310,19 @@ class ParamSet(object):
         # TODO handle UnicodeDecodeError that may occur from _unicode
         if 'form' == self.__datatype__:
             self._raw_data = {}
-            # Processing on handler.request.arguments, utf-8 values
-            for k in kwargs:
-                if isinstance(kwargs[k], list):
-                    if len(kwargs[k]) > 1:
-                        self._raw_data[k] = map(_unicode, kwargs[k])
+            try:
+                # Processing on handler.request.arguments, utf-8 values
+                for k in kwargs:
+                    if isinstance(kwargs[k], list):
+                        if len(kwargs[k]) > 1:
+                            self._raw_data[k] = map(_unicode, kwargs[k])
+                        else:
+                            self._raw_data[k] = _unicode(kwargs[k][0])
                     else:
-                        self._raw_data[k] = _unicode(kwargs[k][0])
-                else:
-                    self._raw_data[k] = _unicode(kwargs[k])
+                        self._raw_data[k] = _unicode(kwargs[k])
+            except UnicodeDecodeError as e:
+                raise ParamsInvalidError('Failed to decode params, got UnicodeDecodeError: %s' % e)
+
         else:
             self._raw_data = kwargs
 
