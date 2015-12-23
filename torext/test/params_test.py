@@ -251,6 +251,7 @@ class WebTestCase(unittest.TestCase):
             from_ = params.WordField(PARAMS_FROM, key='from', required=False, length=16)
             text_anyway = params.WordField()
             text_not_null = params.WordField(null=False)
+            simple_field = params.Field()
 
         @app.route('/api')
         class APIHandler(BaseHandler):
@@ -270,7 +271,6 @@ class WebTestCase(unittest.TestCase):
         self.c.close()
 
     def test_good(self):
-        print 'test good'
         resp = self.c.get('/api', {
             'id': 1,
             'token': '0cc175b9c0f1b6a831c399e269772661'
@@ -281,6 +281,19 @@ class WebTestCase(unittest.TestCase):
         assert data['token'] == '0cc175b9c0f1b6a831c399e269772661'
         assert data['tag'] == 'foo'
         assert data['from'] is None
+
+    def test_chinese(self):
+        print 'test good'
+        cstr = '长度大于8的中文tag'
+        resp = self.c.get('/api', {
+            'id': 1,
+            'token': '0cc175b9c0f1b6a831c399e269772661',
+            'simple_field': cstr,
+        })
+        assert resp.code == 200
+        data = json.loads(resp.body)
+        print repr(data['simple_field']), repr(cstr)
+        assert data['simple_field'] == cstr.decode('utf8')
 
     def test_bad_id(self):
         resp = self.c.get('/api', {
