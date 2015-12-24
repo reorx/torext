@@ -138,6 +138,10 @@ class BaseHandler(tornado.web.RequestHandler):
         if not self._finished:
             self.finish()
 
+    def head(self):
+        """Make `curl -I` useable"""
+        self.finish()
+
     @property
     def app(self):
         return TorextApp.current_app
@@ -261,7 +265,7 @@ class BaseHandler(tornado.web.RequestHandler):
                 return
 
     def render_string(self, template_name, **kwargs):
-        """This method was rewrited to support multiple template engine
+        """This method was rewritten to support multiple template engine
         (Determine by `TEMPLATE_ENGINE` setting, could be `tornado` and `jinja2`),
         it will only affect on template rendering process, ui modules feature,
         which is mostly exposed in `render` method, is kept to be used as normal.
@@ -275,6 +279,54 @@ class BaseHandler(tornado.web.RequestHandler):
                 '%s is not a supported TEMPLATE_ENGINE, should be `tornado` or `jinja2`'
                 % settings['TEMPLATE_ENGINE'])
 
+
+class WSGIStreamHandler(BaseHandler):
+    """
+    http://flask.pocoo.org/snippets/116/
+    http://www.html5rocks.com/en/tutorials/eventsource/basics/
+    """
+    def write_stream_queue(self, stream_queue):
+        self._stream_queue = stream_queue
+
+    def finish(self):
+        """Finishes this response, ending the HTTP request."""
+        if self._finished:
+            raise RuntimeError("finish() called twice.  May be caused "
+                               "by using async operations without the "
+                               "@asynchronous decorator.")
+        if not hasattr(self, '_stream_queue') or not self._stream_queue:
+            raise RuntimeError("`_stream_queue` was not assigned, you should"
+                               "call `write_stream_queue` to set.")
+
+        # === Replace `if not self._headers_written` === #
+        self.set_status(200)
+        self.set_header("Content-Type", "text/event-stream")
+        self.set_header("Cache-Control", "no-cache")
+        self.set_header("Access-Control-Allow-Origin", "*")
+        # ============================================== #
+
+        self.request.connection.set_close_callback(None)
+
+        # === Add before self.flush === #
+        # Reset buffer
+        self._write_buffer = []
+        self._headers_written = False
+        # ============================= #
+
+        self.flush(include_footers=True)
+
+        # === Add after self.flush === #
+        self._write_buffer = self._stream_queue
+        self.request.connection._write_buffer = self._stream_queue
+        # ============================ #
+
+        self.request.finish()
+        self._log()
+        self._finished = True
+        self.on_finish()
+        # Break up a reference cycle between this handler and the
+        # _ui_module closures to allow for faster GC on CPython.
+        self.ui = None
 
 _jinja2_env = None
 
