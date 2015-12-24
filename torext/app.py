@@ -20,31 +20,65 @@ from torext.route import Router
 from torext.utils import json_encode, json_decode
 
 
+# Below are settings items that will be passed to ``tornado.web.Application`` class
+# when you set value to the upper cased form in torext settings,
+# if you don't know the meaning of the settings, please refer to tornado's doc
+# or search in source code of ``tornado/web.py``.
+KEYS_FOR_TORNADO_APPLICATION_SETTINGS = [
+    # debug
+    'debug',
+    'autoreload',
+    # static
+    'static_path',
+    'static_url_prefix',
+    'static_handler_class',
+    'static_handler_args',
+    'compress_resposnse',  # same as ``gzip``
+    # template
+    'template_path',
+    'template_loader',
+    'autoescape',
+    'template_whitespace',
+    # cookie
+    'cookie_secret',
+    'key_version',
+    # xsrf
+    'xsrf_cookie_version',
+    'xsrf_cookie_kwargs',
+    'xsrf_cookies',
+    # handler
+    'default_handler_class',
+    'default_handler_args',
+    # log
+    'log_function',
+    'serve_traceback'
+    # cache
+    'compiled_template_cache',
+    'static_hash_cache',
+    # ui modules
+    'ui_modules',
+    'ui_methods',
+    # misc
+    'login_url',
+]
+
+
 class TorextApp(object):
+    """TorextApp defines a singleton class to represents the whole application,
+    you can see it as the entrance for your web project.
+    Each essential component: tornado, settings, url route, and so on,
+    are included and involved, it simplifys the way to setup and run a tornado server,
+    just pass the settings object to it, then call ``app.run()`` and everything
+    will get started.
     """
-    Simplify the way to setup and run an app instance
-    """
+
     current_app = None
 
     def __init__(self, settings_module=None, extra_settings=None,
-                 application_options=None, httpserver_options=None,
+                 application_settings=None, httpserver_options=None,
                  io_loop=None):
         """
         Automatically involves torext's settings
-
-        related keys:
-            DEBUG
-            TEMPLATE_PATH
-            STATIC_PATH
-            STATIC_URL_PREFIX
-            STATIC_HANDLER_CLASS
-            STATIC_HANDLER_ARGS
-            COOKIE_SECRET
-            XSRF_COOKIES
-            UI_MODULES
-            UI_METHODS
-            GZIP
-            XHEADERS
         """
         global settings
 
@@ -52,7 +86,7 @@ class TorextApp(object):
             self.module_config(settings_module)
         if extra_settings:
             self.update_settings(extra_settings)
-        self._application_options = application_options
+        self._application_settings = application_settings
         self._httpserver_options = httpserver_options
         self.io_loop = io_loop
         self.is_setuped = False
@@ -130,23 +164,9 @@ class TorextApp(object):
 
         return options
 
-    def get_application_options(self):
+    def get_application_settings(self):
         # TODO full list options
-        options_keys = [
-            'debug',
-            'static_path',
-            'template_path',
-            'cookie_secret',
-            'log_function',
-            'ui_modules',
-            'static_handler_class',
-            'static_handler_args',
-
-            'autoreload',
-            'compiled_template_cache',
-            'static_hash_cache',
-            'serve_traceback'
-        ]
+        options_keys = KEYS_FOR_TORNADO_APPLICATION_SETTINGS
         options = {
             'log_function': self._log_function,
             'ui_modules': self.uimodules,
@@ -160,8 +180,8 @@ class TorextApp(object):
         if hasattr(self, 'root_path'):
             self._fix_paths(options)
 
-        if self._application_options:
-            for k, v in self._application_options.iteritems():
+        if self._application_settings:
+            for k, v in self._application_settings.iteritems():
                 options[k] = v
 
         return options
@@ -480,12 +500,13 @@ class TorextApp(object):
     def _make_application(self, application_class=Application):
         options = self.get_application_options()
         app_log.debug('%s settings: %s', application_class.__name__, options)
+        application_settings = self.get_application_settings()
 
         # this method intended to be able to called for multiple times,
         # so attributes should not be changed, just make a copy
         host_handlers = copy.copy(self.host_handlers)
         top_host_handlers = host_handlers.pop('.*$')
-        application = application_class(top_host_handlers, **options)
+        application = application_class(top_host_handlers, **application_settings)
 
         if host_handlers:
             for host, handlers in host_handlers.iteritems():
