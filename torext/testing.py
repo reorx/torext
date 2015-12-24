@@ -107,7 +107,8 @@ class TestClient(object):
         #self.app.io_loop = self.io_loop
 
         # init app.io_loop, app.application and app.http_server
-        self.app._init_infrastructures()
+        self.app._init_application()
+        self.app._init_http_server()
         self.io_loop = self.app.io_loop
 
         if self.raise_handler_exc:

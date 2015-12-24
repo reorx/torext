@@ -363,52 +363,6 @@ class TorextApp(object):
 
         self.is_setuped = True
 
-    def _init_infrastructures(self):
-        multiprocessing = False
-        if settings['PROCESSES'] and settings['PROCESSES'] > 1:
-            if settings['DEBUG']:
-                app_log.info('Multiprocess could not be used in debug mode')
-            else:
-                multiprocessing = True
-
-        if self.io_loop:
-            if not self.io_loop.initialized():
-                # this means self.io_loop is a customized io_loop, so `install` should be called
-                # to make it the singleton instance
-                #print self.io_loop.__class__.__name__
-                self.io_loop.install()
-        else:
-            # NOTE To support running tornado for multiple processes, we do not instance ioloop if multiprocessing is True
-            if not multiprocessing:
-                self.io_loop = IOLoop.instance()
-
-        application = self._make_application()
-
-        http_server_options = self.get_httpserver_options()
-        http_server = HTTPServer(application, io_loop=self.io_loop, **http_server_options)
-        listen_kwargs = {}
-        if settings.get('ADDRESS'):
-            listen_kwargs['address'] = settings.get('ADDRESS')
-
-        if multiprocessing:
-            # Multiprocessing mode
-            try:
-                http_server.bind(settings['PORT'], **listen_kwargs)
-            except socket.error, e:
-                app_log.warning('socket.error detected on http_server.listen, set ADDRESS="0.0.0.0" in settings to avoid this problem')
-                raise e
-            http_server.start(settings['PROCESSES'])
-        else:
-            # Single process mode
-            try:
-                http_server.listen(settings['PORT'], **listen_kwargs)
-            except socket.error, e:
-                app_log.warning('socket.error detected on http_server.listen, set ADDRESS="0.0.0.0" in settings to avoid this problem')
-                raise e
-
-        self.http_server = http_server
-        self.application = application
-
     @property
     def is_running(self):
         if self.io_loop:
@@ -419,11 +373,12 @@ class TorextApp(object):
         if not self.io_loop:
             self.io_loop = IOLoop.instance()
 
-    def run(self):
+    def run(self, application=None):
         if not self.is_setuped:
             self.setup()
 
-        self._init_infrastructures()
+        self._init_application(application=application)
+        self._init_http_server()
 
         if not settings.get('TESTING'):
             self.log_app_info(self.application)
@@ -504,10 +459,9 @@ class TorextApp(object):
         self.application_configurator = config_func
         return config_func
 
-    def _make_application(self, application_class=Application):
-        options = self.get_application_options()
-        app_log.debug('%s settings: %s', application_class.__name__, options)
+    def make_application(self, application_class=Application):
         application_settings = self.get_application_settings()
+        app_log.debug('%s settings: %s', application_class.__name__, application_settings)
 
         # this method intended to be able to called for multiple times,
         # so attributes should not be changed, just make a copy
@@ -526,9 +480,60 @@ class TorextApp(object):
     def application_configurator(self, *args, **kwargs):
         pass
 
-    def wsgi_application(self):
+    def _init_application(self, application=None):
+        """Initialize application object for torext app, if a existed application is passed,
+        then just use this one without make a new one"""
+        if application:
+            self.application = application
+        else:
+            self.application = self.make_application()
+
+    def make_wsgi_application(self):
         from tornado.wsgi import WSGIApplication
-        return self._make_application(application_class=WSGIApplication)
+        return self.make_application(application_class=WSGIApplication)
+
+    def _init_http_server(self):
+        multiprocessing = False
+        if settings['PROCESSES'] and settings['PROCESSES'] > 1:
+            if settings['DEBUG']:
+                app_log.info('Multiprocess could not be used in debug mode')
+            else:
+                multiprocessing = True
+
+        if self.io_loop:
+            if not self.io_loop.initialized():
+                # this means self.io_loop is a customized io_loop, so `install` should be called
+                # to make it the singleton instance
+                #print self.io_loop.__class__.__name__
+                self.io_loop.install()
+        else:
+            # NOTE To support running tornado for multiple processes, we do not instance ioloop if multiprocessing is True
+            if not multiprocessing:
+                self.io_loop = IOLoop.instance()
+
+        http_server_options = self.get_httpserver_options()
+        http_server = HTTPServer(self.application, io_loop=self.io_loop, **http_server_options)
+        listen_kwargs = {}
+        if settings.get('ADDRESS'):
+            listen_kwargs['address'] = settings.get('ADDRESS')
+
+        if multiprocessing:
+            # Multiprocessing mode
+            try:
+                http_server.bind(settings['PORT'], **listen_kwargs)
+            except socket.error, e:
+                app_log.warning('socket.error detected on http_server.listen, set ADDRESS="0.0.0.0" in settings to avoid this problem')
+                raise e
+            http_server.start(settings['PROCESSES'])
+        else:
+            # Single process mode
+            try:
+                http_server.listen(settings['PORT'], **listen_kwargs)
+            except socket.error, e:
+                app_log.warning('socket.error detected on http_server.listen, set ADDRESS="0.0.0.0" in settings to avoid this problem')
+                raise e
+
+        self.http_server = http_server
 
     def _log_function(self, handler):
         """Override Applicaion.log_function so that what to log can be controlled.
