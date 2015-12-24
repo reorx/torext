@@ -345,13 +345,6 @@ class ParamSet(object):
 
                 try:
                     value = field.validate(value)
-                    func_name = 'validate_' + name
-                    if hasattr(self, func_name):
-                        value = getattr(self, func_name)(value)
-                        assert value is not None, (
-                            'Forget to return value after validation?'
-                            'Or this is caused by your explicitly returns'
-                            'None, which is not allowed in the mechanism.')
                 except ValidationError, e:
                     self.errors.append((key, e))
                 else:
@@ -366,12 +359,28 @@ class ParamSet(object):
                     #self.data[key] = field.default
 
         for attr_name in dir(self):
-            if attr_name.startswith('validate_') and\
-                    attr_name[len('validate_'):] not in self._fields:
-                try:
-                    getattr(self, attr_name)()
-                except ValidationError, e:
-                    self.errors.append(e)
+            if attr_name.startswith('validate_'):
+                field_name = attr_name[len('validate_'):]
+
+                if field_name in self._fields:
+                    field = self._fields[field_name]
+                    key = field.key
+                    if key in self.data:
+                        try:
+                            value = getattr(self, attr_name)(self.data[key])
+                        except ValidationError, e:
+                            self.errors.append((key, e))
+                        if field.null is not True:
+                            assert value is not None, (
+                                'Forget to return value after validation?'
+                                'Or this is caused by your explicitly returns'
+                                'None, which is not allowed in the mechanism.')
+                        self.data[key] = value
+                else:
+                    try:
+                        getattr(self, attr_name)()
+                    except ValidationError, e:
+                        self.errors.append(e)
 
     def kwargs(self, *args):
         d = {}
