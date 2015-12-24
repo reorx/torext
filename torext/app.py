@@ -426,7 +426,7 @@ class TorextApp(object):
         self._init_infrastructures()
 
         if not settings.get('TESTING'):
-            self.log_app_info()
+            self.log_app_info(self.application)
 
         try:
             self._instance_ioloop()
@@ -437,7 +437,10 @@ class TorextApp(object):
             print 'Exit'
             sys.exit(0)
 
-    def log_app_info(self):
+    def log_app_info(self, application=None):
+        settings = self.settings
+
+        # Log settings
         mode = settings['DEBUG'] and 'Debug' or 'Product'
         content = '\nMode %s, Service Info:' % mode
         loggers_info = {}
@@ -449,7 +452,7 @@ class TorextApp(object):
             loggers_info[k]['level'] = '%s (%s)' % (level, logging._levelNames[level])
 
         info = {
-            'Project': settings['PROJECT'] or 'None (better be assigned)',
+            'Project': settings['PROJECT'] or 'None',
             'Port': settings['PORT'],
             'Processes': settings['DEBUG'] and 1 or settings['PROCESSES'],
             'Loggers': loggers_info,
@@ -458,9 +461,13 @@ class TorextApp(object):
             'Home': 'http://127.0.0.1:%s' % settings['PORT'],
         }
 
+        # Log urls
+        if not application:
+            application = self.application
+
         #if settings['DEBUG']:
         buf = []
-        for host, rules in self.application.handlers:
+        for host, rules in application.handlers:
             buf.append(host.pattern)
             for i in rules:
                 buf.append('  ' + i.regex.pattern)
