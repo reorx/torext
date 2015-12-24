@@ -67,7 +67,7 @@ class TorextApp(object):
     """TorextApp defines a singleton class to represents the whole application,
     you can see it as the entrance for your web project.
     Each essential component: tornado, settings, url route, and so on,
-    are included and involved, it simplifys the way to setup and run a tornado server,
+    are included and involved, it simplifies the way to setup and run a tornado server,
     just pass the settings object to it, then call ``app.run()`` and everything
     will get started.
     """
@@ -80,8 +80,7 @@ class TorextApp(object):
         """
         Automatically involves torext's settings
         """
-        global settings
-
+        self.root_path = None
         if settings_module:
             self.module_config(settings_module)
         if extra_settings:
@@ -106,8 +105,6 @@ class TorextApp(object):
         TorextApp.current_app = self
 
     def update_settings(self, incoming, convert_type=False, log_changes=False):
-        global settings
-
         def _log(s):
             if log_changes:
                 print s
@@ -165,7 +162,6 @@ class TorextApp(object):
         return options
 
     def get_application_settings(self):
-        # TODO full list options
         options_keys = KEYS_FOR_TORNADO_APPLICATION_SETTINGS
         options = {
             'log_function': self._log_function,
@@ -177,7 +173,7 @@ class TorextApp(object):
             if k_upper in settings:
                 options[k] = settings[k_upper]
 
-        if hasattr(self, 'root_path'):
+        if self.root_path is not None:
             self._fix_paths(options)
 
         if self._application_settings:
@@ -249,13 +245,11 @@ class TorextApp(object):
         self.set_root_path(settings_module=settings_module)
         app_log.debug('Set root_path: %s', self.root_path)
 
-        global settings
-
         self.update_settings(dict(
             [(i, getattr(settings_module, i)) for i in dir(settings_module)
              if not i.startswith('_') and i == i.upper()]))
 
-        settings._module = settings_module
+        settings.origin_module = settings_module
 
         # keep a mapping to app on settings object
         settings._app = self
@@ -337,7 +331,7 @@ class TorextApp(object):
         time.tzset()
 
         # determine project name
-        if settings._module:
+        if settings.origin_module:
             project = os.path.split(self.root_path)[1]
             if settings['PROJECT']:
                 assert settings['PROJECT'] == project, 'PROJECT specialized in settings (%s) '\
@@ -348,7 +342,7 @@ class TorextApp(object):
         # PROJECT should be importable as a python module
         if settings['PROJECT']:
             # add upper directory path to sys.path if not in
-            if settings._module:
+            if settings.origin_module:
                 _abs = os.path.abspath
                 parent_path = os.path.dirname(self.root_path)
                 if not _abs(parent_path) in [_abs(i) for i in sys.path]:
@@ -393,34 +387,34 @@ class TorextApp(object):
             sys.exit(0)
 
     def log_app_info(self, application=None):
-        settings = self.settings
+        current_settings = self.settings
 
         # Log settings
-        mode = settings['DEBUG'] and 'Debug' or 'Product'
+        mode = current_settings['DEBUG'] and 'Debug' or 'Product'
         content = '\nMode %s, Service Info:' % mode
         loggers_info = {}
-        for k in settings['LOGGERS']:
+        for k in current_settings['LOGGERS']:
             _logger = logging.getLogger(k)
-            #loggers_info[k] = {i: getattr(_logger, i) for i in ('level', 'handlers', 'propagate')}
+            # loggers_info[k] = {i: getattr(_logger, i) for i in ('level', 'handlers', 'propagate')}
             loggers_info[k] = dict((i, getattr(_logger, i)) for i in ('level', 'handlers', 'propagate'))
             level = loggers_info[k]['level']
             loggers_info[k]['level'] = '%s (%s)' % (level, logging._levelNames[level])
 
         info = {
-            'Project': settings['PROJECT'] or 'None',
-            'Port': settings['PORT'],
-            'Processes': settings['DEBUG'] and 1 or settings['PROCESSES'],
+            'Project': current_settings['PROJECT'] or 'None',
+            'Port': current_settings['PORT'],
+            'Processes': current_settings['DEBUG'] and 1 or current_settings['PROCESSES'],
             'Loggers': loggers_info,
-            'Locale': settings['LOCALE'],
-            'Debug': settings['DEBUG'],
-            'Home': 'http://127.0.0.1:%s' % settings['PORT'],
+            'Locale': current_settings['LOCALE'],
+            'Debug': current_settings['DEBUG'],
+            'Home': 'http://127.0.0.1:%s' % current_settings['PORT'],
         }
 
         # Log urls
         if not application:
             application = self.application
 
-        #if settings['DEBUG']:
+        # if settings['DEBUG']:
         buf = []
         for host, rules in application.handlers:
             buf.append(host.pattern)
@@ -434,14 +428,16 @@ class TorextApp(object):
 
         app_log.info(content)
 
-    def test_client(self, **kwgs):
-        return TestClient(self, **kwgs)
+    def test_client(self, **kwargs):
+        return TestClient(self, **kwargs)
 
     @property
-    def TestCase(_self):
+    def TestCase(self):
+        app = self
+
         class CurrentTestCase(AppTestCase):
             def get_client(self):
-                return _self.test_client()
+                return app.test_client()
         return CurrentTestCase
 
     def register_uimodules(self, **kwargs):
@@ -504,7 +500,7 @@ class TorextApp(object):
             if not self.io_loop.initialized():
                 # this means self.io_loop is a customized io_loop, so `install` should be called
                 # to make it the singleton instance
-                #print self.io_loop.__class__.__name__
+                # print self.io_loop.__class__.__name__
                 self.io_loop.install()
         else:
             # NOTE To support running tornado for multiple processes, we do not instance ioloop if multiprocessing is True
@@ -522,7 +518,9 @@ class TorextApp(object):
             try:
                 http_server.bind(settings['PORT'], **listen_kwargs)
             except socket.error, e:
-                app_log.warning('socket.error detected on http_server.listen, set ADDRESS="0.0.0.0" in settings to avoid this problem')
+                app_log.warning(
+                    'socket.error detected on http_server.listen,'
+                    'set ADDRESS="0.0.0.0" in settings to avoid this problem')
                 raise e
             http_server.start(settings['PROCESSES'])
         else:
@@ -530,13 +528,15 @@ class TorextApp(object):
             try:
                 http_server.listen(settings['PORT'], **listen_kwargs)
             except socket.error, e:
-                app_log.warning('socket.error detected on http_server.listen, set ADDRESS="0.0.0.0" in settings to avoid this problem')
+                app_log.warning(
+                    'socket.error detected on http_server.listen,'
+                    'set ADDRESS="0.0.0.0" in settings to avoid this problem')
                 raise e
 
         self.http_server = http_server
 
     def _log_function(self, handler):
-        """Override Applicaion.log_function so that what to log can be controlled.
+        """Override Application.log_function so that what to log can be controlled.
         """
         if handler.get_status() < 400:
             log_method = request_log.info
