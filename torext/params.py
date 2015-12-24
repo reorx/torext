@@ -285,6 +285,12 @@ class UUIDField(Field):
 class ParamSetMeta(type):
     def __new__(cls, name, bases, attrs):
         fields = {}
+
+        # Inherit support
+        for base in bases:
+            if hasattr(base, '_fields'):
+                fields.update(base._fields)
+
         for k, v in attrs.iteritems():
             # TODO Assert not reserved attribute name
             if isinstance(v, Field):
