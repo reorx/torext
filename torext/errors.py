@@ -1,36 +1,27 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-errors:
-
-    ConnectionError
-
-    ValidationError
-
-    AuthenticationNotPass
-
-    ObjectNotFound
-
-    MultiObjectsReturned
-
-    ParamsInvalidError
-"""
-
-
-# import inspect
-
 
 class TorextException(Exception):
-    pass
+    def __init__(self, message=''):
+        if isinstance(message, str):
+            message = message.decode('utf8')
+        self.message = message
 
+    def __str__(self):
+        return unicode(self).encode('utf-8')
+
+    def __unicode__(self):
+        return self.message
+
+
+# route.py
 
 class URLRouteError(TorextException):
-    """
-    error in router
-    """
-    pass
+    """error in router"""
 
+
+# params.py
 
 class ValidationError(TorextException):
     """
@@ -40,54 +31,45 @@ class ValidationError(TorextException):
         self.description = description
         self.error_message = error_message
 
-    def __str__(self):
+    def __unicode__(self):
         #return '%s (%s)' % (self.description, self.error_message) if self.error_message else self.description
         return self.description or self.error_message
 
     def __repr__(self):
-        return self.__str__()
+        return str(self)
 
 
-class AuthenticationNotPass(TorextException):
-    pass
-
-
-##
-# TODO add `errors` to its attribute
 class ParamsInvalidError(TorextException):
-    def __init__(self, error_s):
-        if isinstance(error_s, list):
-            self.errors = error_s
+    def __init__(self, errors):
+        """Make sure no string only unicode in errors"""
+        if isinstance(errors, list):
+            self.errors = errors
         else:
-            self.errors = [error_s, ]
+            self.errors = [errors, ]
 
-    def __str__(self):
-        return 'Invalid params: %s' % self.errors
+    def __unicode__(self):
+        return u'Invalid params: %s' % self.errors
 
+
+# script.py
 
 class CommandArgumentError(TorextException):
     pass
 
 
-class OperationNotAllowed(TorextException):
-    pass
-
-
-class OperationFailed(TorextException):
-    pass
-
+# make_settings.py
 
 class SettingsError(TorextException):
     pass
 
 
+# app.py
+
 class ArgsParseError(TorextException):
     pass
 
 
-class DatabaseError(TorextException):
-    pass
+# sql.py
 
-
-class JSONDecodeError(TorextException):
+class DoesNotExist(TorextException):
     pass

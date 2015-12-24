@@ -36,6 +36,10 @@ BUF_DICT = {
 }
 
 
+class AuthenticationNotPass(errors.TorextException):
+    pass
+
+
 def same_dict(d1, d2):
     return set(d1.keys()) == set(d2.keys()) and\
         not [i for i in d1 if d1[i] != d2[i]]
@@ -48,14 +52,14 @@ app.settings['COOKIE_SECRET'] = generate_cookie_secret()
 @app.route('/')
 class HomeHandler(BaseHandler):
     EXCEPTION_HANDLERS = {
-        errors.AuthenticationNotPass: '_handle_401',
+        AuthenticationNotPass: '_handle_401',
         (errors.ValidationError, IndexError): '_handle_400'
     }
 
     def get(self):
         exc = int(self.get_argument('exc'))
         if exc == 0:
-            raise errors.AuthenticationNotPass(EXC_MSG_0)
+            raise AuthenticationNotPass(EXC_MSG_0)
         elif exc == 1:
             raise errors.ValidationError(EXC_MSG_1)
         elif exc == 2:
