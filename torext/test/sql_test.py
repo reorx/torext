@@ -16,15 +16,14 @@ except IOError:
     from nose.plugins.skip import SkipTest
     raise SkipTest
 
-import unittest
 from nose.tools import assert_raises
 from torext.app import TorextApp
 from torext.sql import SQLAlchemy
 from torext import errors
 
 
-class MysqlTestCase(unittest.TestCase):
-    def setUp(self):
+class TestSQLModule(object):
+    def setup(self):
         app = TorextApp()
         app.settings['DEBUG'] = False
         app.settings['SQLALCHEMY'] = {
@@ -41,14 +40,18 @@ class MysqlTestCase(unittest.TestCase):
             id = db.Column(db.Integer, primary_key=True)
             name = db.Column(db.String(20))
 
+        class Hub(db.Model):
+            id = db.Column(db.Integer, primary_key=True)
+
         self.User = User
+        self.Hub = Hub
 
         db.create_all()
 
         self.app = app
         self.db = db
 
-    def tearDown(self):
+    def teardown(self):
         # clean possible opened transactions
         self.db.session.commit()
 
@@ -84,7 +87,8 @@ class MysqlTestCase(unittest.TestCase):
 
         assert self.User.query.get_or_raise(1).name == 'reorx'
 
-        with assert_raises(errors.DoesNotExist):
+        print 'DoesNotExist class', self.User.DoesNotExist
+        with assert_raises(self.User.DoesNotExist):
             self.User.query.get_or_raise(2)
 
     def test_one_or_raise(self):
@@ -98,12 +102,11 @@ class MysqlTestCase(unittest.TestCase):
 
         assert self.User.query.filter(self.User.id == 2).one_or_raise().name == 'reorx'
 
-        with assert_raises(errors.DoesNotExist):
-            self.User.query.filter(self.User.name == 'others').one_or_raise()
+        with assert_raises(self.User.DoesNotExist):
+            try:
+                self.User.query.filter(self.User.name == 'others').one_or_raise()
+            except self.Hub.DoesNotExist:
+                pass
 
         with assert_raises(errors.MultipleObjectsReturned):
             self.User.query.filter(self.User.name == 'reorx').one_or_raise()
-
-
-if __name__ == '__main__':
-    unittest.main()

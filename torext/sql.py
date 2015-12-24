@@ -23,11 +23,13 @@ from sqlalchemy.engine.url import make_url
 from sqlalchemy.orm import sessionmaker, scoped_session, Query, load_only
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
+from sqlalchemy.ext.declarative.api import DeclarativeMeta
 
 from torext.app import TorextApp
 from torext.errors import DoesNotExist, MultipleObjectsReturned, ParamsInvalidError
 
 
+# TODO refine
 logger = logging.getLogger('sqlalchemy')
 logger.propagate = 0
 
@@ -73,7 +75,7 @@ class BaseQuery(Query):
     def _raise_not_exist(self, query_repr, message=None):
         if not message:
             message = '{} does not exist: {}'.format(self.entity_class.__name__, query_repr)
-        raise DoesNotExist(message)
+        raise self.entity_class.DoesNotExist(message)
 
     def _raise_multiple_results(self, query_repr):
         message = '{} got multiple objects: {}'.format(self.entity_class.__name__, query_repr)
@@ -108,6 +110,19 @@ class BaseQuery(Query):
 
     def load_only(self, *args, **kwargs):
         return self.options(load_only(*args, **kwargs))
+
+
+class TorextDeclarativeMeta(DeclarativeMeta):
+    def __new__(cls, name, bases, attrs):
+        print 'cls cls', cls
+        model_cls = super(TorextDeclarativeMeta, cls).__new__(cls, name, bases, attrs)
+        # model_cls = type.__new__(cls, name, bases, attrs)
+
+        exccls_name = '%sDoesNotExist' % name
+        exccls_attrs = {'__module__': model_cls.__module__}
+
+        model_cls.DoesNotExist = type(exccls_name, (DoesNotExist, ), exccls_attrs)
+        return model_cls
 
 
 class _Model(object):
@@ -176,7 +191,7 @@ class SQLAlchemy(object):
         return scoped_session(sessionmaker(query_cls=BaseQuery), **options)
 
     def make_declarative_base(self):
-        base = declarative_base(cls=_Model, name='Model')
+        base = declarative_base(cls=_Model, name='Model', metaclass=TorextDeclarativeMeta)
         base.query = self.session.query_property()
         return base
 
