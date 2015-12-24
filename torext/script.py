@@ -3,14 +3,17 @@
 
 import sys
 import inspect
+import functools
+import time
 from .errors import CommandArgumentError
 
 
 class Command(object):
     allow_types = (int, float, str, unicode, bool)
 
-    def __init__(self, func):
+    def __init__(self, func, profile=False):
         self.func = func
+        self.profile_flag = profile
 
         spec = inspect.getargspec(func)
 
@@ -120,9 +123,12 @@ class Command(object):
 
         return v
 
-    def execute(self, all_args):
-        args, keyword_args = self.parse_args(all_args)
-        return self.func(*args, **keyword_args)
+    def execute(self, all_args=()):
+        if not all_args:
+            return self.func()
+        else:
+            args, keyword_args = self.parse_args(all_args)
+            return self.func(*args, **keyword_args)
 
 
 class Manager(object):
@@ -144,7 +150,10 @@ class Manager(object):
         # Execute
         command = self._commands[all_args[0]]
         try:
+            stime = time.time()
             command.execute(all_args[1:])
+            if command.profile_flag:
+                print "spend time: %f" % float(time.time() - stime)
         except CommandArgumentError as e:
             print 'Command execution failed: %s' % e
             self.print_command_help(command)
@@ -208,7 +217,28 @@ class Manager(object):
 
         print '\n'.join(buf)
 
-    def command(self, func):
+    def prepare(self, setup_func):
+        """This decorator wrap a function which setup a environment before
+        running a command
+        @manager.prepare(setup_func)
+        def some_command():
+            pass
+        """
+        assert inspect.isfunction(setup_func)
+        argsspec = inspect.getargspec(setup_func)
+        if argsspec.args:
+            raise ValueError("prepare function shouldn't have any arguments")
+
+        def decorator(command_func):
+            @functools.wraps(command_func)
+            def wrapper(*args, **kwgs):
+                # Run setup_func before command_func
+                setup_func()
+                return command_func(*args, **kwgs)
+            return wrapper
+        return decorator
+
+    def command(self, profile=False):
         """This is a Flask-Script like decorator, provide functionality like
         @manager.command
         def foo():
@@ -218,12 +248,14 @@ class Manager(object):
         def foo(first_arg, second_arg, first_option=True, second_option=3):
             pass
         """
-        assert inspect.isfunction(func)
+        def wraped(func):
+            assert inspect.isfunction(func)
 
-        self._commands[func.func_name] = Command(func)
-        self._commands_list.append(func.func_name)
+            self._commands[func.func_name] = Command(func, profile)
+            self._commands_list.append(func.func_name)
 
-        return func
+            return func
+        return wraped
 
     def _init_default_commands(self):
         # TODO
