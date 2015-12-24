@@ -54,6 +54,12 @@ class Settings(dict, SingletonMixin):
 
         self._module = None
 
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError('Has no attribute %s' % key)
+
     def __getitem__(self, key):
         try:
             return super(Settings, self).__getitem__(key)

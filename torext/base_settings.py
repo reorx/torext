@@ -22,7 +22,15 @@ PORT = 8000
 
 DEBUG = True
 
-TESTING = False
+AUTORELOAD = True
+
+SERVE_TRACEBACK = True
+
+STATIC_PATH = 'static'
+
+TEMPLATE_PATH = 'template'
+
+TEMPLATE_ENGINE = 'tornado'
 
 LOGGERS = {
     '': {
@@ -33,25 +41,19 @@ LOGGERS = {
     }
 }
 
-LOGGING_LEVEL = None
-
-LOGGING_IGNORE_URLS = [
-    '/favicon.ico',
-]
-
 LOG_REQUEST = False
 
 LOG_RESPONSE = False
 
 LOG_RESPONSE_LINE_LIMIT = 0
 
+LOGGING_IGNORE_URLS = [
+    '/favicon.ico',
+]
+
+TESTING = False
+
 TIME_ZONE = 'Asia/Shanghai'
-
-STATIC_PATH = 'static'
-
-TEMPLATE_PATH = 'template'
-
-TEMPLATE_ENGINE = 'tornado'
 
 
 ############

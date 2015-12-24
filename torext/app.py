@@ -28,6 +28,7 @@ KEYS_FOR_TORNADO_APPLICATION_SETTINGS = [
     # debug
     'debug',
     'autoreload',
+    'serve_traceback',
     # static
     'static_path',
     'static_url_prefix',
@@ -51,7 +52,6 @@ KEYS_FOR_TORNADO_APPLICATION_SETTINGS = [
     'default_handler_args',
     # log
     'log_function',
-    'serve_traceback'
     # cache
     'compiled_template_cache',
     'static_hash_cache',
