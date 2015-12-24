@@ -3,17 +3,11 @@
 
 import os
 import sys
-import copy
-#import pkgutil
-#import logging
 import datetime
 import functools
 
 
-try:
-    import simplejson as pyjson
-except ImportError:
-    import json as pyjson
+import json
 
 try:
     from tornado.util import raise_exc_info
@@ -42,20 +36,10 @@ def generate_cookie_secret():
     return base64.b64encode(uuid.uuid4().bytes + uuid.uuid4().bytes)
 
 
-json_decode = functools.partial(pyjson.loads, encoding='utf-8')
+json_decode = functools.partial(json.loads, encoding='utf-8')
 
 
-json_encode = functools.partial(pyjson.dumps, ensure_ascii=False)
-
-
-#def force_int(value, desire=0, limit=100):
-    #try:
-        #value = int(value)
-    #except:
-        #value = desire
-    #if value > limit:
-        #return limit / 2
-    #return value
+json_encode = functools.partial(json.dumps, ensure_ascii=False)
 
 
 def timesince(t):
@@ -75,8 +59,8 @@ def timesince(t):
 
 
 def pprint(o):
-    import pprint as PPrint
-    pprinter = PPrint.PrettyPrinter(indent=4)
+    import pprint
+    pprinter = pprint.PrettyPrinter(indent=4)
     pprinter.pprint(o)
 
 
@@ -128,155 +112,24 @@ class ObjectDict(dict):
         return '<ObjectDict %s >' % dict(self)
 
 
-try:
-    from collections import OrderedDict
-except ImportError:
-    class OrderedDict(dict):
-        """
-        A dictionary that keeps its keys in the order in which they're inserted.
-
-        # No initial order
-        >>> d = OrderedDict({'a': 1, 'b': 2})
-
-        # Ordered
-        >>> d = OrderedDict([('a', 1), ('b', 2)])
-
-        # Ordered
-        >>> d = OrderedDict()
-        >>> d['a'] = 1
-        >>> d['b'] = 2
-
-        # Chaos-ordered
-        >>> d = OrderedDict({'a': 1, 'b': 2})
-        >>> d['c'] = 3
-        >>> d['d'] = 4
-        """
-        def __new__(cls, *args, **kwargs):
-            instance = super(OrderedDict, cls).__new__(cls, *args, **kwargs)
-            instance.ordered_keys = []
-            return instance
-
-        def __init__(self, data=None):
-            if data is None or isinstance(data, dict):
-                data = data or []
-                super(OrderedDict, self).__init__(data)
-                self.ordered_keys = list(data) if data else []
-            else:
-                super(OrderedDict, self).__init__()
-                super_set = super(OrderedDict, self).__setitem__
-                for key, value in data:
-                    # Take the ordering from first key
-                    if key not in self:
-                        self.ordered_keys.append(key)
-                    # But override with last value in data (dict() does this)
-                    super_set(key, value)
-
-        def __deepcopy__(self, memo):
-            return self.__class__([(key, copy.deepcopy(value, memo))
-                                   for key, value in self.items()])
-
-        def __copy__(self):
-            # The Python's default copy implementation will alter the state
-            # of self. The reason for this seems complex but is likely related to
-            # subclassing dict.
-            return self.copy()
-
-        def __setitem__(self, key, value):
-            if key not in self:
-                self.ordered_keys.append(key)
-            super(OrderedDict, self).__setitem__(key, value)
-
-        def __delitem__(self, key):
-            super(OrderedDict, self).__delitem__(key)
-            self.ordered_keys.remove(key)
-
-        def __iter__(self):
-            return iter(self.ordered_keys)
-
-        def __reversed__(self):
-            return reversed(self.ordered_keys)
-
-        def pop(self, k, *args):
-            result = super(OrderedDict, self).pop(k, *args)
-            try:
-                self.ordered_keys.remove(k)
-            except ValueError:
-                # Key wasn't in the dictionary in the first place. No problem.
-                pass
-            return result
-
-        def popitem(self):
-            result = super(OrderedDict, self).popitem()
-            self.ordered_keys.remove(result[0])
-            return result
-
-        def iteritems(self):
-            for key in self.ordered_keys:
-                yield key, self[key]
-
-        def iterkeys(self):
-            for key in self.ordered_keys:
-                yield key
-
-        def itervalues(self):
-            for key in self.ordered_keys:
-                yield self[key]
-
-        def items(self):
-            return list(self.iteritems())
-
-        def keys(self):
-            return self.ordered_keys[:]
-
-        def values(self):
-            return list(self.itervalues())
-
-        def update(self, dict_):
-            for k, v in dict_.iteritems():
-                self[k] = v
-
-        def setdefault(self, key, default):
-            if key in self:
-                return self[key]
-            else:
-                self[key] = default
-                return default
-
-        def copy(self):
-            """Returns a copy of this object."""
-            # This way of initializing the copy means it works for subclasses, too.
-            return self.__class__(self)
-
-        def __repr__(self):
-            """
-            Replaces the normal dict.__repr__ with a version that returns the keys
-            in their sorted order.
-            """
-            return '{%s}' % ', '.join(['%r: %r' % (k, v) for k, v in self.iteritems()])
-
-        def clear(self):
-            super(OrderedDict, self).clear()
-            self.ordered_keys = []
-
-
-#def import_underpath_module(path, name):
-    #"""
-    #arguments::
-    #:name :: note that name do not contain `.py` at the end
-    #"""
-    #importer = pkgutil.get_importer(path)
-    #logging.debug('loading handler module: ' + name)
-    #return importer.find_module(name).load_module(name)
-
-
-#def autoload_submodules(dirpath):
-    #"""Load submodules by dirpath
-    #NOTE. ignore packages
-    #"""
-    #import pkgutil
-    #importer = pkgutil.get_importer(dirpath)
-    #return (importer.find_module(name).load_module(name)
-            #for name, is_pkg in importer.iter_modules())
+# def import_underpath_module(path, name):
+#     """
+#     arguments::
+#     :name :: note that name do not contain `.py` at the end
+#     """
+#     importer = pkgutil.get_importer(path)
+#     logging.debug('loading handler module: ' + name)
+#     return importer.find_module(name).load_module(name)
+#
+#
+# def autoload_submodules(dirpath):
+#     """Load submodules by dirpath
+#     NOTE. ignore packages
+#     """
+#     import pkgutil
+#     importer = pkgutil.get_importer(dirpath)
+#     return (importer.find_module(name).load_module(name)
+#             for name, is_pkg in importer.iter_modules())
 
 
 ######################################
@@ -341,16 +194,17 @@ def start_shell(extra_vars=None):
     import rlcompleter
     import readline
 
-    class irlcompleter(rlcompleter.Completer):
+    class CustomCompleter(rlcompleter.Completer):
         def complete(self, text, state):
             if text == "":
-                #you could  replace \t to 4 or 8 spaces if you prefer indent via spaces
+                # you could  replace \t to 4 or 8 spaces if you prefer indent via spaces
                 return ['    ', None][state]
             else:
-                return rlcompleter.Completer.complete(self, text, state)
+                # return rlcompleter.Completer.complete(self, text, state)
+                return super(CustomCompleter, self).complete(text, state)
 
     readline.parse_and_bind("tab: complete")
-    readline.set_completer(irlcompleter().complete)
+    readline.set_completer(CustomCompleter().complete)
 
     import __main__
     if extra_vars:
@@ -366,41 +220,7 @@ def start_shell(extra_vars=None):
     # (`__main__` module is explained here: http://docs.python.org/2/library/__main__.html)
     shell = code.InteractiveConsole(__main__.__dict__)
     shell.interact()
-
-
-def start_shell_a(extra_vars=None):
-
-    import code
-    import rlcompleter
-    import readline
-
-    #class irlcompleter(rlcompleter.Completer):
-        #def complete(self, text, state):
-            #if text == "":
-                ##you could  replace \t to 4 or 8 spaces if you prefer indent via spaces
-                #return ['    ', None][state]
-            #else:
-                #return rlcompleter.Completer.complete(self, text, state)
-
-    #readline.set_completer(irlcompleter().complete)
-    readline.parse_and_bind("tab: complete")
-
-    #_globals = globals()
-    #_globals.update(extra_vars)
-    #import __builtin__ as bt
-    #local_vars = {
-        #'__name__': '__main__',
-        #'__package__': None,
-        #'__doc__': None,
-        #'__builtins__': bt
-    #}
-    g = globals()
-    g['__name__'] == '__main__'
-    print g['datetime']
-    import __main__
-    #shell = code.InteractiveConsole(g)
-    #shell.interact()
-    code.interact(local=__main__.__dict__)
+    # code.interact(local=__main__.__dict__)
 
 
 def fix_request_arguments(arguments):
@@ -438,7 +258,7 @@ class LocalProxy(object):
         object.__setattr__(self, '_LocalProxy__local', local)
         object.__setattr__(self, '__name__', name)
 
-    def _get_current_object(self):
+    def get_current_object(self):
         """Return the current object.  This is useful if you want the real
         object behind the proxy at a time for performance reasons or because
         you want to pass the object into a different context.
@@ -453,103 +273,103 @@ class LocalProxy(object):
     @property
     def __dict__(self):
         try:
-            return self._get_current_object().__dict__
+            return self.get_current_object().__dict__
         except RuntimeError:
             raise AttributeError('__dict__')
 
     def __repr__(self):
         try:
-            obj = self._get_current_object()
+            obj = self.get_current_object()
         except RuntimeError:
             return '<%s unbound>' % self.__class__.__name__
         return repr(obj)
 
     def __bool__(self):
         try:
-            return bool(self._get_current_object())
+            return bool(self.get_current_object())
         except RuntimeError:
             return False
 
     def __unicode__(self):
         try:
-            return unicode(self._get_current_object())
+            return unicode(self.get_current_object())
         except RuntimeError:
             return repr(self)
 
     def __dir__(self):
         try:
-            return dir(self._get_current_object())
+            return dir(self.get_current_object())
         except RuntimeError:
             return []
 
     def __getattr__(self, name):
         if name == '__members__':
-            return dir(self._get_current_object())
-        return getattr(self._get_current_object(), name)
+            return dir(self.get_current_object())
+        return getattr(self.get_current_object(), name)
 
     def __setitem__(self, key, value):
-        self._get_current_object()[key] = value
+        self.get_current_object()[key] = value
 
     def __delitem__(self, key):
-        del self._get_current_object()[key]
+        del self.get_current_object()[key]
 
-    __getslice__ = lambda x, i, j: x._get_current_object()[i:j]
+    __getslice__ = lambda x, i, j: x.get_current_object()[i:j]
 
     def __setslice__(self, i, j, seq):
-        self._get_current_object()[i:j] = seq
+        self.get_current_object()[i:j] = seq
 
     def __delslice__(self, i, j):
-        del self._get_current_object()[i:j]
+        del self.get_current_object()[i:j]
 
-    __setattr__ = lambda x, n, v: setattr(x._get_current_object(), n, v)
-    __delattr__ = lambda x, n: delattr(x._get_current_object(), n)
-    __str__ = lambda x: str(x._get_current_object())
-    __lt__ = lambda x, o: x._get_current_object() < o
-    __le__ = lambda x, o: x._get_current_object() <= o
-    __eq__ = lambda x, o: x._get_current_object() == o
-    __ne__ = lambda x, o: x._get_current_object() != o
-    __gt__ = lambda x, o: x._get_current_object() > o
-    __ge__ = lambda x, o: x._get_current_object() >= o
-    __cmp__ = lambda x, o: cmp(x._get_current_object(), o)
-    __hash__ = lambda x: hash(x._get_current_object())
-    __call__ = lambda x, *a, **kw: x._get_current_object()(*a, **kw)
-    __len__ = lambda x: len(x._get_current_object())
-    __getitem__ = lambda x, i: x._get_current_object()[i]
-    __iter__ = lambda x: iter(x._get_current_object())
-    __contains__ = lambda x, i: i in x._get_current_object()
-    __add__ = lambda x, o: x._get_current_object() + o
-    __sub__ = lambda x, o: x._get_current_object() - o
-    __mul__ = lambda x, o: x._get_current_object() * o
-    __floordiv__ = lambda x, o: x._get_current_object() // o
-    __mod__ = lambda x, o: x._get_current_object() % o
-    __divmod__ = lambda x, o: x._get_current_object().__divmod__(o)
-    __pow__ = lambda x, o: x._get_current_object() ** o
-    __lshift__ = lambda x, o: x._get_current_object() << o
-    __rshift__ = lambda x, o: x._get_current_object() >> o
-    __and__ = lambda x, o: x._get_current_object() & o
-    __xor__ = lambda x, o: x._get_current_object() ^ o
-    __or__ = lambda x, o: x._get_current_object() | o
-    __div__ = lambda x, o: x._get_current_object().__div__(o)
-    __truediv__ = lambda x, o: x._get_current_object().__truediv__(o)
-    __neg__ = lambda x: -(x._get_current_object())
-    __pos__ = lambda x: +(x._get_current_object())
-    __abs__ = lambda x: abs(x._get_current_object())
-    __invert__ = lambda x: ~(x._get_current_object())
-    __complex__ = lambda x: complex(x._get_current_object())
-    __int__ = lambda x: int(x._get_current_object())
-    __long__ = lambda x: long(x._get_current_object())
-    __float__ = lambda x: float(x._get_current_object())
-    __oct__ = lambda x: oct(x._get_current_object())
-    __hex__ = lambda x: hex(x._get_current_object())
-    __index__ = lambda x: x._get_current_object().__index__()
-    __coerce__ = lambda x, o: x._get_current_object().__coerce__(x, o)
-    __enter__ = lambda x: x._get_current_object().__enter__()
-    __exit__ = lambda x, *a, **kw: x._get_current_object().__exit__(*a, **kw)
-    __radd__ = lambda x, o: o + x._get_current_object()
-    __rsub__ = lambda x, o: o - x._get_current_object()
-    __rmul__ = lambda x, o: o * x._get_current_object()
-    __rdiv__ = lambda x, o: o / x._get_current_object()
-    __rtruediv__ = lambda x, o: x._get_current_object().__rtruediv__(o)
-    __rfloordiv__ = lambda x, o: o // x._get_current_object()
-    __rmod__ = lambda x, o: o % x._get_current_object()
-    __rdivmod__ = lambda x, o: x._get_current_object().__rdivmod__(o)
+    __setattr__ = lambda x, n, v: setattr(x.get_current_object(), n, v)
+    __delattr__ = lambda x, n: delattr(x.get_current_object(), n)
+    __str__ = lambda x: str(x.get_current_object())
+    __lt__ = lambda x, o: x.get_current_object() < o
+    __le__ = lambda x, o: x.get_current_object() <= o
+    __eq__ = lambda x, o: x.get_current_object() == o
+    __ne__ = lambda x, o: x.get_current_object() != o
+    __gt__ = lambda x, o: x.get_current_object() > o
+    __ge__ = lambda x, o: x.get_current_object() >= o
+    __cmp__ = lambda x, o: cmp(x.get_current_object(), o)
+    __hash__ = lambda x: hash(x.get_current_object())
+    __call__ = lambda x, *a, **kw: x.get_current_object()(*a, **kw)
+    __len__ = lambda x: len(x.get_current_object())
+    __getitem__ = lambda x, i: x.get_current_object()[i]
+    __iter__ = lambda x: iter(x.get_current_object())
+    __contains__ = lambda x, i: i in x.get_current_object()
+    __add__ = lambda x, o: x.get_current_object() + o
+    __sub__ = lambda x, o: x.get_current_object() - o
+    __mul__ = lambda x, o: x.get_current_object() * o
+    __floordiv__ = lambda x, o: x.get_current_object() // o
+    __mod__ = lambda x, o: x.get_current_object() % o
+    __divmod__ = lambda x, o: x.get_current_object().__divmod__(o)
+    __pow__ = lambda x, o: x.get_current_object() ** o
+    __lshift__ = lambda x, o: x.get_current_object() << o
+    __rshift__ = lambda x, o: x.get_current_object() >> o
+    __and__ = lambda x, o: x.get_current_object() & o
+    __xor__ = lambda x, o: x.get_current_object() ^ o
+    __or__ = lambda x, o: x.get_current_object() | o
+    __div__ = lambda x, o: x.get_current_object().__div__(o)
+    __truediv__ = lambda x, o: x.get_current_object().__truediv__(o)
+    __neg__ = lambda x: -(x.get_current_object())
+    __pos__ = lambda x: +(x.get_current_object())
+    __abs__ = lambda x: abs(x.get_current_object())
+    __invert__ = lambda x: ~(x.get_current_object())
+    __complex__ = lambda x: complex(x.get_current_object())
+    __int__ = lambda x: int(x.get_current_object())
+    __long__ = lambda x: long(x.get_current_object())
+    __float__ = lambda x: float(x.get_current_object())
+    __oct__ = lambda x: oct(x.get_current_object())
+    __hex__ = lambda x: hex(x.get_current_object())
+    __index__ = lambda x: x.get_current_object().__index__()
+    __coerce__ = lambda x, o: x.get_current_object().__coerce__(x, o)
+    __enter__ = lambda x: x.get_current_object().__enter__()
+    __exit__ = lambda x, *a, **kw: x.get_current_object().__exit__(*a, **kw)
+    __radd__ = lambda x, o: o + x.get_current_object()
+    __rsub__ = lambda x, o: o - x.get_current_object()
+    __rmul__ = lambda x, o: o * x.get_current_object()
+    __rdiv__ = lambda x, o: o / x.get_current_object()
+    __rtruediv__ = lambda x, o: x.get_current_object().__rtruediv__(o)
+    __rfloordiv__ = lambda x, o: o // x.get_current_object()
+    __rmod__ = lambda x, o: o % x.get_current_object()
+    __rdivmod__ = lambda x, o: x.get_current_object().__rdivmod__(o)
