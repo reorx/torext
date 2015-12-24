@@ -18,11 +18,14 @@ import logging
 import functools
 import sqlalchemy
 import sqlalchemy.orm
+from sqlalchemy import func
 from sqlalchemy.engine.url import make_url
-from sqlalchemy.orm import sessionmaker, scoped_session, Query
+from sqlalchemy.orm import sessionmaker, scoped_session, Query, load_only
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
+from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 from torext.app import TorextApp
+from torext.errors import DoesNotExist, MultipleObjectsReturned, ParamsInvalidError
 
 
 logger = logging.getLogger('sqlalchemy')
@@ -63,7 +66,48 @@ class BaseQuery(Query):
     """
     Add any function on this class, so that it can be called on SomeModel.query
     """
-    pass
+    @property
+    def entity_class(self):
+        return self._entities[0].entities[0].class_
+
+    def _raise_not_exist(self, query_repr, message=None):
+        if not message:
+            message = '{} does not exist: {}'.format(self.entity_class.__name__, query_repr)
+        raise DoesNotExist(message)
+
+    def _raise_multiple_results(self, query_repr):
+        message = '{} got multiple objects: {}'.format(self.entity_class.__name__, query_repr)
+        raise MultipleObjectsReturned(message)
+
+    def get_or_raise(self, id, message=None):
+        rv = self.get(id)
+        if rv is None:
+            self._raise_not_exist('id=%s' % id, message)
+        return rv
+
+    def one_or_raise(self, message=None):
+        try:
+            rv = self.one()
+        except NoResultFound:
+            self._raise_not_exist(self.statement, message)
+        except MultipleResultsFound:
+            self._raise_multiple_results(self.statement)
+        return rv
+
+    def paginator(self, _max, index):
+        count = self.with_entities(func.count(self.entity_class.id)).scalar()
+
+        if (index - 1) * _max > count or index <= 0:
+            raise ParamsInvalidError("index or max argument overflow")
+
+        if not count:
+            return count, self
+
+        ret = self.offset(_max * (index - 1)).limit(_max)
+        return count, ret
+
+    def load_only(self, *args, **kwargs):
+        return self.options(load_only(*args, **kwargs))
 
 
 class _Model(object):
@@ -96,13 +140,13 @@ class SQLAlchemy(object):
     >>> db = SQLAlchemy('sqlite://')
     """
 
-    def __init__(self, app=None, uri=None, config=None):
+    def __init__(self, app=None, uri=None, config=None, session_options=None):
         self._engine = None
 
         # session is created without an engine,
         # it will be binded with engine later by uri argument
         # or through app settings comes from `init_app` invoking
-        self.session = self.create_scoped_session()
+        self.session = self.create_scoped_session(session_options)
 
         self.Model = self.make_declarative_base()
 
@@ -127,7 +171,9 @@ class SQLAlchemy(object):
         self.session.configure(bind=self.engine)
 
     def create_scoped_session(self, options=None):
-        return scoped_session(sessionmaker(query_cls=BaseQuery))
+        if options is None:
+            options = {}
+        return scoped_session(sessionmaker(query_cls=BaseQuery), **options)
 
     def make_declarative_base(self):
         base = declarative_base(cls=_Model, name='Model')

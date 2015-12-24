@@ -73,3 +73,7 @@ class ArgsParseError(TorextException):
 
 class DoesNotExist(TorextException):
     pass
+
+
+class MultipleObjectsReturned(TorextException):
+    pass

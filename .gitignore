@@ -1,9 +1,10 @@
 *.log
 *.py[co]
-build/
+*.db
 *.egg*/
 dist/
-*.db
-.coverage
+build/
 cover/
 .idea/
+.coverage
+.mysqluri
