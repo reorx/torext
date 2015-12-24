@@ -4,7 +4,7 @@
 try:
     import jinja2
 except ImportError:
-    print 'jinja2 is not installed, skip testing'
+    print 'jinja2 is not installed, skip jinja2_test'
     from nose.plugins.skip import SkipTest
     raise SkipTest
 
