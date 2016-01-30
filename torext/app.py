@@ -190,6 +190,8 @@ class TorextApp(object):
         for k in ('template_path', 'static_path'):
             if k in options:
                 v = options.pop(k)
+                if v is None:
+                    continue
                 if not os.path.isabs(v):
                     v = os.path.abspath(
                         os.path.join(self.root_path, v))
