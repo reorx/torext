@@ -50,4 +50,8 @@ setup(
         ]
     },
     install_requires=get_requires(),
+    extras_require={
+        'sql': ['SQLAlchemy'],
+        'gevent': ['gevent'],
+    }
 )
