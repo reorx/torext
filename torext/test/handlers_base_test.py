@@ -40,6 +40,10 @@ class AuthenticationNotPass(errors.TorextException):
     pass
 
 
+class ValidationError(errors.TorextException):
+    pass
+
+
 def same_dict(d1, d2):
     return set(d1.keys()) == set(d2.keys()) and\
         not [i for i in d1 if d1[i] != d2[i]]
@@ -53,7 +57,7 @@ app.settings['COOKIE_SECRET'] = generate_cookie_secret()
 class HomeHandler(BaseHandler):
     EXCEPTION_HANDLERS = {
         AuthenticationNotPass: '_handle_401',
-        (errors.ValidationError, IndexError): '_handle_400'
+        (ValidationError, IndexError): '_handle_400'
     }
 
     def get(self):
@@ -61,7 +65,7 @@ class HomeHandler(BaseHandler):
         if exc == 0:
             raise AuthenticationNotPass(EXC_MSG_0)
         elif exc == 1:
-            raise errors.ValidationError(EXC_MSG_1)
+            raise ValidationError(EXC_MSG_1)
         elif exc == 2:
             raise IndexError(EXC_MSG_2)
 

@@ -5,7 +5,7 @@ from setuptools import setup
 
 
 # Always stay on 0.9 before documentation is finished
-__version__ = '0.9.4-r5'
+__version__ = '0.9.5'
 
 
 def get_requires():

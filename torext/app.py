@@ -164,7 +164,7 @@ class TorextApp(object):
 
         return options
 
-    def get_application_settings(self):
+    def get_application_options(self):
         options_keys = KEYS_FOR_TORNADO_APPLICATION_SETTINGS
         options = {
             'log_function': self._log_function,

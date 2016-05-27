@@ -70,8 +70,8 @@ class TestClient(object):
     def __init__(self, app, raise_handler_exc=False):
         # TODO add `host` kwarg
         if app.is_running:
-            raise RuntimeError('You should not instance TestClient\
-                               when applicaion is running')
+            raise RuntimeError('You should not instance TestClient'
+                               'when applicaion is running')
 
         self.raise_handler_exc = raise_handler_exc
 
@@ -108,7 +108,7 @@ class TestClient(object):
 
         # init app.io_loop, app.application and app.http_server
         self.app._init_application()
-        self.app._init_http_server()
+        self.app.make_http_server()
         self.io_loop = self.app.io_loop
 
         if self.raise_handler_exc:
