@@ -26,12 +26,20 @@ from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.ext.declarative.api import DeclarativeMeta
 
 from torext.app import TorextApp
-from torext.errors import DoesNotExist, MultipleObjectsReturned, ParamsInvalidError
+from torext.errors import TorextException
 
 
 # TODO refine
 logger = logging.getLogger('sqlalchemy')
 logger.propagate = 0
+
+
+class DoesNotExist(TorextException):
+    pass
+
+
+class MultipleObjectsReturned(TorextException):
+    pass
 
 
 def _make_table(db):
@@ -100,7 +108,7 @@ class BaseQuery(Query):
         count = self.with_entities(func.count(self.entity_class.id)).scalar()
 
         if (index - 1) * _max > count or index <= 0:
-            raise ParamsInvalidError("index or max argument overflow")
+            raise ValueError('index or max argument overflow')
 
         if not count:
             return count, self
