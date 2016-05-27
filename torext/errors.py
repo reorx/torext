@@ -21,42 +21,6 @@ class URLRouteError(TorextException):
     """error in router"""
 
 
-# params.py
-
-class ValidationError(TorextException):
-    """
-    error occur when validating values
-    """
-    def __init__(self, description=None, error_message=None):
-        self.description = description
-        self.error_message = error_message
-
-    def __unicode__(self):
-        #return '%s (%s)' % (self.description, self.error_message) if self.error_message else self.description
-        return self.description or self.error_message
-
-    def __repr__(self):
-        return str(self)
-
-
-class ParamsInvalidError(TorextException):
-    def __init__(self, errors):
-        """Make sure no string only unicode in errors"""
-        if isinstance(errors, list):
-            self.errors = errors
-        else:
-            self.errors = [errors, ]
-
-    def __unicode__(self):
-        return u'Invalid params: %s' % self.errors
-
-
-# script.py
-
-class CommandArgumentError(TorextException):
-    pass
-
-
 # make_settings.py
 
 class SettingsError(TorextException):
@@ -69,11 +33,7 @@ class ArgsParseError(TorextException):
     pass
 
 
-# sql.py
+# script.py
 
-class DoesNotExist(TorextException):
-    pass
-
-
-class MultipleObjectsReturned(TorextException):
+class CommandArgumentError(TorextException):
     pass
