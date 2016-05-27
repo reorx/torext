@@ -75,17 +75,18 @@ class TorextApp(object):
     current_app = None
 
     def __init__(self, settings_module=None, extra_settings=None,
-                 application_settings=None, httpserver_options=None,
+                 application_options=None, httpserver_options=None,
                  io_loop=None):
         """
         Automatically involves torext's settings
         """
-        self.root_path = None
+        global settings
+
         if settings_module:
             self.module_config(settings_module)
         if extra_settings:
             self.update_settings(extra_settings)
-        self._application_settings = application_settings
+        self._application_options = application_options
         self._httpserver_options = httpserver_options
         self.io_loop = io_loop
         self.is_setuped = False
@@ -105,6 +106,8 @@ class TorextApp(object):
         TorextApp.current_app = self
 
     def update_settings(self, incoming, convert_type=False, log_changes=False):
+        global settings
+
         def _log(s):
             if log_changes:
                 print s
@@ -173,11 +176,11 @@ class TorextApp(object):
             if k_upper in settings:
                 options[k] = settings[k_upper]
 
-        if self.root_path is not None:
+        if hasattr(self, 'root_path'):
             self._fix_paths(options)
 
-        if self._application_settings:
-            for k, v in self._application_settings.iteritems():
+        if self._application_options:
+            for k, v in self._application_options.iteritems():
                 options[k] = v
 
         return options
@@ -247,11 +250,13 @@ class TorextApp(object):
         self.set_root_path(settings_module=settings_module)
         app_log.debug('Set root_path: %s', self.root_path)
 
+        global settings
+
         self.update_settings(dict(
             [(i, getattr(settings_module, i)) for i in dir(settings_module)
              if not i.startswith('_') and i == i.upper()]))
 
-        settings.origin_module = settings_module
+        settings._module = settings_module
 
         # keep a mapping to app on settings object
         settings._app = self
@@ -333,7 +338,7 @@ class TorextApp(object):
         time.tzset()
 
         # determine project name
-        if settings.origin_module:
+        if settings._module:
             project = os.path.split(self.root_path)[1]
             if settings['PROJECT']:
                 assert settings['PROJECT'] == project, 'PROJECT specialized in settings (%s) '\
@@ -344,7 +349,7 @@ class TorextApp(object):
         # PROJECT should be importable as a python module
         if settings['PROJECT']:
             # add upper directory path to sys.path if not in
-            if settings.origin_module:
+            if settings._module:
                 _abs = os.path.abspath
                 parent_path = os.path.dirname(self.root_path)
                 if not _abs(parent_path) in [_abs(i) for i in sys.path]:
@@ -358,6 +363,49 @@ class TorextApp(object):
                                   'or there is no __init__ in the package.')
 
         self.is_setuped = True
+
+    def make_http_server(self):
+        multiprocessing = False
+        if settings['PROCESSES'] and settings['PROCESSES'] > 1:
+            if settings['DEBUG']:
+                app_log.info('Multiprocess could not be used in debug mode')
+            else:
+                multiprocessing = True
+
+        if self.io_loop:
+            if not self.io_loop.initialized():
+                # this means self.io_loop is a customized io_loop, so `install` should be called
+                # to make it the singleton instance
+                #print self.io_loop.__class__.__name__
+                self.io_loop.install()
+        else:
+            # NOTE To support running tornado for multiple processes, we do not instance ioloop if multiprocessing is True
+            if not multiprocessing:
+                self.io_loop = IOLoop.instance()
+
+        http_server_options = self.get_httpserver_options()
+        http_server = HTTPServer(self.application, io_loop=self.io_loop, **http_server_options)
+        listen_kwargs = {}
+        if settings.get('ADDRESS'):
+            listen_kwargs['address'] = settings.get('ADDRESS')
+
+        if multiprocessing:
+            # Multiprocessing mode
+            try:
+                http_server.bind(settings['PORT'], **listen_kwargs)
+            except socket.error, e:
+                app_log.warning('socket.error detected on http_server.listen, set ADDRESS="0.0.0.0" in settings to avoid this problem')
+                raise e
+            http_server.start(settings['PROCESSES'])
+        else:
+            # Single process mode
+            try:
+                http_server.listen(settings['PORT'], **listen_kwargs)
+            except socket.error, e:
+                app_log.warning('socket.error detected on http_server.listen, set ADDRESS="0.0.0.0" in settings to avoid this problem')
+                raise e
+
+        self.http_server = http_server
 
     @property
     def is_running(self):
@@ -374,10 +422,11 @@ class TorextApp(object):
             self.setup()
 
         self._init_application(application=application)
-        self._init_http_server()
 
         if not settings.get('TESTING'):
             self.log_app_info(self.application)
+
+        self.make_http_server()
 
         try:
             self._instance_ioloop()
@@ -434,12 +483,10 @@ class TorextApp(object):
         return TestClient(self, **kwargs)
 
     @property
-    def TestCase(self):
-        app = self
-
+    def TestCase(_self):
         class CurrentTestCase(AppTestCase):
             def get_client(self):
-                return app.test_client()
+                return _self.test_client()
         return CurrentTestCase
 
     def register_uimodules(self, **kwargs):
@@ -458,14 +505,14 @@ class TorextApp(object):
         return config_func
 
     def make_application(self, application_class=Application):
-        application_settings = self.get_application_settings()
-        app_log.debug('%s settings: %s', application_class.__name__, application_settings)
+        options = self.get_application_options()
+        app_log.debug('%s settings: %s', application_class.__name__, options)
 
         # this method intended to be able to called for multiple times,
         # so attributes should not be changed, just make a copy
         host_handlers = copy.copy(self.host_handlers)
         top_host_handlers = host_handlers.pop('.*$')
-        application = application_class(top_host_handlers, **application_settings)
+        application = application_class(top_host_handlers, **options)
 
         if host_handlers:
             for host, handlers in host_handlers.iteritems():
@@ -489,53 +536,6 @@ class TorextApp(object):
     def make_wsgi_application(self):
         from tornado.wsgi import WSGIApplication
         return self.make_application(application_class=WSGIApplication)
-
-    def _init_http_server(self):
-        multiprocessing = False
-        if settings['PROCESSES'] and settings['PROCESSES'] > 1:
-            if settings['DEBUG']:
-                app_log.info('Multiprocess could not be used in debug mode')
-            else:
-                multiprocessing = True
-
-        if self.io_loop:
-            if not self.io_loop.initialized():
-                # this means self.io_loop is a customized io_loop, so `install` should be called
-                # to make it the singleton instance
-                # print self.io_loop.__class__.__name__
-                self.io_loop.install()
-        else:
-            # NOTE To support running tornado for multiple processes, we do not instance ioloop if multiprocessing is True
-            if not multiprocessing:
-                self.io_loop = IOLoop.instance()
-
-        http_server_options = self.get_httpserver_options()
-        http_server = HTTPServer(self.application, io_loop=self.io_loop, **http_server_options)
-        listen_kwargs = {}
-        if settings.get('ADDRESS'):
-            listen_kwargs['address'] = settings.get('ADDRESS')
-
-        if multiprocessing:
-            # Multiprocessing mode
-            try:
-                http_server.bind(settings['PORT'], **listen_kwargs)
-            except socket.error, e:
-                app_log.warning(
-                    'socket.error detected on http_server.listen,'
-                    'set ADDRESS="0.0.0.0" in settings to avoid this problem')
-                raise e
-            http_server.start(settings['PROCESSES'])
-        else:
-            # Single process mode
-            try:
-                http_server.listen(settings['PORT'], **listen_kwargs)
-            except socket.error, e:
-                app_log.warning(
-                    'socket.error detected on http_server.listen,'
-                    'set ADDRESS="0.0.0.0" in settings to avoid this problem')
-                raise e
-
-        self.http_server = http_server
 
     def _log_function(self, handler):
         """Override Application.log_function so that what to log can be controlled.

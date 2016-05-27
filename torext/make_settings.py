@@ -52,7 +52,7 @@ class Settings(dict, SingletonMixin):
             if not i.startswith('_'):
                 self[i] = getattr(base_settings, i)
 
-        self.origin_module = None
+        self._module = None
 
     def __getattr__(self, key):
         try:
