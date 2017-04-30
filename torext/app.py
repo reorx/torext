@@ -458,7 +458,7 @@ class TorextApp(object):
             'Loggers': loggers_info,
             'Locale': current_settings['LOCALE'],
             'Debug': current_settings['DEBUG'],
-            'Home': 'http://127.0.0.1:%s' % current_settings['PORT'],
+            'Home': 'http://%s:%s' % (current_settings['ADDRESS'], current_settings['PORT']),
         }
 
         # Log urls
