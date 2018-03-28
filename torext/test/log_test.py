@@ -9,11 +9,11 @@ from nose.tools import with_setup
 def test_logging():
     msgs = [
         '中文 utf8',
-        u'中文 gbk'.encode('gbk'),
-        u'中文 unicode',
+        '中文 gbk'.encode('gbk'),
+        '中文 unicode',
         '始める utf8',
-        u'始める shift_jis'.encode('shift_jis'),
-        u'始める unicode'
+        '始める shift_jis'.encode('shift_jis'),
+        '始める unicode'
     ]
     for i in msgs:
         yield do_logging, i

@@ -232,9 +232,9 @@ class TestClient(object):
 
         kwgs['method'] = method
 
-        # `path` should be utf-8 encoded string to complete requote process
-        if isinstance(path, unicode):
-            path = path.encode('utf8')
+        ## `path` should be utf-8 encoded string to complete requote process
+        #if isinstance(path, str):
+        #    path = path.encode('utf8')
         path = requote_uri(path)
 
         # `body` must be passed if method is one of those three

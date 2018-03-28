@@ -13,6 +13,8 @@ from torext.app import TorextApp
 from torext.handlers.base import BaseHandler
 from torext import errors
 from torext.utils import generate_cookie_secret
+from torext.compat import str_
+from nose.tools import eq_
 
 
 EXC_MSG_0 = 'not pass'
@@ -143,20 +145,23 @@ class JsonHandler(BaseHandler):
 class BaseHandlerRequestTest(app.TestCase):
     def test_handle_request_exception(self):
         resp = self.c.get('/', {'exc': 0})
-        assert resp.code == 401 and resp.body == EXC_MSG_0
+        eq_(resp.code, 401)
+        eq_(str_(resp.body), EXC_MSG_0)
 
         resp = self.c.get('/', {'exc': 1})
-        assert resp.code == 400 and resp.body == EXC_MSG_1
+        eq_(resp.code, 400)
+        eq_(str_(resp.body), EXC_MSG_1)
 
         resp = self.c.get('/', {'exc': 2})
-        assert resp.code == 400 and resp.body == EXC_MSG_2
+        eq_(resp.code, 400)
+        eq_(str_(resp.body), EXC_MSG_2)
 
     def test_file_write(self):
         resp = self.c.get('/file')
         print(repr(resp.body))
-        assert resp.body == FILE_CONTENT
+        eq_(str_(resp.body), FILE_CONTENT)
 
-        assert  resp.headers.get('Content-Type') == 'text/plain'
+        eq_(resp.headers.get('Content-Type'), 'text/plain')
         assert 'Last-Modified' in resp.headers
         assert 'ETag' in resp.headers
 
@@ -165,24 +170,24 @@ class BaseHandlerRequestTest(app.TestCase):
         print(resp.cookies)
         resp_post = self.c.post('/cookie', cookies=resp.cookies)
         print(repr(resp_post.body))
-        assert resp_post.body == SIGNED_RAW_VALUE
+        eq_(str_(resp_post.body), SIGNED_RAW_VALUE)
 
     def test_prepare(self):
         resp = self.c.get('/prepare')
-        assert json.loads(resp.body) == BUF_DICT
+        eq_(json.loads(resp.body), BUF_DICT)
 
     def test_json_write(self):
         resp = self.c.get('/json?write_json=1')
-        assert resp.code == 201
-        assert resp.headers.get('EVA-01') == 'Shinji Ikari'
+        eq_(resp.code, 201)
+        eq_(resp.headers.get('EVA-01'), 'Shinji Ikari')
 
-        assert json.loads(resp.body) == JSON_DICT
+        eq_(json.loads(resp.body), JSON_DICT)
 
     def test_dump_dict(self):
         resp = self.c.get('/json')
         print(resp.body)
-        assert json.loads(resp.body) == JSON_DICT
+        eq_(json.loads(resp.body), JSON_DICT)
 
     def test_parse_json(self):
         resp = self.c.post('/json', data={'data': json.dumps(JSON_DICT)})
-        assert resp.code == 200
+        eq_(resp.code, 200)
