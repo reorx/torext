@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import sys
-import httplib
 import datetime
 import email.utils
 import hashlib
@@ -20,6 +19,7 @@ from torext import settings, errors
 from torext.log import app_log
 from torext.app import TorextApp
 from torext.utils import raise_exc_info
+from torext.compat import httplib
 
 
 def log_response(handler):

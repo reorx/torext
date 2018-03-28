@@ -7,19 +7,18 @@
 
 import sys
 import time
-import urllib
 import unittest
 import logging
 import mimetypes
-from Cookie import SimpleCookie
-from urllib import quote
 from tornado.httpclient import AsyncHTTPClient
 from tornado.ioloop import IOLoop
 from tornado.stack_context import NullContext
 from tornado.escape import json_encode
 from tornado import web
+from tornado.web import HTTPError
 
 from torext.utils import raise_exc_info
+from torext.compat import SimpleCookie, quote, urlencode, httplib
 
 
 COOKIE_HEADER_KEY = 'Set-Cookie'
@@ -268,11 +267,11 @@ class TestClient(object):
                         headers['Content-Type'] = 'application/json'
                     else:
                         headers['Content-Type'] = 'application/x-www-form-urlencoded'
-                        body = urllib.urlencode(data)
+                        body = urlencode(data)
             kwgs['body'] = body
         else:
             if data:
-                path = '%s?%s' % (path, urllib.urlencode(data))
+                path = '%s?%s' % (path, urlencode(data))
 
         if cookies:
             self._add_cookies(cookies, kwgs)
@@ -329,9 +328,6 @@ class TestClient(object):
 
 
 def _handle_request_exception(self, e):
-    import httplib
-    import logging
-    from tornado.web import HTTPError
 
     if isinstance(e, HTTPError):
         if e.log_message:

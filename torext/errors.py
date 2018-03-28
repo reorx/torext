@@ -1,18 +1,21 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from torext.compat import decode_, PY2
+
 
 class TorextException(Exception):
     def __init__(self, message=''):
         if isinstance(message, str):
-            message = message.decode('utf8')
+            message = decode_(message, 'utf8')
         self.message = message
 
-    def __str__(self):
-        return unicode(self).encode('utf-8')
+    if PY2:
+        def __str__(self):
+            return str(self).encode('utf-8')
 
-    def __unicode__(self):
-        return self.message
+        def __unicode__(self):
+            return self.message
 
 
 # route.py
