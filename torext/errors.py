@@ -12,7 +12,7 @@ class TorextException(Exception):
 
     if PY2:
         def __str__(self):
-            return str(self).encode('utf-8')
+            return self.__unicode__().encode('utf-8')
 
         def __unicode__(self):
             return self.message

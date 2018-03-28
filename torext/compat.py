@@ -13,7 +13,7 @@ if PY2:
     def unicode_(s, *args):
         return unicode(s, *args)
     def decode_(s, *args):
-        s.decode(*args)
+        return s.decode(*args)
     def bytes_(s):
         return s
     def str_(s):
