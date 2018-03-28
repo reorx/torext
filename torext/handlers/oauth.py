@@ -675,7 +675,7 @@ class FacebookAuthMixin(object):
         args["api_key"] = self.settings["facebook_api_key"]
         args["v"] = "1.0"
         args["method"] = method
-        args["call_id"] = str(long(time.time() * 1e6))
+        args["call_id"] = str(int(time.time() * 1e6))
         args["format"] = "json"
         args["sig"] = self._signature(args)
         url = "http://api.facebook.com/restserver.php?" + \
@@ -722,6 +722,6 @@ class FacebookAuthMixin(object):
     def _signature(self, args):
         parts = ["%s=%s" % (n, args[n]) for n in sorted(args.keys())]
         body = "".join(parts) + self.settings["facebook_secret"]
-        if isinstance(body, unicode):
+        if isinstance(body, str):
             body = body.encode("utf-8")
         return hashlib.md5(body).hexdigest()

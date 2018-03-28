@@ -159,7 +159,7 @@ class TorextApp(object):
                 options[k] = settings[k_upper]
 
         if self._httpserver_options:
-            for k, v in self._httpserver_options.iteritems():
+            for k, v in self._httpserver_options.items():
                 options[k] = v
 
         return options
@@ -180,7 +180,7 @@ class TorextApp(object):
             self._fix_paths(options)
 
         if self._application_options:
-            for k, v in self._application_options.iteritems():
+            for k, v in self._application_options.items():
                 options[k] = v
 
         return options
@@ -331,7 +331,7 @@ class TorextApp(object):
             # Fix nose handler in testing situation.
             config = settings['LOGGERS'].get('', {})
             set_nose_formatter(config)
-            print('testing, set nose formatter: {}'.format(config))
+            #print('testing, set nose formatter: {}'.format(config))
 
         # reset timezone
         os.environ['TZ'] = settings['TIME_ZONE']
@@ -393,7 +393,7 @@ class TorextApp(object):
             # Multiprocessing mode
             try:
                 http_server.bind(settings['PORT'], **listen_kwargs)
-            except socket.error, e:
+            except socket.error as e:
                 app_log.warning('socket.error detected on http_server.listen, set ADDRESS="0.0.0.0" in settings to avoid this problem')
                 raise e
             http_server.start(settings['PROCESSES'])
@@ -401,7 +401,7 @@ class TorextApp(object):
             # Single process mode
             try:
                 http_server.listen(settings['PORT'], **listen_kwargs)
-            except socket.error, e:
+            except socket.error as e:
                 app_log.warning('socket.error detected on http_server.listen, set ADDRESS="0.0.0.0" in settings to avoid this problem')
                 raise e
 
@@ -515,7 +515,7 @@ class TorextApp(object):
         application = application_class(top_host_handlers, **options)
 
         if host_handlers:
-            for host, handlers in host_handlers.iteritems():
+            for host, handlers in host_handlers.items():
                 application.add_handlers(host, handlers)
 
         # call `application_configurator` to do extra setups

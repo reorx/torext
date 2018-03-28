@@ -62,7 +62,7 @@ def log_request(handler):
 
     if handler.request.arguments:
         block += '+----Arguments----+\n'
-        for k, v in handler.request.arguments.iteritems():
+        for k, v in handler.request.arguments.items():
             block += '| {0:<15} | {1:<15} \n'.format(repr(k), repr(v))
 
     app_log.info(block)
@@ -71,7 +71,7 @@ def log_request(handler):
 def _format_headers_log(headers):
     # length of '+-...-+' is 19
     block = '+-----Headers-----+\n'
-    for k, v in headers.iteritems():
+    for k, v in headers.items():
         block += '| {0:<15} | {1:<15} \n'.format(k, v)
     return block
 
@@ -129,7 +129,7 @@ class BaseHandler(tornado.web.RequestHandler):
         """
         handle_func = self._exception_default_handler
         if self.EXCEPTION_HANDLERS:
-            for excs, func_name in self.EXCEPTION_HANDLERS.iteritems():
+            for excs, func_name in self.EXCEPTION_HANDLERS.items():
                 if isinstance(e, excs):
                     handle_func = getattr(self, func_name)
                     break
@@ -198,7 +198,7 @@ class BaseHandler(tornado.web.RequestHandler):
             self.set_status(code)
 
         if headers:
-            for k, v in headers.iteritems():
+            for k, v in headers.items():
                 self.set_header(k, v)
 
     def write_file(self, file_path, mime_type=None):
@@ -327,6 +327,7 @@ class WSGIStreamHandler(BaseHandler):
         # Break up a reference cycle between this handler and the
         # _ui_module closures to allow for faster GC on CPython.
         self.ui = None
+
 
 _jinja2_env = None
 

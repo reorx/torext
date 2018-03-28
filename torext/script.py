@@ -9,7 +9,7 @@ from .errors import CommandArgumentError
 
 
 class Command(object):
-    allow_types = (int, float, str, unicode, bool)
+    allow_types = (int, float, str, str, bool)
 
     def __init__(self, func, profile=False):
         self.func = func
@@ -21,21 +21,21 @@ class Command(object):
         defaults = list(spec.defaults or [])
 
         self.parameters = argnames[:len(argnames) - len(defaults)]
-        self.keyword_parameters = dict(zip(argnames[- len(defaults):], defaults))
+        self.keyword_parameters = dict(list(zip(argnames[- len(defaults):], defaults)))
 
         # Check defined keyword parameters
-        for k, v in self.keyword_parameters.iteritems():
+        for k, v in self.keyword_parameters.items():
             self._get_value_type(v)
 
         self.has_varargs = bool(spec.varargs)
         self.has_kwargs = bool(spec.keywords)
 
-        if func.func_doc:
-            doc = func.func_doc
+        if func.__doc__:
+            doc = func.__doc__
             if '\n' in doc:
                 doc = ' '.join(i.strip() for i in doc.split('\n'))
         else:
-            doc = "Command '%s' in manage script" % func.func_name
+            doc = "Command '%s' in manage script" % func.__name__
         self.doc = doc
 
     def parse_args(self, all_args=None):
@@ -105,7 +105,7 @@ class Command(object):
         return typ
 
     def _convert_to_type(self, source, typ):
-        if typ in (int, float, str, unicode):
+        if typ in (int, float, str, str):
             try:
                 v = typ(source)
             except ValueError:
@@ -160,9 +160,9 @@ class Manager(object):
 
     def print_command_help(self, command):
         buf = []
-        buf.append("'%s' usage:".format(command.func.func_name))
+        buf.append("'%s' usage:".format(command.func.__name__))
         buf.append("  Arguments        : {}".format(','.join(command.parameters)))
-        buf.append("  Keyword arguments: {}".format(','.join('%s=%s' % (k, v) for k, v in command.keyword_parameters.iteritems())))
+        buf.append("  Keyword arguments: {}".format(','.join('%s=%s' % (k, v) for k, v in command.keyword_parameters.items())))
         print('\n'.join(buf))
 
     def print_small_help(self, hint=None):
@@ -201,7 +201,7 @@ class Manager(object):
         indent_size = 2
         tab_size = 4
         doc_width = 50
-        grid_len = max(len(i) for i in self._commands.keys()) + tab_size
+        grid_len = max(len(i) for i in list(self._commands.keys())) + tab_size
 
         for name in self._commands_list:
             command = self._commands[name]
@@ -251,8 +251,8 @@ class Manager(object):
         def wraped(func):
             assert inspect.isfunction(func)
 
-            self._commands[func.func_name] = Command(func, profile)
-            self._commands_list.append(func.func_name)
+            self._commands[func.__name__] = Command(func, profile)
+            self._commands_list.append(func.__name__)
 
             return func
         return wraped

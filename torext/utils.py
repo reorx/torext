@@ -9,9 +9,6 @@ import json
 from tornado.util import raise_exc_info
 
 
-PY3 = sys.version_info.major == 3
-
-
 def generate_cookie_secret():
     import uuid
     import base64
@@ -125,7 +122,7 @@ def _resolve_name(name, package, level):
     if not hasattr(package, 'rindex'):
         raise ValueError("'package' not set to a string")
     dot = len(package)
-    for x in xrange(level, 1, -1):
+    for x in range(level, 1, -1):
         try:
             dot = package.rindex('.', 0, dot)
         except ValueError:
@@ -191,7 +188,7 @@ def start_shell(extra_vars=None):
     import __main__
     if extra_vars:
         __main__.__dict__.update(
-            dict((k, v) for k, v in extra_vars.iteritems() if not k.startswith('__')))
+            dict((k, v) for k, v in extra_vars.items() if not k.startswith('__')))
 
     # As completer class search complement variables in `__main__.__dict__`
     # (`self.namespace = __main__.__dict__` in 'rlcompleter.Completer.complete'),
@@ -206,7 +203,7 @@ def start_shell(extra_vars=None):
 
 
 def fix_request_arguments(arguments):
-    return dict((k, v[0]) for k, v in arguments.iteritems())
+    return dict((k, v[0]) for k, v in arguments.items())
 
 
 class LocalProxy(object):
@@ -274,7 +271,7 @@ class LocalProxy(object):
 
     def __unicode__(self):
         try:
-            return unicode(self.get_current_object())
+            return str(self.get_current_object())
         except RuntimeError:
             return repr(self)
 
@@ -339,7 +336,7 @@ class LocalProxy(object):
     __invert__ = lambda x: ~(x.get_current_object())
     __complex__ = lambda x: complex(x.get_current_object())
     __int__ = lambda x: int(x.get_current_object())
-    __long__ = lambda x: long(x.get_current_object())
+    __long__ = lambda x: int(x.get_current_object())
     __float__ = lambda x: float(x.get_current_object())
     __oct__ = lambda x: oct(x.get_current_object())
     __hex__ = lambda x: hex(x.get_current_object())
