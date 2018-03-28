@@ -67,7 +67,7 @@ def _wrap_with_default_query_class(fn):
         _set_default_query_class(kwargs)
         if "backref" in kwargs:
             backref = kwargs['backref']
-            if isinstance(backref, basestring):
+            if isinstance(backref, str):
                 backref = (backref, {})
             _set_default_query_class(backref[1])
         return fn(*args, **kwargs)
@@ -124,7 +124,7 @@ class BaseQuery(Query):
 
 class TorextDeclarativeMeta(DeclarativeMeta):
     def __new__(cls, name, bases, attrs):
-        print 'cls cls', cls
+        print('cls cls', cls)
         model_cls = super(TorextDeclarativeMeta, cls).__new__(cls, name, bases, attrs)
         # model_cls = type.__new__(cls, name, bases, attrs)
 
@@ -143,7 +143,7 @@ class _Model(object):
         return cls.__name__.lower()
 
     def __init__(self, **kwargs):
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             setattr(self, k, v)
 
 
@@ -360,7 +360,7 @@ class MutationDict(MutationObj, dict):
     @classmethod
     def coerce(cls, key, value):
         """Convert plain dictionary to MutationDict"""
-        self = MutationDict((k,MutationObj.coerce(key,v)) for (k,v) in value.items())
+        self = MutationDict((k,MutationObj.coerce(key, v)) for (k, v) in value.items())
         self._key = key
         return self
 

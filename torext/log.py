@@ -4,6 +4,7 @@
 import sys
 import logging
 from torext.utils import split_kwargs
+from torext.compat import unicode_ as u_, decode_
 
 
 try:
@@ -33,7 +34,7 @@ def _color(lvl):
         except:
             pass
     if not color:
-        return u'', u''
+        return u_(''), u_('')
     # The curses module has some str/bytes confusion in
     # python3.  Until version 3.2.3, most methods return
     # bytes, but only accept strings.  In addition, we want to
@@ -44,20 +45,20 @@ def _color(lvl):
     fg_color = (curses.tigetstr("setaf") or
                 curses.tigetstr("setf") or "")
     if (3, 0) < sys.version_info < (3, 2, 3):
-        fg_color = unicode(fg_color, "ascii")
+        fg_color = u_(fg_color, "ascii")
     colors_map = {
-        logging.DEBUG: unicode(curses.tparm(fg_color, 4),  # Blue
+        logging.DEBUG: u_(curses.tparm(fg_color, 4),  # Blue
                                "ascii"),
-        logging.INFO: unicode(curses.tparm(fg_color, 2),  # Green
+        logging.INFO: u_(curses.tparm(fg_color, 2),  # Green
                               "ascii"),
-        logging.WARNING: unicode(curses.tparm(fg_color, 3),  # Yellow
+        logging.WARNING: u_(curses.tparm(fg_color, 3),  # Yellow
                                  "ascii"),
-        logging.ERROR: unicode(curses.tparm(fg_color, 1),  # Red
+        logging.ERROR: u_(curses.tparm(fg_color, 1),  # Red
                                "ascii"),
-        'grey': unicode(curses.tparm(fg_color, 0),  # Grey
+        'grey': u_(curses.tparm(fg_color, 0),  # Grey
                         "ascii"),
     }
-    _normal = unicode(curses.tigetstr("sgr0"), "ascii")
+    _normal = u_(curses.tigetstr("sgr0"), "ascii")
 
     return colors_map.get(lvl, _normal), _normal
 
@@ -87,7 +88,7 @@ class BaseFormatter(logging.Formatter):
         logging.Formatter.__init__(self, datefmt=datefmt)
 
         self.fmt = fmt
-        self.ufmt = fmt.decode('utf8')
+        self.ufmt = decode_(fmt, 'utf8')
         self.color = color
         self.tab = tab
 
@@ -111,11 +112,11 @@ class BaseFormatter(logging.Formatter):
         self._format_record(record)
 
         record_dict = {}
-        for k, v in record.__dict__.iteritems():
+        for k, v in record.__dict__.items():
             if isinstance(k, str):
-                k = k.decode('utf8')
+                k = decode_(k, 'utf8')
             if isinstance(v, str):
-                v = v.decode('utf8', 'replace')
+                v = decode_(v, 'utf8', 'replace')
             record_dict[k] = v
 
         if 'color' in self.fmt or 'end_color' in self.fmt:
@@ -124,11 +125,11 @@ class BaseFormatter(logging.Formatter):
         log = self.ufmt % record_dict
 
         if record.exc_text:
-            if log[-1:] != u'\n':
-                log += u'\n'
-            log += record.exc_text.decode('utf8', 'replace')
+            if log[-1:] != '\n':
+                log += '\n'
+            log += decode_(record.exc_text, 'utf8', 'replace')
 
-        log = log.replace(u'\n', u'\n' + self.tab)
+        log = log.replace('\n', '\n' + self.tab)
 
         return log
 
@@ -188,7 +189,7 @@ def set_logger(name,
 
 
 def set_loggers(loggers):
-    for name, config in loggers.iteritems():
+    for name, config in loggers.items():
         set_logger(name, **config)
 
 
@@ -239,7 +240,7 @@ if __name__ == '__main__':
         root_logger.warning('\nholy a shit')
         try:
             tuple()[0]
-        except Exception, e:
+        except Exception as e:
             root_logger.error(e, exc_info=True)
 
         # this logger's log will be handled only once, due to the bool False value

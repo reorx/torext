@@ -7,19 +7,18 @@
 
 import sys
 import time
-import urllib
 import unittest
 import logging
 import mimetypes
-from Cookie import SimpleCookie
-from urllib import quote
 from tornado.httpclient import AsyncHTTPClient
 from tornado.ioloop import IOLoop
 from tornado.stack_context import NullContext
 from tornado.escape import json_encode
 from tornado import web
+from tornado.web import HTTPError
 
 from torext.utils import raise_exc_info
+from torext.compat import SimpleCookie, quote, urlencode, httplib
 
 
 COOKIE_HEADER_KEY = 'Set-Cookie'
@@ -33,7 +32,7 @@ COOKIE_HEADER_KEY = 'Set-Cookie'
 # The unreserved URI characters (RFC 3986)
 UNRESERVED_SET = frozenset(
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-    + "0123456789-._~")
+    "0123456789-._~")
 
 
 def unquote_unreserved(uri):
@@ -155,7 +154,7 @@ class TestClient(object):
             c = cookies
         elif isinstance(cookies, dict):
             c = SimpleCookie()
-            for k, v in cookies.iteritems():
+            for k, v in cookies.items():
                 c[k] = v
         else:
             raise TypeError('cookies kwarg should be dict or SimpleCookie instance')
@@ -233,9 +232,9 @@ class TestClient(object):
 
         kwgs['method'] = method
 
-        # `path` should be utf-8 encoded string to complete requote process
-        if isinstance(path, unicode):
-            path = path.encode('utf8')
+        ## `path` should be utf-8 encoded string to complete requote process
+        #if isinstance(path, str):
+        #    path = path.encode('utf8')
         path = requote_uri(path)
 
         # `body` must be passed if method is one of those three
@@ -247,12 +246,12 @@ class TestClient(object):
                 headers['Content-Type'] = 'multipart/form-data; boundary=%s' % boundary
                 L = []
                 if data:
-                    for k, v in data.iteritems():
+                    for k, v in data.items():
                         L.append('--' + boundary)
                         L.append('Content-Disposition: form-data; name="%s"' % k)
                         L.append('')
                         L.append(v)
-                for k, f in files.iteritems():
+                for k, f in files.items():
                     L.append('--' + boundary)
                     L.append('Content-Disposition: form-data; name="%s"; filename="%s"' % (k, f[0]))
                     L.append('Content-Type: %s' % mimetypes.guess_type(f[0])[0] or 'application/octet-stream')
@@ -268,11 +267,11 @@ class TestClient(object):
                         headers['Content-Type'] = 'application/json'
                     else:
                         headers['Content-Type'] = 'application/x-www-form-urlencoded'
-                        body = urllib.urlencode(data)
+                        body = urlencode(data)
             kwgs['body'] = body
         else:
             if data:
-                path = '%s?%s' % (path, urllib.urlencode(data))
+                path = '%s?%s' % (path, urlencode(data))
 
         if cookies:
             self._add_cookies(cookies, kwgs)
@@ -329,9 +328,6 @@ class TestClient(object):
 
 
 def _handle_request_exception(self, e):
-    import httplib
-    import logging
-    from tornado.web import HTTPError
 
     if isinstance(e, HTTPError):
         if e.log_message:

@@ -7,8 +7,6 @@
 # oauth2 mixin classes
 
 import logging
-import urllib
-import urlparse
 import hashlib
 import requests
 import time
@@ -21,6 +19,8 @@ from tornado.auth import OAuthMixin, OAuth2Mixin
 from tornado.util import bytes_type
 
 from torext import settings
+from torext.compat import urlencode, quote, urljoin
+
 
 #
 # TODO move the consumer_* arguments out of classes
@@ -63,11 +63,11 @@ class TwitterOAuthMixin(OAuthMixin):
                 url, access_token, all_args, method=method)
             args.update(oauth)
         if args:
-            url += "?" + urllib.urlencode(args)
+            url += "?" + urlencode(args)
         callback = self.async_callback(self._on_twitter_request, callback)
         http = httpclient.AsyncHTTPClient()
         if post_args is not None:
-            http.fetch(url, method="POST", body=urllib.urlencode(post_args),
+            http.fetch(url, method="POST", body=urlencode(post_args),
                        callback=callback)
         else:
             http.fetch(url, callback=callback)
@@ -115,11 +115,11 @@ class WeiboOAuthMixin(OAuthMixin):
                 url, access_token, all_args, method=method)
             args.update(oauth)
         if args:
-            url += "?" + urllib.urlencode(args)
+            url += "?" + urlencode(args)
         callback = self.async_callback(self._on_weibo_request, callback)
         http = httpclient.AsyncHTTPClient()
         if post_args is not None:
-            http.fetch(url, method="POST", body=urllib.urlencode(post_args),
+            http.fetch(url, method="POST", body=urlencode(post_args),
                        callback=callback)
         else:
             http.fetch(url, callback=callback)
@@ -162,7 +162,7 @@ class DoubanOAuthMixin(OAuthMixin):
         # and they are required to be quoted before generated to be oauth parameters,
         # (unfortunately tornado don't voluntarily do that)
         # we forwardly quote the url before it is handled.
-        url = urllib.quote("http://" + self._OAUTH_API_DOMAIN + path, ':/')
+        url = quote("http://" + self._OAUTH_API_DOMAIN + path, ':/')
 
         # reset `format` value in args
         args['alt'] = 'json'
@@ -190,7 +190,7 @@ class DoubanOAuthMixin(OAuthMixin):
                        callback=callback)
         else:
             if args:
-                url += "?" + urllib.urlencode(args)
+                url += "?" + urlencode(args)
             http.fetch(url, callback=callback)
 
     def _on_douban_request(self, callback, response):
@@ -234,7 +234,7 @@ class TencentOAuthMixin(OAuthMixin):
         # before oauth parameters are generated
         self._OAUTH_VERSION = '1.0'
 
-        url = urllib.quote("http://" + self._OAUTH_API_DOMAIN + path, ':/')
+        url = quote("http://" + self._OAUTH_API_DOMAIN + path, ':/')
 
         # reset `format` value in args
         args['format'] = 'json'
@@ -248,12 +248,12 @@ class TencentOAuthMixin(OAuthMixin):
                 url, access_token, all_args, method=method)
             args.update(oauth)
         if args:
-            url += "?" + urllib.urlencode(args)
+            url += "?" + urlencode(args)
         http = httpclient.AsyncHTTPClient()
         callback = self.async_callback(self._on_tencent_request, callback)
 
         if post_args is not None:
-            http.fetch(url, method="POST", body=urllib.urlencode(post_args),
+            http.fetch(url, method="POST", body=urlencode(post_args),
                        callback=callback)
         else:
             http.fetch(url, callback=callback)
@@ -277,7 +277,7 @@ class TencentOAuthMixin(OAuthMixin):
             access_token=access_token, callback=callback)
 
     def _parse_user_response(self, callback, user):
-        print 'user', user
+        print('user', user)
         if user:
             user["username"] = user["data"]["name"]
         callback(user)
@@ -363,11 +363,11 @@ class FacebookOAuth2Mixin(OAuth2Mixin):
             all_args.update(args)
             all_args.update(post_args or {})
         if all_args:
-            url += "?" + urllib.urlencode(all_args)
+            url += "?" + urlencode(all_args)
         callback = self.async_callback(self._on_facebook_request, callback)
         http = httpclient.AsyncHTTPClient()
         if post_args is not None:
-            http.fetch(url, method="POST", body=urllib.urlencode(post_args),
+            http.fetch(url, method="POST", body=urlencode(post_args),
                        callback=callback)
         else:
             http.fetch(url, callback=callback)
@@ -456,7 +456,7 @@ class WeiboOAuth2Mixin(object):
         #
         #http = httpclient.AsyncHTTPClient()
         #req = httpclient.HTTPRequest(self._OAUTH_ACCESS_TOKEN_URL,
-                #body=urllib.urlencode(all_args))
+                #body=urlencode(all_args))
         #http.fetch(req,
                    #callback=(yield gen.Callback('WeiboGraphMixin.get_access_token')))
         #response = yield gen.Wait('WeiboGraphMixin.get_access_token')
@@ -637,18 +637,18 @@ class FacebookAuthMixin(object):
             "v": "1.0",
             "fbconnect": "true",
             "display": "page",
-            "next": urlparse.urljoin(self.request.full_url(), callback_uri),
+            "next": urljoin(self.request.full_url(), callback_uri),
             "return_session": "true",
         }
         if cancel_uri:
-            args["cancel_url"] = urlparse.urljoin(
+            args["cancel_url"] = urljoin(
                 self.request.full_url(), cancel_uri)
         if extended_permissions:
-            if isinstance(extended_permissions, (unicode, bytes_type)):
+            if isinstance(extended_permissions, (str, bytes_type)):
                 extended_permissions = [extended_permissions]
             args["req_perms"] = ",".join(extended_permissions)
         self.redirect("http://www.facebook.com/login.php?" +
-                      urllib.urlencode(args))
+                      urlencode(args))
 
     def authorize_redirect(self, extended_permissions, callback_uri=None,
                            cancel_uri=None):
@@ -675,11 +675,11 @@ class FacebookAuthMixin(object):
         args["api_key"] = self.settings["facebook_api_key"]
         args["v"] = "1.0"
         args["method"] = method
-        args["call_id"] = str(long(time.time() * 1e6))
+        args["call_id"] = str(int(time.time() * 1e6))
         args["format"] = "json"
         args["sig"] = self._signature(args)
         url = "http://api.facebook.com/restserver.php?" + \
-            urllib.urlencode(args)
+            urlencode(args)
         http = httpclient.AsyncHTTPClient()
         http.fetch(url, callback=self.async_callback(
             self._parse_response, callback))
@@ -722,6 +722,6 @@ class FacebookAuthMixin(object):
     def _signature(self, args):
         parts = ["%s=%s" % (n, args[n]) for n in sorted(args.keys())]
         body = "".join(parts) + self.settings["facebook_secret"]
-        if isinstance(body, unicode):
+        if isinstance(body, str):
             body = body.encode("utf-8")
         return hashlib.md5(body).hexdigest()

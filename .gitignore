@@ -8,3 +8,4 @@ cover/
 .idea/
 .coverage
 .mysqluri
+venv3/

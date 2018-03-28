@@ -6,6 +6,8 @@ import unittest
 from torext.app import TorextApp
 from torext.handlers import BaseHandler
 from torext.testing import AppTestCase
+from torext.compat import str_
+from nose.tools import eq_
 
 
 GET_RESULT = 'get ok'
@@ -49,29 +51,29 @@ def make_app():
 class CaseMixin(object):
     def test_get(self):
         rv = self.c.get('/')
-        assert rv.body == GET_RESULT
+        eq_(str_(rv.body), GET_RESULT)
 
     def test_post(self):
         rv = self.c.post('/')
-        assert rv.body == POST_RESULT
+        eq_(str_(rv.body), POST_RESULT)
 
     def test_get_params(self):
         p = 'fly me to the moon'
         rv = self.c.get('/withdata', {'p': p})
-        assert rv.body == p
+        eq_(str_(rv.body), p)
 
     def test_post_data(self):
         d = 'in other words'
         rv = self.c.post('/withdata', {'d': d})
-        assert rv.body == d
+        eq_(str_(rv.body), d)
 
     def test_header_change(self):
         h = 'darling kiss me'
         name = 'Torext-Special'
         rv = self.c.get('/header', {'h': name}, headers={name: h})
 
-        assert rv.headers.get(name) == h
-        assert rv.body == h
+        eq_(rv.headers.get(name), h)
+        eq_(str_(rv.body), h)
 
 
 class BasicTestCase(unittest.TestCase, CaseMixin):

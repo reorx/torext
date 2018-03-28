@@ -9,7 +9,7 @@ from nose.tools import assert_raises
 
 def test_func_parse():
     def pri(a, b, c=True, d=3):
-        print 'pri func'
+        print('pri func')
         return
 
     c = Command(pri)

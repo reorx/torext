@@ -13,6 +13,8 @@ from torext.app import TorextApp
 from torext.handlers.base import BaseHandler
 from torext import errors
 from torext.utils import generate_cookie_secret
+from torext.compat import str_
+from nose.tools import eq_
 
 
 EXC_MSG_0 = 'not pass'
@@ -98,8 +100,8 @@ class CookieHandler(BaseHandler):
         self.set_cookie(SIGNED_NAME, signed_value)
 
     def post(self):
-        print 'request header', self.request.headers
-        print 'request cookies', self.request.cookies
+        print('request header', self.request.headers)
+        print('request cookies', self.request.cookies)
         cookie_value = self.get_cookie(SIGNED_NAME)
         self.write(self.decode_signed_value(SIGNED_NAME, cookie_value))
 
@@ -131,7 +133,7 @@ class JsonHandler(BaseHandler):
             self.write(self.json_encode(JSON_DICT))
 
     def post(self):
-        print 'headers', self.request.headers
+        print('headers', self.request.headers)
         data = self.get_argument('data')
         d = self.json_decode(data)
         if d == JSON_DICT:
@@ -143,46 +145,49 @@ class JsonHandler(BaseHandler):
 class BaseHandlerRequestTest(app.TestCase):
     def test_handle_request_exception(self):
         resp = self.c.get('/', {'exc': 0})
-        assert resp.code == 401 and resp.body == EXC_MSG_0
+        eq_(resp.code, 401)
+        eq_(str_(resp.body), EXC_MSG_0)
 
         resp = self.c.get('/', {'exc': 1})
-        assert resp.code == 400 and resp.body == EXC_MSG_1
+        eq_(resp.code, 400)
+        eq_(str_(resp.body), EXC_MSG_1)
 
         resp = self.c.get('/', {'exc': 2})
-        assert resp.code == 400 and resp.body == EXC_MSG_2
+        eq_(resp.code, 400)
+        eq_(str_(resp.body), EXC_MSG_2)
 
     def test_file_write(self):
         resp = self.c.get('/file')
-        print repr(resp.body)
-        assert resp.body == FILE_CONTENT
+        print(repr(resp.body))
+        eq_(str_(resp.body), FILE_CONTENT)
 
-        assert  resp.headers.get('Content-Type') == 'text/plain'
+        eq_(resp.headers.get('Content-Type'), 'text/plain')
         assert 'Last-Modified' in resp.headers
         assert 'ETag' in resp.headers
 
     def test_decode_signed_value(self):
         resp = self.c.get('/cookie')
-        print resp.cookies
+        print(resp.cookies)
         resp_post = self.c.post('/cookie', cookies=resp.cookies)
-        print repr(resp_post.body)
-        assert resp_post.body == SIGNED_RAW_VALUE
+        print(repr(resp_post.body))
+        eq_(str_(resp_post.body), SIGNED_RAW_VALUE)
 
     def test_prepare(self):
         resp = self.c.get('/prepare')
-        assert json.loads(resp.body) == BUF_DICT
+        eq_(json.loads(resp.body), BUF_DICT)
 
     def test_json_write(self):
         resp = self.c.get('/json?write_json=1')
-        assert resp.code == 201
-        assert resp.headers.get('EVA-01') == 'Shinji Ikari'
+        eq_(resp.code, 201)
+        eq_(resp.headers.get('EVA-01'), 'Shinji Ikari')
 
-        assert json.loads(resp.body) == JSON_DICT
+        eq_(json.loads(resp.body), JSON_DICT)
 
     def test_dump_dict(self):
         resp = self.c.get('/json')
-        print resp.body
-        assert json.loads(resp.body) == JSON_DICT
+        print(resp.body)
+        eq_(json.loads(resp.body), JSON_DICT)
 
     def test_parse_json(self):
         resp = self.c.post('/json', data={'data': json.dumps(JSON_DICT)})
-        assert resp.code == 200
+        eq_(resp.code, 200)
