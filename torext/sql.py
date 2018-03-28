@@ -124,7 +124,7 @@ class BaseQuery(Query):
 
 class TorextDeclarativeMeta(DeclarativeMeta):
     def __new__(cls, name, bases, attrs):
-        print 'cls cls', cls
+        print('cls cls', cls)
         model_cls = super(TorextDeclarativeMeta, cls).__new__(cls, name, bases, attrs)
         # model_cls = type.__new__(cls, name, bases, attrs)
 

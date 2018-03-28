@@ -98,8 +98,8 @@ class CookieHandler(BaseHandler):
         self.set_cookie(SIGNED_NAME, signed_value)
 
     def post(self):
-        print 'request header', self.request.headers
-        print 'request cookies', self.request.cookies
+        print('request header', self.request.headers)
+        print('request cookies', self.request.cookies)
         cookie_value = self.get_cookie(SIGNED_NAME)
         self.write(self.decode_signed_value(SIGNED_NAME, cookie_value))
 
@@ -131,7 +131,7 @@ class JsonHandler(BaseHandler):
             self.write(self.json_encode(JSON_DICT))
 
     def post(self):
-        print 'headers', self.request.headers
+        print('headers', self.request.headers)
         data = self.get_argument('data')
         d = self.json_decode(data)
         if d == JSON_DICT:
@@ -153,7 +153,7 @@ class BaseHandlerRequestTest(app.TestCase):
 
     def test_file_write(self):
         resp = self.c.get('/file')
-        print repr(resp.body)
+        print(repr(resp.body))
         assert resp.body == FILE_CONTENT
 
         assert  resp.headers.get('Content-Type') == 'text/plain'
@@ -162,9 +162,9 @@ class BaseHandlerRequestTest(app.TestCase):
 
     def test_decode_signed_value(self):
         resp = self.c.get('/cookie')
-        print resp.cookies
+        print(resp.cookies)
         resp_post = self.c.post('/cookie', cookies=resp.cookies)
-        print repr(resp_post.body)
+        print(repr(resp_post.body))
         assert resp_post.body == SIGNED_RAW_VALUE
 
     def test_prepare(self):
@@ -180,7 +180,7 @@ class BaseHandlerRequestTest(app.TestCase):
 
     def test_dump_dict(self):
         resp = self.c.get('/json')
-        print resp.body
+        print(resp.body)
         assert json.loads(resp.body) == JSON_DICT
 
     def test_parse_json(self):

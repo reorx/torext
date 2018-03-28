@@ -18,7 +18,7 @@ parser = optparse.OptionParser(usage='Usage: %prog project')
 class CommandInputError(Exception):
     def __init__(self, msg):
         self.msg = msg
-        print self.__str__() + '\n'
+        print(self.__str__() + '\n')
         parser.print_help()
         sys.exit()
 

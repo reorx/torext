@@ -5,29 +5,11 @@ import os
 import sys
 import datetime
 import functools
-
-
 import json
+from tornado.util import raise_exc_info
 
-try:
-    from tornado.util import raise_exc_info
-except ImportError:
-    def raise_exc_info(exc_info):
-        """Re-raise an exception (with original traceback) from an exc_info tuple.
 
-        The argument is a ``(type, value, traceback)`` tuple as returned by
-        `sys.exc_info`.
-        """
-        # 2to3 isn't smart enough to convert three-argument raise
-        # statements correctly in some cases.
-        if isinstance(exc_info[1], exc_info[0]):
-            raise exc_info[1], None, exc_info[2]
-            # After 2to3: raise exc_info[1].with_traceback(exc_info[2])
-        else:
-            # I think this branch is only taken for string exceptions,
-            # which were removed in Python 2.6.
-            raise exc_info[0], exc_info[1], exc_info[2]
-            # After 2to3: raise exc_info[0](exc_info[1]).with_traceback(exc_info[2])
+PY3 = sys.version_info.major == 3
 
 
 def generate_cookie_secret():
@@ -183,9 +165,9 @@ def add_to_syspath(pth, relative_to=None):
     if relative_to:
         pth = _join(relative_to, pth)
     if _abspath(pth) in [_abspath(i) for i in sys.path]:
-        print 'path %s is in sys.path, pass' % pth
+        print('path {} is in sys.path, pass'.format(pth))
     else:
-        print 'add path %s to sys.path' % pth
+        print('add path {} to sys.path'.format(pth))
         sys.path.insert(0, pth)
 
 

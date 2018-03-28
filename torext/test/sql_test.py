@@ -4,7 +4,7 @@
 try:
     import sqlalchemy
 except ImportError:
-    print 'sqlalchemy is not installed, skip testing'
+    print('sqlalchemy is not installed, skip testing')
     from nose.plugins.skip import SkipTest
     raise SkipTest
 
@@ -12,7 +12,7 @@ try:
     with open('.mysqluri', 'r') as f:
         MYSQL_URI = f.read().strip()
 except IOError:
-    print 'mysql is not configured, skip sql_test'
+    print('mysql is not configured, skip sql_test')
     from nose.plugins.skip import SkipTest
     raise SkipTest
 
@@ -87,7 +87,7 @@ class TestSQLModule(object):
 
         assert self.User.query.get_or_raise(1).name == 'reorx'
 
-        print 'DoesNotExist class', self.User.DoesNotExist
+        print('DoesNotExist class', self.User.DoesNotExist)
         with assert_raises(self.User.DoesNotExist):
             self.User.query.get_or_raise(2)
 

@@ -110,7 +110,7 @@ class TorextApp(object):
 
         def _log(s):
             if log_changes:
-                print s
+                print(s)
 
         for i in incoming:
             incoming_v = incoming[i]
@@ -331,7 +331,7 @@ class TorextApp(object):
             # Fix nose handler in testing situation.
             config = settings['LOGGERS'].get('', {})
             set_nose_formatter(config)
-            print 'testing, set nose formatter: %s' % config
+            print('testing, set nose formatter: {}'.format(config))
 
         # reset timezone
         os.environ['TZ'] = settings['TIME_ZONE']
@@ -432,9 +432,9 @@ class TorextApp(object):
             self._instance_ioloop()
             self.io_loop.start()
         except KeyboardInterrupt:
-            print '\nStopping ioloop.. ',
+            print('\nStopping ioloop.. ', end=' ')
             IOLoop.instance().stop()
-            print 'Exit'
+            print('Exit')
             sys.exit(0)
 
     def log_app_info(self, application=None):

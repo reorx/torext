@@ -277,7 +277,7 @@ class TencentOAuthMixin(OAuthMixin):
             access_token=access_token, callback=callback)
 
     def _parse_user_response(self, callback, user):
-        print 'user', user
+        print('user', user)
         if user:
             user["username"] = user["data"]["name"]
         callback(user)

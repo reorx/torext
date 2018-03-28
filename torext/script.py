@@ -144,7 +144,7 @@ class Manager(object):
             return
 
         if all_args[0] not in self._commands:
-            self.print_small_help("'%s' is not a command" % all_args[0])
+            self.print_small_help("'{}' is not a command".format(all_args[0]))
             return
 
         # Execute
@@ -153,24 +153,24 @@ class Manager(object):
             stime = time.time()
             command.execute(all_args[1:])
             if command.profile_flag:
-                print "spend time: %f" % float(time.time() - stime)
+                print("spend time: {}".format(float(time.time() - stime)))
         except CommandArgumentError as e:
-            print 'Command execution failed: %s' % e
+            print('Command execution failed: {}'.format(e))
             self.print_command_help(command)
 
     def print_command_help(self, command):
         buf = []
-        buf.append("'%s' usage:" % command.func.func_name)
-        buf.append("  Arguments        : %s" % ','.join(command.parameters))
-        buf.append("  Keyword arguments: %s" % ','.join('%s=%s' % (k, v) for k, v in command.keyword_parameters.iteritems()))
-        print '\n'.join(buf)
+        buf.append("'%s' usage:".format(command.func.func_name))
+        buf.append("  Arguments        : {}".format(','.join(command.parameters)))
+        buf.append("  Keyword arguments: {}".format(','.join('%s=%s' % (k, v) for k, v in command.keyword_parameters.iteritems())))
+        print('\n'.join(buf))
 
     def print_small_help(self, hint=None):
         s = "Type '%s -h' or '%s --help' for more information"
         if hint:
-            print hint + '\n' + s
+            print(hint + '\n' + s)
         else:
-            print s
+            print(s)
 
     def print_usage(self, hint=None):
         """Usage format should be like:
@@ -215,7 +215,7 @@ class Manager(object):
 
             buf.append(line)
 
-        print '\n'.join(buf)
+        print('\n'.join(buf))
 
     def prepare(self, setup_func):
         """This decorator wrap a function which setup a environment before
